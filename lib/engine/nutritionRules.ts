@@ -40,7 +40,7 @@ export function getNutritionRecommendation(args: {
   const suggestions: string[] = [];
   if (needProtein > 30) {
     suggestions.push(
-      `You still need ${Math.round(needProtein)}g protein — a whey shake (whey, banana, peanut butter, milk) covers ~45g.`
+      `You still need ${Math.round(needProtein)}g protein — a whey shake (whey, banana, peanut butter, milk) covers ~46g.`
     );
   } else if (needProtein > 0) {
     suggestions.push(`${Math.round(needProtein)}g protein to go — a Greek yogurt bowl closes it.`);
