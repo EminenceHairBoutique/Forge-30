@@ -1,0 +1,96 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { NextResponse } from "next/server";
+import type { CoachInput, CoachReview } from "@/lib/engine/mockCoach";
+
+/**
+ * Live AI Coach route. The client POSTs the day's structured summary (all
+ * data lives client-side in the StorageAdapter); this route calls the
+ * Anthropic Messages API with a guardrailed system prompt and the exact
+ * 8-part output schema, and returns the parsed review.
+ *
+ * When ANTHROPIC_API_KEY is not configured (or anything fails), it returns a
+ * non-200 and the client falls back to the deterministic mock engine. The key
+ * never leaves the server.
+ */
+
+const SYSTEM_PROMPT = `You are the Forge30 coach: a daily accountability coach inside a 30-day lifestyle app covering training, nutrition, money, mind, and skills.
+
+Tone: calm, direct, premium, honest. Encouraging but never cheesy — no hype, no emoji, no exclamation marks. Speak to the user like a sharp coach who read their log, in second person. Reference only what was actually logged (the JSON you receive); never invent data.
+
+Hard guardrails — these override everything:
+- No medical diagnosis or treatment advice. Pain guidance stays at the level of "reduce load, avoid aggravating movements, stop on sharp pain."
+- No therapy or mental-health treatment claims. Mind guidance stays at the level of journaling, breathing resets, and boundaries.
+- No legal advice.
+- No financial or investment advice. Money guidance stays at the level of visibility, limits, and habits with the user's own numbers.
+
+You must respond with JSON matching the provided schema: eight short parts (1–3 sentences each) — score explanation, what went well, what slipped, one physical adjustment, one nutrition adjustment, one money adjustment, one mental/emotional adjustment, and tomorrow's single #1 priority.
+
+Rules of thumb the app also applies (follow them when the data matches): protein short >30g → recommend a specific protein add-on like the whey shake; calories short >400 → a calorie-dense shake; 7-day weight flat → add 250 kcal/day; pain >6/10 → reduce loads 15–25% and avoid heavy overhead pressing; stress >7/10 → 60-second breathing reset before charged conversations; unnecessary spending over the daily limit → set a lower next-day cap; skills missed two days running → drop to the 10-minute minimum task.`;
+
+const REVIEW_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    scoreExplanation: { type: "string" as const },
+    wentWell: { type: "string" as const },
+    slipped: { type: "string" as const },
+    physicalAdjustment: { type: "string" as const },
+    nutritionAdjustment: { type: "string" as const },
+    moneyAdjustment: { type: "string" as const },
+    mentalAdjustment: { type: "string" as const },
+    tomorrowPriority: { type: "string" as const },
+  },
+  required: [
+    "scoreExplanation",
+    "wentWell",
+    "slipped",
+    "physicalAdjustment",
+    "nutritionAdjustment",
+    "moneyAdjustment",
+    "mentalAdjustment",
+    "tomorrowPriority",
+  ],
+  additionalProperties: false,
+};
+
+export async function POST(request: Request) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY not configured — use the mock engine." },
+      { status: 503 }
+    );
+  }
+
+  try {
+    const input = (await request.json()) as CoachInput;
+    const client = new Anthropic();
+
+    const response = await client.messages.create({
+      model: "claude-opus-4-8",
+      max_tokens: 2048,
+      thinking: { type: "adaptive" },
+      system: SYSTEM_PROMPT,
+      output_config: { format: { type: "json_schema", schema: REVIEW_SCHEMA } },
+      messages: [
+        {
+          role: "user",
+          content: `Here is today's log and trailing trends as JSON. Write the daily review.\n\n${JSON.stringify(input)}`,
+        },
+      ],
+    });
+
+    if (response.stop_reason === "refusal") {
+      return NextResponse.json({ error: "Model declined the request." }, { status: 502 });
+    }
+
+    const text = response.content.find((b) => b.type === "text")?.text;
+    if (!text) {
+      return NextResponse.json({ error: "Empty model response." }, { status: 502 });
+    }
+
+    const review = JSON.parse(text) as CoachReview;
+    return NextResponse.json({ review });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Coach request failed.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
