@@ -82,6 +82,8 @@ export interface DailyLog {
   skillMinutes: number;
   journalDone: boolean;
   calendarState: CalendarState;
+  /** Ids of checked meal-prep checklist items (see PREP_CHECKLIST). */
+  prepChecklist?: string[];
 }
 
 // ---------------------------------------------------------------------------

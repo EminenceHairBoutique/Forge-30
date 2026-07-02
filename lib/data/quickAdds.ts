@@ -1,0 +1,68 @@
+import type { QuickAddFood } from "@/lib/types";
+
+/** One-tap quick-add templates (Section 5.2). */
+export const QUICK_ADDS: QuickAddFood[] = [
+  {
+    id: "whey-shake",
+    name: "Whey shake",
+    description: "whey, banana, peanut butter, milk",
+    calories: 705,
+    protein: 46,
+    carbs: 60,
+    fats: 26,
+  },
+  {
+    id: "greek-yogurt-bowl",
+    name: "Greek yogurt bowl",
+    description: "yogurt, honey, granola",
+    calories: 380,
+    protein: 25,
+    carbs: 55,
+    fats: 8,
+  },
+  {
+    id: "chicken-rice",
+    name: "Chicken & rice serving",
+    description: "grilled chicken, jasmine rice",
+    calories: 550,
+    protein: 45,
+    carbs: 60,
+    fats: 12,
+  },
+  {
+    id: "beef-pasta",
+    name: "Beef & pasta serving",
+    description: "lean beef, pasta, marinara",
+    calories: 600,
+    protein: 40,
+    carbs: 55,
+    fats: 22,
+  },
+  {
+    id: "eggs-potatoes",
+    name: "Eggs & potatoes",
+    description: "3 eggs, roasted potatoes",
+    calories: 450,
+    protein: 25,
+    carbs: 40,
+    fats: 20,
+  },
+  {
+    id: "rice-olive-oil",
+    name: "Rice + olive oil booster",
+    description: "calorie-dense add-on",
+    calories: 400,
+    protein: 4,
+    carbs: 55,
+    fats: 18,
+  },
+  {
+    id: "bagel-eggs",
+    name: "Bagel and eggs",
+    description: "bagel, 2 eggs",
+    calories: 480,
+    protein: 22,
+    carbs: 55,
+    fats: 18,
+  },
+];
