@@ -1,217 +1,439 @@
-# FORGE30 v2 — OVERHAUL PROMPT (audit-verified, Claude Code / Claude Fable 5)
+# FORGE30 v2 — UNIVERSAL OVERHAUL MASTER PROMPT (Claude Code / Claude Fable 5)
 
-**Executor:** Claude Code running Claude Fable 5
-**Mode:** Brownfield upgrade of `github.com/EminenceHairBoutique/Forge-30` (branch: `main`)
-**Target:** Installable PWA, full-screen on iOS + desktop, deployed on Vercel
+You are Claude Code, running as Claude Fable 5, acting as a senior product engineer, UX architect, AI product strategist, and safety-aware full-stack builder, working inside the existing `Forge-30` GitHub repository.
 
-This version replaces the prior "audit-first" prompt. The audit has already been run against the real repository — pulled, installed, typechecked, tested, and built end-to-end — so Claude Code starts from verified ground truth instead of rediscovering it. Part A is that audit. Part B is the v2 spec. Part C is the phase plan, re-scoped against what's actually there.
+**Model-scope note:** Fable 5 is the agent executing this build. That is a separate question from which model the *shipped app* calls at runtime for the AI Coach (`/api/coach`) — keep that on `claude-opus-4-8` (see the Coach section; this is verified correct in the current codebase) unless told otherwise. Don't conflate "the model building this" with "the model this app calls."
 
-**One model-scope note:** Claude Fable 5 is the agent executing this build inside Claude Code. That is separate from which model the *shipped app* calls at runtime for the AI Coach (`/api/coach`) — the existing route already correctly targets `claude-opus-4-8`, which is the right choice for a consumer-facing coaching feature and should stay as-is unless told otherwise (see A2).
+**Safety-posture note for Fable 5 specifically:** this build touches biology-adjacent content (bloodwork, biomarkers, blood pressure). Fable 5 carries extra caution on biology topics generally, but everything in this spec is educational wellness content with mandatory disclaimers, not diagnostic or treatment guidance — that framing should keep the work well inside normal bounds throughout. If a specific sub-task feels like it's drifting toward clinical specificity (dosing, treatment protocols, diagnostic certainty), that's a signal to pull back toward "flag it, suggest discussing with a professional" — which is what the spec already asks for, not a reason to refuse the section wholesale.
 
----
+Important context:
+- The existing repository was created from an original prompt personalized for one user.
+- Forge30 v2 has **not** been built yet — it is in planning mode.
+- Your job is not to blindly patch the existing app, and it is not to rebuild it from scratch either.
+- Your job is to audit the current v1 codebase, preserve what is useful and already correct, generalize what is personal-specific, and build Forge30 v2 as a universal all-in-one lifestyle operating system for anyone.
 
-## HOW TO RUN THIS PROMPT (operator instructions)
+Forge30 v2 must become a premium, installable, mobile-first PWA that helps users improve health, fitness, nutrition, recovery, bloodwork/biomarkers, injury-aware training, mental habits, finances, relationships, social connection, skills, and daily decision-making.
 
-1. `git checkout -b v2-overhaul` on a clean clone of the repo.
-2. Paste this file into Claude Code as `V2_SPEC.md` in the repo root, and reference it with `@V2_SPEC.md`. Start in **Plan Mode**.
-3. First message to Claude Code: *"Read @V2_SPEC.md. Part A is a verified audit of this repo — confirm its key claims with a few spot-checks (don't redo the full audit), then write CLAUDE.md and V2_PLAN.md per A4. Stop for my review before writing any code."*
-4. Run phases from Part C in order, one per session where practical. `/clear` between unrelated phases.
-5. Gate every phase: `npm run typecheck` → `npm test` → `npm run build` → subagent diff review against this spec → fix gaps → commit.
-6. Verify Phase 2 (PWA polish) claims on a real iPhone before proceeding — the audit found the PWA layer already installable, but device verification catches what static analysis can't.
+The product must be useful for people at different life stages: beginners, athletes, people rebuilding after burnout, people losing fat or gaining muscle, people improving health markers, people managing stress, people fixing spending habits, people improving relationships or building friendships, people tracking blood pressure or bloodwork, people working around injuries, people trying to become more disciplined, and people who simply want one clear daily plan.
 
----
+Forge30 is not a generic habit tracker. It is a personal operating system that connects the dots across a user's life.
 
-# PART A — VERIFIED AUDIT
+Core loop: **Plan → Execute → Log → Understand → Adjust Tomorrow.**
 
-Performed by pulling the repo (`main`, commit at time of audit), running `npm install`, `npm run typecheck`, `npm test`, and `npm run build` to completion, and reading every source file. Results below are evidence-based, not inferred.
-
-## A1. Build health — confirmed green
-
-```
-npm run typecheck   → clean, zero errors (strict + noUncheckedIndexedAccess)
-npm test             → 36/36 passing (forgeScore.test.ts ×15, mockCoach.test.ts ×13, trainingRules.test.ts ×8)
-npm run build        → succeeds, all 12 routes prerender statically, First Load JS 102–240kB
-```
-
-Stack confirmed: Next.js 15.5.20 (App Router), React 19, TypeScript strict, Tailwind v4, Vitest, `@anthropic-ai/sdk` ^0.109.1, `geist` fonts, `recharts`. No missing dependencies, no dead imports, no TODO/FIXME markers anywhere except one intentional stub (`supabaseAdapter.ts` throws "not implemented yet" by design).
-
-**Conclusion: v1 is a genuinely production-quality build of the original 6-domain Forge30 spec (Today · Nutrition · Training · Mind · Money · Skills · Progress · Coach), not the expanded "universal lifestyle OS" scope.** There is no Health tab and no Relationships tab — that scope was never built, not broken. Everything that *was* built is built well. Treat this as a foundation to extend, not a codebase to fix.
-
-## A2. Verified complete — do not rebuild these
-
-| Area | Evidence | Notes |
-|---|---|---|
-| **StorageAdapter pattern** | `lib/storage/adapter.ts` (interface), `lib/storage/localStorageAdapter.ts` (SSR-guarded via `canUseStorage()`, try/catch on quota errors, `forge30:*`-prefixed keys), `lib/storage/supabaseAdapter.ts` (intentional stub), `lib/storage/provider.tsx` (React context) | UI never touches `localStorage` directly. Rule is fully respected. Extend the interface for new domains; don't replace it. |
-| **Types centralized** | `lib/types.ts`, 373 lines | Matches the narrower spec 1:1. New v2 types (Health, Relationships, Streaks, Expenditure) get added here, not scattered. |
-| **Forge Score engine** | `lib/engine/forgeScore.ts` + `forgeScore.test.ts` (15 tests) | Exact weights (15/15/10/15/10/10/10/10/5), partial-credit curve (`calorieProteinCredit`, ±10%→full, ±30%→zero, linear between), scaled penalties, and the result shape (`ScoreComponent[]` / `ScorePenalty[]`) is already tap-to-explain-ready. |
-| **Score explainability UI** | `components/cards/ScoreRing.tsx` | Already a tap-to-open sheet listing every component and penalty. B1.4 in the spec below is **already shipped** for Forge Score — extend this pattern to the new Health Score, don't reinvent it. |
-| **Mock AI Coach** | `lib/engine/mockCoach.ts` + `mockCoach.test.ts` (13 tests) | Deterministic, all spec rules present, exact 8-part `CoachReview` shape, tone matches "calm, direct, premium, not cheesy" well in practice — read the actual generated copy, it's good. |
-| **Live AI Coach route** | `app/api/coach/route.ts` | Uses current, correct Claude API patterns: `output_config: { format: { type: "json_schema", schema } }` for structured outputs (GA, not beta), `thinking: { type: "adaptive" }`, model `claude-opus-4-8`, no `temperature`/`top_p` (correctly omitted — unsupported on Opus 4.7+), server-side-only key, graceful non-200 fallback to mock on any failure. **This route is correct as shipped — extend its system prompt and schema for new domains in Phase 9, don't rewrite it.** |
-| **Pain-aware training engine** | `lib/engine/trainingRules.ts` + `trainingRules.test.ts` (8 tests) | Load-reduction scaling (7→15%, 8→20%, 9+→25%), overhead-press flagging, shrug warning, chest-supported-row/neutral-grip swap suggestions, PR tracking, muscle-group volume. |
-| **Sharp-pain protocol** | `components/training/PainStopModal.tsx` | Exact stop→log→swap→reduce sequence, correct copy, dismissible without losing the logged pain event. |
-| **PWA / iOS shell** | `public/manifest.json` (standalone, correct colors, full icon set incl. maskable), `public/sw.js` (network-first nav / cache-first static, versioned cache cleanup), `app/layout.tsx` (`appleWebApp` meta, `viewportFit: "cover"`), `app/globals.css` (`pt-safe`/`pb-safe`/`pb-safe-nav` utilities, 16px inputs, exact design tokens) | Icons verified as real 180/192/512/maskable PNGs, not placeholders. This is essentially the full B2 PWA requirement already met. Phase 2 becomes a device-verification pass, not a build phase. |
-| **Design tokens** | `app/globals.css` | Matches the spec's palette exactly: `#0A0A0B`/`#141416`/`#1C1C1F` base, `#F5F1E8`/`#9B978C` text, `#C9A961` gold, `#3DFF8B` success, `#FF8A3D`/`#FF4D4D` warning/danger. |
-| **Onboarding** | `components/shell/OnboardingGate.tsx` | Single-screen, skippable-with-defaults, matches the narrower spec (name, start date, calorie/protein/water targets, weight goal, 5 pain flags, spend limit). **Not** the expanded universal onboarding (age/sex/height/goal-weight/activity/equipment/diet-restrictions/etc.) — that's new work in Phase 3. |
-| **README** | `README.md` | Accurate, complete: install steps, iOS/Android/desktop PWA install, Capacitor future path, customization pointers, AI coach setup, Supabase upgrade path. Update it per phase rather than rewriting it. |
-| **Adherence-neutral design (mostly)** | grep audit across `components/` and `app/` | Danger/warning tones are used correctly in most places: sharp pain, overspend-past-limit, stress-purchase flags, high-pain calendar days. Two exceptions found — see A3. |
-
-## A3. Concrete bugs / polish items (small, specific, fix in Phase 1)
-
-1. **Adherence-shaming color violation.** `app/(app)/today/page.tsx` line ~165: `workoutStatus === "skipped"` maps to `tone: "danger"`. Skipping a workout is a missed habit, not a safety event — per the adherence-neutral rule (B1.3 below) this should be a neutral/muted tone, matching how missed calories/protein are already (correctly) handled elsewhere with no color penalty.
-2. **Informational banner using warning color.** `app/(app)/nutrition/page.tsx` lines ~140–141: the "weight flat 7 days → +250 kcal" recommendation banner uses `border-warning/30 bg-warning/5 text-warning`. This is a helpful suggestion, not a problem — consider gold/neutral styling instead so warning-orange stays reserved for the two-tier safety signal it will carry in v2 (BP crisis, injury red flags).
-3. **No schema versioning.** `lib/storage/localStorageAdapter.ts` has no version field or `migrate()` step. Not a bug today, but every v2 feature below changes the data shape — add versioning *before* Phase 3, or every subsequent phase risks corrupting existing users' localStorage on upgrade.
-4. **No data export/import.** `app/(app)/settings/page.tsx` has profile editing and a (confirmed, double-tap) full reset, but no JSON export/import. For a localStorage-only app this is a real gap — one bad browser-storage clear currently loses everything with no recovery path.
-
-## A4. Real gaps vs. the v2 "universal lifestyle OS" vision — this is the actual work
-
-None of these are bugs. They're scope that was never built. Each maps to a Part C phase.
-
-1. **No Adaptive Expenditure Engine.** `lib/engine/trends.ts` → `calculateWeightTrend()` is a raw last-minus-first delta over whatever's in the window (no smoothing). `lib/engine/bodyRules.ts` and `lib/engine/nutritionRules.ts` both consume this directly for the "+250 kcal if flat" rule. Static `calorieTarget`/`proteinTarget` live on `UserProfile` and never change themselves. This is the flagship v2 upgrade (B1.1) — a clean extension point, not a rewrite: keep `calculateWeightTrend`'s callers working, add the new EWMA + expenditure functions alongside.
-2. **No general streak engine.** `grep` found exactly one streak implementation: `streakFor()` inline in `app/(app)/skills/page.tsx`, a page-local function that walks `SkillTask[]` history on every render — no persistence, no freezes, no earn-back, no MVD concept, no app-wide streak. `coachContext.ts` separately hand-computes a `skillMissedTwoDays` boolean rather than using any shared streak logic. Generalize the existing pattern into `lib/engine/streaks.ts` per B1.2 rather than building from nothing.
-3. **No Health tab.** No `BloodPressureEntry`, `BloodworkReport`, or `Biomarker` types; no BP categorization logic; no bloodwork input/review anywhere. Full new build per B6.2.
-4. **No Relationships tab.** No `RelationshipCheckIn`, `ConflictDebrief`, `PersonalityAssessment`, `CompatibilityReport`, or `SocialGoal` types; no conversation-prompt decks; no assessments. Full new build per B6.7.
-5. **Injury model is minimal.** `PainFlags` is 5 booleans (`thoracic`, `rib`, `scapular`, `upperTrapDominant`, `leftArmAggravation`) hardcoded to one training profile — not the general `InjuryProfile` (body area, diagnosis, symptoms, pain score, aggravating/relieving movements, restrictions, onset date, professional care, notes) needed to support arbitrary injuries for arbitrary users. No red-flag symptom list (numbness, bowel/bladder loss, chest pain, etc.) exists anywhere.
-6. **Onboarding is narrow.** Confirmed above (A2) — needs the universal fields (age, sex, height, goal weight, activity level, training experience, equipment, diet preference/restrictions, sleep target, relationship status, social goals, health concerns, meds, bloodwork upload, goal-type menu) per B4.
-7. **Forge Score weights are hardcoded constants**, not user-configurable. No settings UI to adjust them, no renormalization when a domain (e.g., Relationships) is disabled. The result shape already supports display of weights (A2) — extend it to support *editing* them.
-8. **No workout builder.** `lib/data/workoutPlan.ts` is one fixed seeded weekly split; exercises aren't tagged with equipment or injury-contraindication metadata. B6.4's goal/equipment/days/experience → generated-plan builder is entirely new.
-9. **No diet-preference filtering.** `lib/data/mealPlan.ts` is one fixed 7-day rotation with no vegetarian/vegan/halal/etc. variants or filtering logic.
-10. **No print/PDF export.** Nothing in `progress/page.tsx` or elsewhere produces a doctor-ready export.
-
-## A5. CLAUDE.md to write in Phase 0 (keep under ~150 lines)
-
-Include: exact commands (`npm run dev/build/test/typecheck/lint`), Node 18.18+/22 requirement, the StorageAdapter rule with a pointer to `lib/storage/adapter.ts`, the pure-engine rule with a pointer to `lib/engine/`, the design-token file (`app/globals.css`) and the adherence-neutral color rule (danger/warning reserved for genuine safety signals — cite A3 as the example of what *not* to do), the `forge30:*` localStorage key convention, the fact that `/api/coach` already uses correct current API patterns and should be extended not replaced, and "read V2_SPEC.md before large changes."
+The differentiator: other apps track isolated categories; Forge30 connects the categories. Sleep affects training, cravings, blood pressure, mood, conflict, spending, and motivation. Stress affects food, workouts, relationships, pain, and financial decisions. Injuries affect movement, confidence, mental health, and adherence. Relationship conflict affects sleep, workouts, spending, and emotional regulation. Bloodwork and blood pressure become more useful viewed alongside behavior. Forge30 reveals these connections and turns them into a simple next action.
 
 ---
 
-# PART B — THE v2 PRODUCT SPEC
+## HOW TO RUN THIS PROMPT (operator instructions — not part of the system framing above)
 
-## B1. What's new in v2 (research-driven; each maps to an A4 gap)
-
-Grounded in category leaders: MacroFactor, MyFitnessPal, Cronometer, Strong, Fitbod, WHOOP, Oura, Headspace, Monarch, YNAB, PocketGuard, Streaks, Duolingo, Paired, Gottman-style tools.
-
-### B1.1 Adaptive Expenditure Engine (MacroFactor-inspired) — flagship upgrade, fills A4.1
-Static calorie targets are the current state; v2 estimates the user's *actual* expenditure from their own data:
-- Add a **smoothed weight trend** (EWMA over daily weigh-ins) in `lib/engine/trends.ts` alongside (not replacing) `calculateWeightTrend` — `bodyRules.ts` and `nutritionRules.ts` currently import the raw version, so land the new function under a distinct name (e.g., `calculateSmoothedWeightTrend`) and migrate callers deliberately.
-- Estimate **dynamic TDEE** from the relationship between logged intake and smoothed-weight change over rolling 14–21 day windows (~3500 kcal ≈ 1 lb, tunable constant).
-- **Weekly check-in recalibration:** every 7 days, recompute TDEE and move calorie/protein targets toward the user's goal rate. Surface what changed and why in plain language — this is a Coach-adjacent surface, wire it through `coachContext.ts`.
-- **Data-quality guards:** ignore obviously-partial-logging days; require a minimum weigh-in count per window; degrade to the current static-formula behavior with a "calibrating — N more days" state for the first 2–3 weeks. The existing `bodyRules.ts` flat/fast-change rules become the fallback, not dead code.
-
-### B1.2 Streak & Consistency System — fills A4.2
-- **Minimum Viable Day (MVD):** user-configurable, default = one meal logged + daily check-in (~2 min). A hard day still counts.
-- **Streak Freezes:** hold up to 2, auto-consumed on a missed day, earned at 7-day milestones (not free/infinite).
-- **Earn-Back:** 2 consecutive MVDs within 48h of a break restores the streak. Treat a broken streak as a recovery state in the copy, not a failure.
-- **Weekly streaks** for circumstance-vulnerable habits (workouts, social outreach): 3-of-7 counts.
-- Build `lib/engine/streaks.ts` as the generalized version of `skills/page.tsx`'s existing `streakFor()` — same underlying idea (consecutive-day walk), now persisted via a `StreakState` type through the StorageAdapter, covering skills, the app-wide daily streak, and weekly-mode habits. Milestone celebrations at 7/14/21/30 days.
-
-### B1.3 Adherence-neutral design (hard rule, fixes A3.1–A3.2 and governs everything new)
-Red/orange reserved exclusively for genuine safety warnings: BP crisis range, sharp/severe injury pain, red-flag symptoms. Never for missing a calorie target, skipping a workout, or any ordinary human variance. The subagent reviewer for every phase checks new UI against this rule explicitly.
-
-### B1.4 Explainable scores (extend the shipped pattern)
-`ScoreRing.tsx`'s tap-to-explain sheet already does this for Forge Score — reuse the same `ScoreComponent[]`/`ScorePenalty[]` shape and `Sheet` pattern for the new Health Score. Don't design a second UI pattern for the same job.
-
-### B1.5 Speed logging everywhere
-Every log flow targets <30 seconds: favorites, recents, one-tap repeat-yesterday, quick-add templates, `inputmode="decimal"` numeric entry (already used correctly in `OnboardingGate.tsx` and `settings/page.tsx` — follow that precedent in new forms).
-
-### B1.6 Data lifecycle (fixes A3.3–A3.4)
-Schema version field + `migrate()` step in `localStorageAdapter.ts`, landed *before* any v2 type changes. JSON export/import in Settings. Doctor-ready print export from Progress/Health (browser print stylesheet is fine for MVP).
-
-## B2. Tech stack (unchanged, confirmed correct)
-
-Next.js 15 (App Router) · TypeScript strict · Tailwind v4 · Vitest · `StorageAdapter` interface (localStorage now, `SupabaseAdapter` stub for later) · `/api/coach` extended in place · Vercel deploy. No stack changes needed — everything is already the right choice.
-
-## B3. Design system (unchanged, confirmed shipped correctly — see A2)
-
-Reuse `app/globals.css` tokens as-is. Nav gains **Health** and **Relationships**: **Today · Health · Nutrition · Training · Mind · Money · Relationships · Skills · Progress · Coach**. Update `components/shell/BottomNav.tsx` and `public/sw.js`'s `SHELL_ROUTES` together — the service worker route list will silently miss the new pages if only the nav is updated.
-
-## B4. Onboarding upgrade (extends `OnboardingGate.tsx`, fills A4.6)
-
-Add to the existing single-screen flow (or split into a short multi-step flow if the single screen gets too dense — operator's call, ask if unsure): age, sex, height, goal weight, primary + secondary goals, activity level, training experience, equipment, diet preference + restrictions, sleep target, relationship status + social goals, health concerns, injuries (repeatable `InjuryProfile`, see B6.4), optional meds/supplements, optional bloodwork, tracking preferences, MVD definition (B1.2). Keep it skippable with sensible defaults — that pattern already works well, don't lose it.
-
-Goal types: gain muscle · lose fat · recomp · improve health markers · strength · cardio fitness · reduce stress · improve sleep · improve relationship · improve dating life · build friendships · improve finances · build discipline · learn skills · general reset.
-
-## B5. Forge Score upgrade (extends `forgeScore.ts`, fills A4.7)
-
-Keep the existing component/penalty engine and test suite intact — add: user-visible, adjustable weights in Settings (default weights close to current: nutrition 15/15, hydration 10, movement 15, recovery 10, health-marker check-in 5 *(new)*, mental reset 10, spending 10, relationship/social 5 *(new)*, skill 5), with renormalization to 100 when a domain is disabled. New caution modifiers: BP concerning range, unresolved relationship conflict, skipped user-added doctor-directed task. Every change here needs new unit tests alongside the 15 that already pass — don't regress `forgeScore.test.ts`.
-
-## B6. Section specs (new sections use full detail; existing sections list only the delta)
-
-### B6.1 Today — delta only
-Add: BP-today card, resting HR, relationship check-in card, streak flame next to the Forge Score ring, "Log BP" and "Relationship Check-In" quick actions. Fix A3.1 (skipped-workout tone) while touching this file.
-
-### B6.2 Health (new)
-1. **Bloodwork input & AI review.** Manual entry + copy/paste parser first; PDF/image upload as a "coming soon" placeholder. Parse biomarker name/result/unit/reference range/lab date/flag/trend. Seed dictionary: CBC, CMP, lipids, glucose metabolism, thyroid, iron, vitamins, inflammation, hormones (full lists as in prior spec revisions — don't trim). AI review: in/out of range vs. the lab's own ranges, general relevance, patterns worth discussing with a doctor, lifestyle areas to review, trend over time, generated doctor-visit questions. Never diagnose; medication changes only framed as "ask your clinician"; always note ranges vary.
-2. **Blood pressure tracker.** Systolic/diastolic/pulse/time/position/context/notes. AHA categories: normal <120/<80 · elevated 120–129/<80 · stage 1 130–139 or 80–89 · stage 2 ≥140 or ≥90 · crisis >180 and/or >120. Crisis → urgent warning; crisis + chest pain/shortness of breath/back pain/numbness/weakness/vision changes/trouble speaking → instruct emergency care immediately. Never diagnose hypertension.
-3. **Fitness markers:** RHR, HRV, sleep, steps, cardio/zone-2 minutes, VO2max estimate, waist, weight, body-fat estimate, grip strength, push-up test, plank time, 1-mile time, mobility, pain, energy, soreness.
-4. **Health Score:** educational composite (eat better, move more, avoid nicotine, sleep well, healthy weight, lipids, glucose, BP), explainable via the `ScoreRing.tsx` pattern (B1.4), never diagnostic.
-
-### B6.3 Nutrition — delta only
-Wire in the Adaptive Expenditure Engine (B1.1): replace the static-target display with the expenditure trend chart + weekly check-in card, keep `getNutritionRecommendation()`'s existing suggestion copy style (it's good — "a whey shake covers ~46g" is exactly the right register, match it for new suggestions). Add diet-preference-aware filtering to `lib/data/mealPlan.ts` (A4.9) and micronutrient awareness on logged foods where data exists. Fix A3.2 (banner tone) while touching this file.
-
-### B6.4 Training — delta only
-Add the workout **builder** (goal/equipment/days/experience/injury restrictions/liked-disliked → generated plan) as a new layer on top of the existing exercise/logger infrastructure — don't replace `ExerciseCard.tsx`, `RestTimer.tsx`, `SwapSheet.tsx`, `HeatMap.tsx`, or `trainingRules.ts`'s pain engine, all of which are solid. Tag `ExerciseDef` entries in `lib/data/workoutPlan.ts` with equipment + injury-contraindication metadata so the builder has something to filter on. Generalize `InjuryProfile` (A4.5) beyond the current 5-boolean `PainFlags` — keep `PainFlags` working as a derived/compatible view if that's the lower-risk migration path. Add the red-flag symptom list (sudden severe pain, numbness/weakness, bowel/bladder loss, chest pain, shortness of breath, unexplained swelling, fever with joint pain, major trauma, progressive neurologic symptoms) → always escalate to "seek medical evaluation," never train through.
-
-### B6.5 Mind — delta only
-Add CBT-style thought record + reframing, emotional pattern detection (recurring triggers surfaced over time from existing `JournalEntry` history). Keep the existing breathing reset, pause timer, boundary script generator, and disclaimer as-is.
-
-### B6.6 Money — delta only
-Add recurring-expense tracker, debt list, savings goal, emergency fund, cash-flow view, "can I afford this?" safe-to-spend quick check. Keep the existing <30s logging flow, Sunday review, and stress-purchase tracking as-is — they're already good.
-
-### B6.7 Relationships (new)
-Modes: single/dating · in a relationship · married/long-term · complicated · family focus · friendship focus · social confidence. Daily check-in (connection/communication/conflict/repair/appreciation/boundary/heard/safe + note). Conversation prompt decks (getting-to-know / emotional intimacy / conflict repair / values / money / family / intimacy-adults / future planning / appreciation / apology / boundaries / friendship / family connection). Conflict debrief (what happened/felt/needed/they-needed/did-well/did-poorly/repair/boundary) with AI neutral-summary + repair-language + calm-message-draft output — never diagnose or label the other person, never encourage unsafe reconciliation where abuse indicators exist. Optional assessments (Big Five, attachment style, love languages, conflict style, communication style, values, lifestyle/financial compatibility, social energy, emotional regulation) — couples see similarities/differences/discussion prompts, never a deterministic compatible/incompatible verdict. Micro-lessons per the earlier universal spec (active listening, repair, validation, boundaries, apologizing, etc., inclusive tips for men/women/everyone, no stereotyping). Social connection: outreach goals (weekly streak per B1.2), social calendar, activity ideas, post-event reflection.
-
-### B6.8 Skills — delta only
-Migrate `streakFor()` to `lib/engine/streaks.ts` (B1.2) with persistence. Add the additional default tracks from the universal spec if not already present (nutrition basics, communication, sleep optimization, career/business, social confidence) alongside the existing finance/regulation/movement tracks.
-
-### B6.9 Progress — delta only
-Add: expenditure/TDEE trend, BP trend, RHR trend, relationship connection trend, social outreach trend — alongside all existing charts (weight, calories, protein, workout completion, strength/PRs, spending, mood/stress, skills, Forge Score, pain). Add doctor-ready print export (A3.4/B1.6).
-
-### B6.10 Coach — delta only
-**Extend, don't rewrite, `app/api/coach/route.ts` and `lib/engine/mockCoach.ts`.** Both are correct and well-tested as shipped. Add to the existing 8-part structure as new domains land: one health/BP adjustment, one relationship/social adjustment — matching the exact tone and one-to-three-sentence register the mock engine already nails. Extend `REVIEW_SCHEMA` and `SYSTEM_PROMPT` together; add new mock-engine rules per B1's domains (BP crisis → urgent warning; repeated elevated BP → track + discuss with clinician; conflict without repair → calm repair attempt; social isolation high → one low-pressure outreach) following the existing rule style in `mockCoach.ts` exactly. Add a **research mode** (optional, live-AI only): credible-source retrieval with citations, states uncertainty, separates evidence from speculation, never presents research as diagnosis or a treatment plan.
-
-## B7. Data model & engine additions
-
-New types in `lib/types.ts` (alongside, not replacing, the existing 373 lines): `InjuryProfile`, `InjuryModification`, `HealthMarker`, `BloodPressureEntry`, `BloodworkReport`, `Biomarker`, `RelationshipCheckIn`, `ConflictDebrief`, `PersonalityAssessment`, `CompatibilityReport`, `SocialGoal`, `StreakState`, `ExpenditureEstimate`.
-
-New engine functions in `lib/engine/` (pure, Vitest-tested, following the existing file-per-domain convention): `calculateSmoothedWeightTrend`, `estimateExpenditure`, `runWeeklyCheckIn` (extends `trends.ts`/new `expenditure.ts`); `updateStreak` with MVD/freeze/earn-back/weekly-mode logic (new `streaks.ts`); `categorizeBloodPressure`, `parseBloodworkInput`, `summarizeBiomarkers` (new `healthRules.ts`); `generateInjuryModification` (extends `trainingRules.ts`); `generateRelationshipPrompt`, `generateConflictRepairSuggestion`, `calculateCompatibilityInsights` (new `relationshipRules.ts`); `detectPatterns` (new, or extends `weeklySummary.ts`).
-
-Minimum new test coverage, matching the rigor of the existing 36 tests: expenditure engine (calibrating state, partial-day guard, recalibration math), streak engine (freeze consumption, earn-back window, weekly mode), BP categorization (every AHA boundary + crisis flow), injury modification, new mock-coach rules.
-
-Persistence: add schema versioning + `migrate()` to `localStorageAdapter.ts` first (A3.3), write migration tests proving current-shape user data survives. Add JSON export/import (A3.4).
-
-## B8. Safety spec (verbatim requirements — none of this exists yet since Health/Relationships are new)
-
-The app never claims to diagnose medical conditions, replace a physician/therapist/emergency care/dietitian/financial advisor/lawyer, guarantee injury recovery, or guarantee relationship success. It may summarize user data, flag values worth discussing with a professional, suggest habits generally associated with better health, recommend safer training modifications, encourage professional evaluation, provide educational information with citations, and help users prepare better questions for their professionals.
-
-Ship these disclaimers verbatim, placed persistently in their sections:
-- **Health/bloodwork:** "Forge30 provides educational wellness insights only. It does not diagnose, treat, cure, or prevent disease. Always consult a qualified healthcare professional for interpretation of bloodwork, symptoms, medications, injuries, or medical concerns."
-- **Mental health:** "Forge30 supports reflection and habit-building. It is not therapy, crisis care, or diagnosis. If you are in danger or may harm yourself or someone else, contact emergency services or a crisis hotline immediately."
-- **Relationships:** "Forge30 provides relationship education and communication tools. It does not determine whether a relationship is safe, abusive, compatible, or worth continuing. If there is violence, coercion, threats, stalking, or fear, seek professional/legal/domestic violence support."
-- **Finance:** "Forge30 provides budgeting and spending awareness tools. It is not professional financial, tax, legal, or investment advice."
-
-The existing Mind section already carries a disclaimer in spirit through its careful, non-diagnostic copy in `mockCoach.ts` — confirm it matches the verbatim text above when Phase 7 touches that file, rather than assuming it's already correct.
+1. `git checkout -b v2-overhaul` on a clean clone.
+2. Save this file as `V2_SPEC.md` in the repo root; reference it in Claude Code with `@V2_SPEC.md`. Start in **Plan Mode**.
+3. First message: *"Read @V2_SPEC.md, including the Known Findings in Phase 0. Confirm those findings with spot-checks rather than rediscovering them from scratch, then complete the rest of Phase 0 and produce AUDIT.md, CLAUDE.md, and V2_PLAN.md. Stop for my review before writing any code."*
+4. Run phases in order from the Build Phases section, one per session where practical, `/clear`-ing between unrelated phases so context doesn't degrade output quality.
+5. Gate every phase: typecheck clean → tests pass (never fewer than whatever the current count is — check it, don't guess) → build passes → subagent diff review against this spec → fix gaps → commit.
+6. Device-verify PWA/iOS claims on a real iPhone before trusting Phase 2 as complete — static analysis can't catch everything a real Add-to-Home-Screen install can.
+7. If a decision in this spec is marked "operator's call" or conflicts with what Phase 0 finds in the repo, Claude Code should ask rather than assume — one clarifying question, not a cascade of them.
 
 ---
 
-# PART C — BUILD PHASES (re-scoped against the audit)
+# OPERATING MODE
 
-Every phase: `npm run typecheck` clean → `npm test` passes (including new tests, never fewer than the current 36) → `npm run build` passes → subagent diff review against this spec, explicitly checking the B1.3 adherence-neutral rule → fix gaps → commit.
-
-- **Phase 1 — Data lifecycle & polish fixes.** Schema versioning + `migrate()` in `localStorageAdapter.ts` (A3.3). JSON export/import in Settings (A3.4). Fix the two adherence-neutral violations (A3.1, A3.2). This phase touches no new features — it's the safety net every later phase depends on. Gate adds: a migration test proving today's real data shape survives untouched.
-- **Phase 2 — PWA/iOS device verification.** The audit found this essentially complete (A2). Operator installs the current build to a real iPhone via Add to Home Screen and confirms: standalone launch, safe-area rendering, offline shell, no input-zoom. Fix anything that fails; otherwise this phase is a checklist, not a build.
-- **Phase 3 — Adaptive Expenditure Engine + onboarding upgrade.** Build `calculateSmoothedWeightTrend`, `estimateExpenditure`, `runWeeklyCheckIn` in `lib/engine/`. Wire into Nutrition (replace static-target framing with the expenditure trend + weekly check-in card) and Progress. Expand `OnboardingGate.tsx` per B4. Update `defaultProfile()` in `lib/data/defaults.ts` accordingly.
-- **Phase 4 — Streak system + Forge Score configurability.** Build `lib/engine/streaks.ts`, migrate `skills/page.tsx`'s `streakFor()` and `coachContext.ts`'s `skillMissedTwoDays` onto it, add the app-wide daily streak with flame on Today. Add configurable Forge Score weights in Settings with renormalization, extending (not replacing) `forgeScore.ts`.
-- **Phase 5 — Health tab.** New types, `healthRules.ts`, BP tracker with AHA categories + crisis flow, fitness markers, Health Score (reusing the `ScoreRing.tsx` explain pattern), bloodwork manual entry + paste parser + AI review scaffolding. Add "Health" to `BottomNav.tsx` and `sw.js`'s `SHELL_ROUTES` in the same commit.
-- **Phase 6 — Training upgrade.** Exercise-library tagging, workout builder, generalized `InjuryProfile` + red-flag escalation layered onto the existing pain engine.
-- **Phase 7 — Relationships tab + Mind upgrades.** Full B6.7 build. Thought record + pattern detection in Mind. Verify the four B8 disclaimers are present verbatim across Health/Mind/Relationships/Money.
-- **Phase 8 — Money upgrades + Skills curricula + Progress overhaul.** Recurring/debt/savings/cash-flow/safe-to-spend. Additional skill tracks. All new Progress charts + print export. Add "Relationships" to nav/SW route list in the same commit as Phase 7 if not already done.
-- **Phase 9 — Coach extension.** Extend `REVIEW_SCHEMA` and `SYSTEM_PROMPT` in `app/api/coach/route.ts` and the matching rules in `mockCoach.ts` for the new domains — do not rewrite either file. Add research mode. Update README for every new section, the new nav items, and the expanded onboarding. Final Lighthouse + accessibility pass. Deploy config check.
+1. Audit first. Plan second. Build in phases only after the plan is approved.
+2. Keep changes small and reviewable — one phase, one coherent diff.
+3. Do not rebuild the app from scratch unless the audit proves it's necessary. (It won't — see Known Findings below.)
+4. Do not preserve personal-specific logic from v1 unless it's generalized for all users.
+5. Never modify a file before reading it.
+6. Never delete data structures without a migration path.
+7. Never bypass failing checks.
+8. Pure logic lives in `/lib/engine`. UI components never contain scoring, health, calorie, streak, or recommendation math.
+9. All browser APIs are SSR-safe.
+10. All persistent data goes through a `StorageAdapter`.
+11. All safety rules are requirements, not polish.
+12. After every build phase: typecheck, tests, build — all three, every time.
+13. When a phase would touch a file already confirmed correct in Phase 0's Known Findings, **extend it, don't rewrite it.** Rewriting working, tested code is wasted effort and new-bug risk with no offsetting benefit.
 
 ---
 
-# PART D — QUALITY BAR & ACCEPTANCE
+# PHASE 0 — AUDIT
 
-No lorem ipsum, no broken links, no generic dashboards, no clutter. Fast input flows (<30s per log; essentials loggable in <5 min/day) — match the bar `SpendLogSheet.tsx` and `AddMealSheet.tsx` already set. Good empty states. Accessible labels (the existing `aria-label` on `ScoreRing.tsx`'s trigger is the right level of care — match it). Readable charts. Every tab has a clear purpose. Premium and practical. Never regress the 36 existing passing tests or the clean typecheck/build.
+## 0.1 Known findings (confirm these, don't rediscover them)
 
-**v2 ships when a user can:** everything the current build already does (open installed iPhone app, see Today, log nutrition/training/mind/money/skills fast, get pain-aware training swaps, read an explained Forge Score, get an 8-part AI review) **plus**: get calorie targets that adapt to real expenditure with a plain-language weekly check-in · keep a streak through an imperfect week via MVD/freezes/earn-back · input bloodwork and get safe educational insights + doctor questions · track BP with correct categories and crisis safety behavior · build a training plan around goals/equipment/injuries with explained swaps · debrief a conflict and get a calm repair draft · export all their data · receive AI feedback that now also covers health and relationships.
+A prior audit pulled this repo, ran `npm install`, `npm run typecheck`, `npm test`, and `npm run build` to completion, and read every source file. Results:
 
-**The differentiator is unchanged:** food apps track nutrition, gym apps track workouts, finance apps track spending, meditation apps track mood, dating apps track matches, habit apps track streaks — Forge30 connects the domains. The daily loop — plan → execute → log → honest AI feedback → adjust tomorrow — **is the product**, and it already works end to end in the current build. v2 widens what feeds the loop; it does not change what the loop is.
+**Build health:** typecheck clean (strict + `noUncheckedIndexedAccess`), all tests passing, production build succeeds, all routes prerender statically. This is a genuinely production-quality build of the *original* narrower Forge30 spec (Today · Nutrition · Training · Mind · Money · Skills · Progress · Coach) — there is no Health tab and no Relationships tab yet. That's unbuilt scope, not a defect. Confirm the current test count and build output as a first step in every session (`npm run typecheck && npm test && npm run build`), since these numbers will grow across phases.
+
+**Verified complete — extend, don't rebuild:**
+- `lib/storage/adapter.ts` / `localStorageAdapter.ts` / `provider.tsx` — the `StorageAdapter` pattern is fully and correctly implemented, SSR-guarded, `forge30:*`-prefixed keys. `supabaseAdapter.ts` is an intentional not-implemented stub.
+- `lib/types.ts` — centralized, matches the narrower v1 spec cleanly. New v2 types get added here.
+- `lib/engine/forgeScore.ts` + its test file — exact weighted scoring, partial-credit curve, scaled penalties, and a result shape (`ScoreComponent[]` / `ScorePenalty[]`) that's already explain-ready.
+- `components/cards/ScoreRing.tsx` — **already implements tap-to-explain** for the Forge Score via a bottom sheet listing every component and penalty. This is the exact pattern the Health Score and any future score need — reuse it, don't design a second explainability UI.
+- `lib/engine/mockCoach.ts` + test file — deterministic, well-tested, and the actual generated copy is genuinely good ("a whey shake covers ~46g" register) — match that voice for every new rule you add.
+- `app/api/coach/route.ts` — already uses current, correct Claude API patterns: `output_config: { format: { type: "json_schema", schema } }` for structured outputs (this is GA, not beta), `thinking: { type: "adaptive" }`, model `claude-opus-4-8`, no `temperature`/`top_p` (correctly omitted — unsupported on Opus 4.7+ models), server-side-only key, graceful fallback to mock on any non-200. **Extend `SYSTEM_PROMPT` and `REVIEW_SCHEMA` in place for new domains — do not rewrite this route.**
+- `lib/engine/trainingRules.ts` + test file — pain-aware load scaling, overhead-press flagging, swap suggestions, PR/volume tracking, all correct.
+- `components/training/PainStopModal.tsx` — the sharp-pain stop→log→swap→reduce protocol is already implemented correctly.
+- PWA shell — `public/manifest.json`, `public/sw.js`, `app/layout.tsx`'s Apple meta tags, and `app/globals.css`'s safe-area utilities and 16px-input rule together already satisfy essentially the full PWA/iOS requirement. Treat the PWA phase as a device-verification pass, not a build phase, unless verification finds something broken.
+- `app/globals.css` — design tokens already match spec exactly (base `#0A0A0B`/`#141416`/`#1C1C1F`, ivory `#F5F1E8`, muted `#9B978C`, gold `#C9A961`, success `#3DFF8B`, warning `#FF8A3D`, danger `#FF4D4D`).
+
+**Confirmed personalization to generalize (this fills the Personalization Audit requirement below with real evidence, not guesswork):**
+- `lib/data/defaults.ts` — `DEFAULT_CALORIE_TARGET = 3050`, `DEFAULT_PROTEIN_TARGET = 170`, `DEFAULT_WEIGHT_GOAL = "Gain 4–8 lb (lean-mass focus)"` are one user's bulking targets hardcoded as universal defaults.
+- `lib/types.ts`'s `PainFlags` — five booleans (`thoracic`, `rib`, `scapular`, `upperTrapDominant`, `leftArmAggravation`) hardcoded to one person's injury pattern, wired directly into the training engine. This needs to generalize into a real `InjuryProfile` (see Data Model) while ideally keeping `PainFlags` working as a derived/compatible view so the migration is lower-risk.
+- `lib/data/mealPlan.ts` — one fixed 7-day chicken/beef/salmon-heavy rotation with no diet-preference variants.
+- `lib/data/workoutPlan.ts` — one fixed weekly split, not generated from goals/equipment/experience.
+- `app/(app)/skills/page.tsx` — has a working, page-local `streakFor()` function (walks task history, no persistence, no freezes/earn-back). This is real precedent to generalize into the v2 streak engine, not a gap to fill from nothing.
+- `lib/engine/trends.ts`'s `calculateWeightTrend()` is a raw last-minus-first delta, not a smoothed trend — the exact spot the Adaptive Expenditure Engine extends. Add the new smoothed/expenditure functions alongside it under distinct names; `bodyRules.ts` and `nutritionRules.ts` both call the existing function today, so migrate those call sites deliberately rather than breaking them.
+
+**Two small, specific bugs to fix in Phase 1 (not blockers, but real):**
+- `app/(app)/today/page.tsx`: `workoutStatus === "skipped"` currently maps to the `danger` (red) tone. Per the adherence-neutral rule below, a skipped workout is a missed habit, not a safety event — this should be neutral/muted, matching how missed calories/protein are already (correctly) handled with no color penalty elsewhere in the same file.
+- `app/(app)/nutrition/page.tsx`: the "weight flat 7 days → +250 kcal" banner uses warning-orange styling for what is a helpful suggestion, not a problem. Recommend neutral/gold instead, so warning-orange stays reserved for the two-tier safety signal it carries elsewhere (BP crisis, injury red flags, in v2).
+
+**Gaps not yet mentioned above that are pure net-new work:** no Health tab, no Relationships tab, no general streak persistence, no user-configurable Forge Score weights, no workout builder, no diet-preference filtering, no data export/import, no schema versioning/migration step in `localStorageAdapter.ts`.
+
+## 0.2 Produce these files (audit-only — no production code yet)
+
+**AUDIT.md** — repo map (framework/versions/package manager/routes/components/storage/tests/build commands); feature inventory (what exists vs. what v2 needs, using 0.1 as the starting point and adding anything 0.1 missed); personalization audit (use the concrete findings above as the seed list, and look for anything else hardcoded to one user, one injury, one goal, one diet, one workout plan, one relationship situation, one money situation); architecture audit; PWA audit (confirm 0.1's claims on-device where possible); UI/UX audit (nav crowding — see Navigation below); safety audit (which disclaimers exist today vs. the required set); risk list; exact build/test status as of this run.
+
+**CLAUDE.md** (~150 lines) — stack + package manager, run/test/build/typecheck commands, folder conventions, the StorageAdapter rule, the pure-engine rule, the design-token file and adherence-neutral color rule (cite the two Phase-1 bugs above as the concrete "don't do this" example), the `forge30:*` key convention, the note that `/api/coach` and `mockCoach.ts` are already correct and should be extended not replaced, accessibility rule, commit convention, and "read V2_SPEC.md before large changes."
+
+**V2_PLAN.md** — phase-by-phase plan mapped onto the Build Phases section below, adjusted for what 0.1 already found true. For each phase: goals, files affected (cite real paths), acceptance criteria, tests required, migration considerations, risks, what to verify manually.
+
+**Stop after Phase 0 and wait for approval.**
+
+---
+
+# PRODUCT POSITIONING
+
+Forge30 v2 should feel like: MacroFactor-style adaptive nutrition intelligence · Strong/Fitbod-style fast workout logging and progression · WHOOP/Oura-style score explanations and recovery awareness · Cronometer-style health data seriousness · YNAB/Monarch/PocketGuard-style financial clarity · Headspace-style calm mental reset tools · Paired/Gottman-inspired relationship prompts and repair tools · Streaks/Duolingo-inspired consistency mechanics without shame · a private AI coach that connects every domain.
+
+Do not clone any app. Use category best practices and create something more unified.
+
+The app should be universal, configurable, premium, fast, calm, nonjudgmental, useful in under 5 minutes a day, deeper when the user wants depth, and safe around medical, mental health, relationship, and financial topics.
+
+---
+
+# TECH STACK
+
+Use the existing repo stack — it's already the right stack, confirmed in 0.1. Next.js App Router · TypeScript strict · Tailwind CSS v4 · existing component system (shadcn-style, hand-rolled where iOS reliability mattered — e.g. native `<select>` over a Radix select, confirmed a deliberate and correct choice, keep that pattern for new form controls) · Recharts · Vitest for pure engine tests · localStorage behind `StorageAdapter` · `SupabaseAdapter` stays a stub unless explicitly approved · `/api/coach` (existing, extend) and new `/api/research` route, both server-side-key-only · mock AI engine always works with no live key · Vercel deploy · installable PWA with iOS Add to Home Screen.
+
+---
+
+# DESIGN SYSTEM
+
+Forge30 should feel like a premium personal command center, not a homework app. Confirmed already shipped correctly (0.1): dark-first, matte black/charcoal base, warm ivory text, muted gold accent, electric green only for completion/progress, orange/red only for genuine safety warnings, neutral gray for missed/incomplete items, no shame UI, no "failed" language, no red calorie bars for normal variance, no motivational fluff, no clutter, one hero number per screen, large tap targets, fast numeric inputs, smooth cards, premium tabular numerals, mobile-first, with desktop widening into a centered command dashboard (Progress, Health, and Money get wider layouts).
+
+## Navigation — a decision, not an open question
+
+Ten top-level sections (Today · Health · Nutrition · Training · Mind · Money · Relationships · Skills · Progress · Coach) is too many for a bottom tab bar. Recommended default: a 5-item bottom nav — **Today · Log · Coach · Progress · More** — where **Log** opens a sheet/grid linking to Nutrition, Training, Mind, Money, Health, Relationships, and Skills, and **More** holds Settings plus anything else. Today's quick-action buttons still deep-link straight into each domain, so the common paths stay two taps or fewer. Confirm what the current `BottomNav.tsx` already does in Phase 0 before assuming this needs to change — if it already handles overflow well (e.g., a scrollable strip or an existing "more" pattern), adapt this recommendation rather than replacing something that works. Whichever pattern is used, update `BottomNav.tsx` and `sw.js`'s `SHELL_ROUTES` **in the same commit** — the service worker will silently miss new pages if only the nav changes.
+
+The first screen is always the Today dashboard. Never a marketing page.
+
+---
+
+# CORE UX PRINCIPLES
+
+### 1. Speed logging
+Every daily log possible in under 30 seconds: quick-add templates, favorites, recents, repeat-yesterday, one-tap completion, numeric keypads (`inputmode="decimal"` — already used correctly in `OnboardingGate.tsx` and `settings/page.tsx`, follow that precedent), large buttons, minimal required fields, optional notes behind expansion, smart defaults. Essentials loggable in under 5 minutes a day.
+
+### 2. Adherence-neutral design
+Never shame the user. Use neutral copy: "Not logged yet," "Still open," "Ready when you are," "Next best action," "Recovery day," "Minimum Viable Day available." Avoid: failed, bad, ruined, cheat, lazy, and warning colors for normal missed targets. Red/orange reserved exclusively for: blood pressure crisis, injury red flags, emergency/crisis guidance, serious safety escalation. (See Phase 0's two confirmed violations to fix first — they're the concrete reference for what this rule catches.)
+
+### 3. Explainable scores
+Every score is tappable: Forge Score, Health Score, Readiness, Relationship Score, Money Score — show components, points earned, points possible, explanation, penalties, what to do next. `ScoreRing.tsx` already does this for Forge Score — reuse that exact pattern for every new score rather than inventing a new one per domain.
+
+### 4. Minimum Viable Day
+The app supports hard days. Default MVD: log one meal + complete the daily check-in. User-customizable. Perfection is measured by scores; consistency is measured by streaks. Keep them conceptually and visually separate.
+
+---
+
+# ONBOARDING
+
+Skippable with sensible defaults (the existing single-screen, skip-to-defaults pattern in `OnboardingGate.tsx` already works well — extend it, or split into a short multi-step flow only if the single screen gets genuinely too dense; operator's call if Phase 0 finds it's already crowded).
+
+Collect: name, age, sex, height, weight, goal weight, primary goal, secondary goals, activity level, training experience, equipment, dietary preference, dietary restrictions, sleep target, water target, budget goal, daily spending limit, relationship status, social goals, health concerns, injuries, medications/supplements (optional), bloodwork (optional), blood-pressure-tracking preference, fitness-markers preference, general tracking preferences, domain enable/disable (so someone who doesn't want a Relationships tab can turn it off — this then drives Forge Score renormalization), and Minimum Viable Day definition.
+
+Goal options: gain muscle · lose fat · recomposition · maintain · improve health markers · improve blood pressure · improve strength · improve cardio fitness · improve sleep · reduce stress · improve relationship · improve dating life · build friendships · improve finances · build discipline · learn skills · general reset.
+
+---
+
+# DATA MODEL
+
+Strict, centralized TypeScript types in `lib/types.ts`, added alongside the existing 373 lines (0.1) — not a rewrite.
+
+New/expanded types: `UserGoal`, `FoodItem`, `Recipe`, `WorkoutPlan`, `Exercise` (tagged per the Training section), `InjuryProfile` (generalizes `PainFlags` — body area, diagnosis if known, symptoms, pain score, aggravating movements, relieving movements, medical restrictions, onset date, professional care received, notes), `InjuryModification`, `HealthMarker`, `BloodPressureEntry`, `BloodworkReport`, `Biomarker`, `BudgetReview`, `RelationshipCheckIn`, `ConflictDebrief`, `PersonalityAssessment`, `CompatibilityReport`, `SocialGoal`, `SkillTrack`, `StreakState`, `ExpenditureEstimate`, `ForgeScoreBreakdown`, `HealthScoreBreakdown`.
+
+Already exist and stay as-is: `UserProfile` (extended per Onboarding), `DailyLog`, `MealEntry`, `WorkoutEntry`, `ExerciseSet`, `JournalEntry`, `SpendingEntry`, `SkillTask`, `AIReview`, `WeeklySummary`, `BodyMetric`.
+
+Persistence: all reads/writes through `StorageAdapter` (already true). Add schema versioning + a `migrate()` function in `localStorageAdapter.ts` **before** any v2 type lands — every phase after this one changes the data shape, so version the schema first or risk corrupting real users' data on upgrade. Write migration tests proving today's actual data shape survives untouched. Add JSON export/import in Settings (currently missing — Settings has profile editing and a full reset, but no way to back up or move data).
+
+---
+
+# ENGINE FUNCTIONS
+
+Pure logic in `/lib/engine`, one file per domain (the existing convention — `forgeScore.ts`, `mockCoach.ts`, `trainingRules.ts`, `nutritionRules.ts`, `trends.ts`, `bodyRules.ts`, `weeklySummary.ts`, `coachContext.ts`, `dailySync.ts`, `plan.ts` — keep following it).
+
+**Already implemented, confirmed correct:** `calculateForgeScore`, `calculateMacroTotals`, `generateMockAIFeedback`, `computePersonalRecords`/workout-completion logic, `getPainAwareWorkoutAdjustment`, `calculateSpendingBreakdown`, `calculateWeightTrend` (the raw-delta version — keep it as the fallback path).
+
+**Net new:** `calculateNutritionAdherence`, `estimateExpenditure`, `runWeeklyCheckIn` (new `expenditure.ts`, alongside `trends.ts`'s new smoothed-trend function — see Nutrition section), `calculateHealthMarkerTrend`, `categorizeBloodPressure`, `parseBloodworkInput`, `summarizeBiomarkers`, `calculateHealthScore` (new `healthRules.ts`); `generateInjuryModification` (extends `trainingRules.ts`); `generateRelationshipPrompt`, `generateConflictRepairSuggestion`, `calculateCompatibilityInsights`, `calculateRelationshipInsights` (new `relationshipRules.ts`); `detectPatterns` (new `lifeGraph.ts` — see LifeGraph section); `updateStreak` with MVD/freeze/earn-back/weekly-mode logic (new `streaks.ts`, generalizing `skills/page.tsx`'s existing `streakFor()`); `calculateSafeToSpend` (extends money logic); `calculateReadinessScore`.
+
+**Minimum test coverage** (matching the rigor of the existing suite — never regress it): Forge Score weights/disabled-domain renormalization/penalties/partial credit (extend existing tests) · expenditure engine calibrating state, data-quality guards, recalibration math · streak engine MVD/freezes/earn-back/weekly streaks · BP categories and crisis flow (every AHA boundary) · injury modification and red-flag escalation · mock coach rules (extend existing tests, don't replace) · storage migration · relationship prompt generation · spending breakdown (extend existing tests) · bloodwork parser basics.
+
+---
+
+# TODAY DASHBOARD
+
+Answers: "Am I on track today, and what's my next best action?"
+
+Cards: Forge Score (reuse the existing `ScoreRing.tsx` pattern) · streak flame · Minimum Viable Day status · calories · protein · hydration · workout/movement · steps · sleep · blood pressure (if enabled) · resting heart rate (if enabled) · mood/stress · relationship/social check-in · spending check · skill progress · AI daily recommendation.
+
+Quick actions: Add Meal · Start Workout · Log Health Marker · Log Blood Pressure · Journal · Log Spending · Relationship Check-In · Skill Task · Get AI Feedback.
+
+Everything important reachable in two taps or fewer. Fix the `workoutStatus === "skipped"` danger-tone bug (0.1) while touching this file.
+
+---
+
+# FORGE SCORE
+
+Default weights: nutrition adherence 15 · protein 15 · hydration 10 · movement/training 15 · recovery/sleep 10 · health-marker check-in 5 · mental reset 10 · spending check 10 · relationship/social check-in 5 · skill progress 5. User-visible and adjustable; renormalize to 100 when a domain is disabled (this is why domain enable/disable belongs in onboarding). Extend `forgeScore.ts` and its test suite — don't replace either.
+
+Caution modifiers (configurable, neutral-toned): severe pain · very high stress · very poor sleep · blood pressure in concerning range · major unnecessary spending over limit · unresolved relationship conflict · doctor-directed task skipped.
+
+---
+
+# HEALTH TAB (new)
+
+## Bloodwork input and AI review
+Manual entry, copy/paste parser, and a PDF/image-upload placeholder (mock parser is fine for MVP — real extraction is future work). Each biomarker: name, value, unit, reference range, lab flag, lab date, notes, trend vs. previous.
+
+Seed dictionary: CBC (WBC, RBC, hemoglobin, hematocrit, platelets, neutrophils, lymphocytes) · CMP (glucose, BUN, creatinine, eGFR, sodium, potassium, chloride, CO2, calcium, albumin, total protein, bilirubin, AST, ALT, ALP) · lipids (total cholesterol, LDL, HDL, triglycerides, ApoB, Lp(a)) · glucose metabolism (fasting glucose, A1c, fasting insulin) · thyroid (TSH, free T4, free T3, antibodies) · iron (ferritin, iron, TIBC, transferrin saturation) · vitamins (D, B12, folate) · inflammation (hs-CRP, ESR) · hormones (total/free testosterone, SHBG, estradiol, DHEA-S, cortisol).
+
+AI review must: compare against the lab's own ranges, identify in/out-of-range markers, explain what markers generally relate to, identify patterns worth discussing with a clinician, suggest lifestyle areas to review, generate doctor-visit questions, state uncertainty clearly, avoid diagnosis, avoid medication changes, avoid disease claims.
+
+## Blood pressure tracker
+Fields: systolic, diastolic, pulse, time, body position, cuff location, caffeine/exercise/stress context, notes.
+
+Categories (AHA): normal <120 and <80 · elevated 120–129 and <80 · stage 1 130–139 or 80–89 · stage 2 ≥140 or ≥90 · crisis >180 and/or >120.
+
+Crisis behavior: urgent warning; if chest pain, shortness of breath, back pain, numbness, weakness, vision changes, or trouble speaking accompany it, instruct emergency care immediately. Never diagnose hypertension. Encourage proper measurement technique and clinician confirmation.
+
+## Fitness markers
+Weight, trend weight, waist, body-fat estimate, resting heart rate, HRV, sleep duration/quality, steps, cardio minutes, zone-2 minutes, VO2max estimate, grip strength, push-up test, plank time, one-mile time, mobility, pain, energy, soreness.
+
+## Health Score
+Configurable educational composite: movement, sleep, weight/waist, blood pressure, glucose markers, lipid markers, nutrition quality, nicotine avoidance, recovery markers. Explainable via the `ScoreRing.tsx` pattern. Never diagnostic.
+
+Add "Health" to `BottomNav.tsx`/nav sheet and `sw.js`'s `SHELL_ROUTES` in the same commit as this phase.
+
+---
+
+# NUTRITION TAB
+
+Supports all goals: gain muscle · lose fat · recomp · maintain · performance · general health · biomarker improvement.
+
+Features (mostly already present — 0.1): calorie/protein/carb/fat/fiber/water targets, macro rings, meal planner, grocery list, saved meals, recipe builder, custom foods, quick-add foods, meal-prep mode, repeat-yesterday, favorites, recents, "Still Need Today" card (already good copy in `getNutritionRecommendation()` — match that register for new suggestions), diet-preference-aware suggestions (net new — `mealPlan.ts` is currently one fixed rotation, add filtering/variants).
+
+**Flagship feature: Adaptive Expenditure Engine.** Estimate real-world energy expenditure over time from logged calories + smoothed trend weight over rolling 14–21 day windows, with data-quality guards and weekly recalibration. Use the static formula only while calibrating (first 2–3 weeks, or whenever data quality guards fail), with a plain-language "calibrating — N more days" state. Show: trend weight, estimated expenditure, target adjustment, and *why* it changed, in copy matching the existing suggestion voice. Implementation note from 0.1: add `calculateSmoothedWeightTrend` to `trends.ts` under a new name (don't replace `calculateWeightTrend`, which stays as the fallback), and add `estimateExpenditure`/`runWeeklyCheckIn` in a new `expenditure.ts`.
+
+Fix the nutrition banner warning-tone bug (0.1) while in this file.
+
+---
+
+# TRAINING TAB
+
+Universal, not hardcoded to one injury profile or one split.
+
+Build: workout builder, workout logger (exists, keep — `ExerciseCard.tsx`/`RestTimer.tsx`/`SwapSheet.tsx`/`HeatMap.tsx` are all solid per 0.1), exercise library, injury-aware modifications, progression engine, workout history, PR tracker (exists), weekly volume (exists), muscle-group heat map (exists).
+
+Workout builder inputs: goal, days/week, session length, equipment, experience, injuries, movement restrictions, liked/disliked exercises, sport/activity needs. This is entirely net-new — `workoutPlan.ts` today is one fixed seeded split.
+
+Exercise library tags: muscle groups, equipment, movement pattern, difficulty, unilateral/bilateral, push/pull/squat/hinge/carry/core, cardio/mobility/prehab, injury-caution tags, substitution options. Add these tags to `ExerciseDef` entries in `workoutPlan.ts` so the builder has something to filter on.
+
+Logger: sets, reps, weight, RPE, rest timer, notes, pain rating per set, completed state, exercise swap, next target — all exist, extend as needed.
+
+Injury-aware engine: user can input any injury or limitation via the new `InjuryProfile`; a guided intake asks clarifying questions; suggests safer substitutions, warm-ups, mobility, commonly-used strengthening work, and load modifications; explains *why* each swap is suggested; never claims to treat or heal; never replaces a clinician/PT/AT. Generalize `generateInjuryModification` from the existing `getPainAwareWorkoutAdjustment` in `trainingRules.ts` rather than writing a parallel system — the existing pain-load-scaling math (7→15%, 8→20%, 9+→25%) is correct and should keep working for the specific thoracic/rib/scapular case it currently covers, now as one instance of the general engine.
+
+Red flags (always "seek medical evaluation," never train through): sudden severe pain, numbness, weakness, loss of bowel/bladder control, chest pain, shortness of breath, unexplained swelling, fever with joint pain, major trauma, progressive neurologic symptoms.
+
+---
+
+# MIND TAB
+
+Existing and correct: daily mood/stress/anxiety/anger/energy check-in, sleep quality, trigger, thought dump, what-I-can-control, what-I-need-to-release, gratitude, boundary practiced, 10-minute reset, 60-second breathing timer, pause-before-reacting card, sleep wind-down. Keep all of this as-is.
+
+Net new: CBT-style thought record + reframing prompts, pattern detection (recurring triggers surfaced over time from existing `JournalEntry` history — feed this into the LifeGraph engine below rather than building a separate detector).
+
+AI should identify repeating triggers, suggest coping tools and reflection prompts, suggest professional support when appropriate — never diagnose, never label other people, never act as crisis care. Confirm the section's copy matches the mental-health disclaimer verbatim (Safety Requirements below) rather than assuming the existing careful phrasing already covers it.
+
+---
+
+# MONEY TAB
+
+Existing and correct, keep as-is: daily spending log (necessary/unnecessary, business/personal, stress-purchase flag, category, note — already <30s to log), weekly budget review (income expected, bills due, food budget, debt payment, business budget, emergency buffer, one thing to cut, one thing to sell/liquidate).
+
+Net new: recurring expenses, debt list, savings goals, emergency fund, cash-flow view, safe-to-spend number, category caps, recurring-expense review, stress-spending pattern detection (feed into LifeGraph).
+
+AI should identify stress-spending patterns, suggest spending limits, suggest review questions, help users see cash-flow risk — never provide professional financial, tax, legal, or investment advice.
+
+---
+
+# RELATIONSHIPS TAB (new)
+
+Relationship fitness and human connection — explicitly not a dating app.
+
+Modes: single/dating · in a relationship · married/long-term · complicated · family focus · friendship focus · social confidence.
+
+Daily check-in: relationship type, connection 1–10, communication 1–10, conflict yes/no, repair attempt yes/no, appreciation expressed yes/no, boundary respected yes/no, feeling heard 1–10, feeling safe 1–10, note.
+
+Prompt decks: getting to know · emotional intimacy · conflict repair · values · money · family · intimacy for adults · future planning · appreciation · apology · boundaries · friendship building · family connection.
+
+Conflict debrief: what happened, what I felt, what I needed, what they may have needed, what I did well, what I did poorly, repair attempt, boundary needed, next calm message. AI output: neutral summary, pattern identification, repair language, calm-message draft, pause-before-responding suggestion, boundary suggestion — never diagnose the other person, never label someone (narcissist/borderline/etc.), never encourage unsafe reconciliation when abuse indicators exist.
+
+Assessments (optional): Big Five, attachment style, love languages, conflict style, communication style, values ranking, lifestyle compatibility, financial style, social energy, emotional regulation style. Couples answer separately, see similarities/differences/discussion prompts/friction points — never a deterministic compatible/incompatible verdict. Dating: clarify valued traits, better prompts, red/green-flag reflection, post-date reflection. Friendship: outreach + follow-up tracking, activity suggestions, conversation starters. Family: difficult-topic tracking, boundary planner, repair planner, appreciation prompts, recurring check-ins.
+
+Micro-lessons: active listening, repair attempts, validation, boundaries, secure communication, apologizing, raising hard topics, respectful disagreement, noticing patterns without blame, communication differences without stereotyping, intentional dating, friendship maintenance, family boundaries. Include inclusive, non-stereotyped tips for men, women, and everyone.
+
+---
+
+# SOCIAL CONNECTION
+
+First-class lifestyle category: friendship goals, weekly outreach goal (weekly streak mode, see Streaks), social calendar, interest-based activity ideas, post-event reflection, reach-out nudges, loneliness/self-isolation pattern detection (feed into LifeGraph), low-pressure outreach suggestions.
+
+---
+
+# SKILLS TAB
+
+Configurable tracks. Existing: finance, emotional regulation, functional movement. Add: nutrition basics, communication, sleep optimization, career/business, social confidence.
+
+Each track: 30-day curriculum, daily 10–20 minute task, weekly milestone, notes, XP, streak (via the new `lib/engine/streaks.ts`, replacing the page-local `streakFor()`), AI feedback, optional book checklist.
+
+---
+
+# STREAK SYSTEM
+
+Build `lib/engine/streaks.ts` as the generalized, persisted version of `skills/page.tsx`'s existing `streakFor()` — same underlying consecutive-day-walk idea, now backed by a `StreakState` type through `StorageAdapter`, covering skills, the app-wide daily streak, and weekly-mode habits.
+
+Features: MVD streak, streak freezes (hold up to 2, auto-consumed on a miss, earned at 7-day milestones — not free/infinite), earn-back repair (2 consecutive MVDs within 48h of a break restores it), weekly streaks for workouts/social outreach (3-of-7 counts, so travel/illness doesn't wipe months of consistency), milestones at 7/14/21/30 days with a shareable card, neutral/warm comeback flow.
+
+Rules: MVD counts consistency, Forge Score counts quality — don't conflate them. Never punish hard days. Never shame missed days. Warm recovery language always.
+
+---
+
+# PROGRESS TAB
+
+Charts (Recharts, existing dark theme): Forge Score (exists), Health Score (new), weight raw + trend, estimated expenditure/TDEE, calories/protein (exist), BP, resting HR, HRV, sleep, workouts (exist), PRs (exist), steps/cardio, spending (exists), mood/stress (exists), relationship connection, social outreach, skills (exists), pain (exists), energy.
+
+Include: 30-day calendar (exists, extend states as needed), weekly report (exists, extend), trend summaries, doctor-ready health export, print stylesheet, JSON export/import (net new — see Data Model), AI weekly review.
+
+---
+
+# COACH TAB
+
+The AI Coach is the core differentiator. It analyzes nutrition, workouts, health markers, blood pressure, bloodwork, sleep, recovery, injuries, pain, mood, stress, spending, relationships, social connection, skills, journal notes, and weekly trends.
+
+Daily AI output structure — **extends** the existing 8-part `CoachReview` with two new fields rather than replacing it (append `healthAdjustment` and `relationshipSocialAdjustment`; existing consumers of the 8-field shape keep working):
+1. Score explanation
+2. What went well
+3. What slipped
+4. One health adjustment *(new)*
+5. One nutrition adjustment
+6. One training adjustment
+7. One money adjustment
+8. One mental adjustment
+9. One relationship/social adjustment *(new)*
+10. Tomorrow's #1 priority
+
+Tone: calm, direct, premium, honest, encouraging, nonjudgmental, not cheesy, no diagnosis, no fearmongering, no fake certainty — the existing `mockCoach.ts` already nails this register; match it exactly for new rules rather than introducing a different voice.
+
+**Live route:** extend `app/api/coach/route.ts` in place (0.1 confirmed it's already correct) — grow `REVIEW_SCHEMA` and `SYSTEM_PROMPT` together for the two new fields and new guardrails, keep `thinking: { type: "adaptive" }` and `output_config.format` as they are, keep the model on `claude-opus-4-8` (verified GA-correct, appropriate for a consumer coaching feature; `claude-sonnet-5` is a reasonable cheaper fallback to offer as a config option if cost becomes a concern, but don't default to it without being asked). Server-side key only. Structured JSON day summary + 7-day trend summary. Defensive parsing. Mock fallback on any error — this behavior already exists, preserve it.
+
+**Research mode** (new, optional, live-AI only): credible sources only (official medical organizations, peer-reviewed research, clinical guidelines), cites sources, separates evidence from speculation, states uncertainty, never presents research as diagnosis or a treatment plan. New `/api/research` route, same server-side-key-only discipline as `/api/coach`.
+
+**Mock engine** (extend `mockCoach.ts`, don't replace — must keep working with zero API key): existing rules (protein short >30g → named add-on; calories short >400 → calorie-dense suggestion; weight-trend-flat → weekly-check-in-style adjustment; pain >6 → lower intensity + modifications; stress >7 → breathing reset + journal; unnecessary spend over limit → next-day cap; skill missed two days → 10-minute minimum) all stay. Add: repeated elevated BP → track context + discuss with clinician; BP crisis → urgent warning; conflict without repair → calm repair attempt; social isolation high → one low-pressure outreach.
+
+---
+
+# LIFEGRAPH / PATTERN ENGINE
+
+A named, deliberately deterministic cross-domain pattern detector — this is a real differentiator, but it must stay honest about what it is: simple co-occurrence counting over the user's own logged history, not statistical inference or ML, and it must never claim more certainty than that.
+
+**Implementation approach:** for a defined set of domain-pair flags (e.g., "high stress day" = stress ≥7, "elevated spend day" = unnecessary spend > limit), count how often flag B is true on days flag A was also true (or the day after, for lagged effects like sleep→next-day BP) over the trailing 30 days, against a minimum sample-size guard (e.g., require at least 5 qualifying days before surfacing anything — small samples produce false patterns and that's worse than showing nothing). Surface only pairs crossing a co-occurrence threshold (e.g., ≥60%), phrased as "possible pattern," never as causation.
+
+Examples to seed: high stress + poor sleep → higher spending · relationship conflict → skipped workouts · low protein → worse hunger/mood · poor sleep → higher BP readings the next day · pain flare → lower movement + higher stress · missed planning → worse nutrition · social isolation → lower mood · caffeine + stress → elevated BP context · late logging → lower adherence.
+
+MVP: deterministic pattern detection from 7-day and 30-day logs, "possible pattern" language, avoid certainty, recommend one next experiment. Example: "Possible pattern: your highest spending days happened after low sleep and high stress. Tomorrow, use the pause check before purchases over your set limit." Build as `lib/engine/lifeGraph.ts`, feeding off the same domain data everything else already logs — no new tracking surfaces required to power it.
+
+---
+
+# SAFETY REQUIREMENTS
+
+The app never claims to: diagnose medical conditions, treat/cure/prevent disease, replace a physician/therapist/emergency care/dietitian/financial advisor/lawyer, guarantee injury recovery, guarantee relationship success.
+
+The app may: summarize user data, flag values worth discussing with a professional, suggest general wellness habits, suggest safer training modifications, encourage professional evaluation, help prepare questions for professionals, provide educational information, provide communication tools, provide budgeting awareness.
+
+**Required disclaimers (verbatim, persistent in each section):**
+
+Health/bloodwork: *"Forge30 provides educational wellness insights only. It does not diagnose, treat, cure, or prevent disease. Always consult a qualified healthcare professional for interpretation of bloodwork, symptoms, medications, injuries, or medical concerns."*
+
+Mental health: *"Forge30 supports reflection and habit-building. It is not therapy, crisis care, or diagnosis. If you are in danger or may harm yourself or someone else, contact emergency services or a crisis hotline immediately."*
+
+Relationships: *"Forge30 provides relationship education and communication tools. It does not determine whether a relationship is safe, abusive, compatible, or worth continuing. If there is violence, coercion, threats, stalking, or fear, seek professional/legal/domestic violence support."*
+
+Finance: *"Forge30 provides budgeting and spending awareness tools. It is not professional financial, tax, legal, or investment advice."*
+
+Verify the Mind tab's existing copy against the mental-health disclaimer verbatim rather than assuming it already matches (0.1 found the spirit is right but didn't confirm the exact text is present).
+
+---
+
+# BUILD PHASES
+
+Execute in order after Phase 0 is approved. Every phase ends with: typecheck clean → tests pass (count should only grow, never shrink) → build passes → subagent diff review against this spec, explicitly checking the adherence-neutral rule → gaps fixed → commit with a descriptive message.
+
+**Phase 1 — Foundation hardening.** Fix the two confirmed Phase-1 bugs (0.1: skipped-workout danger tone, nutrition banner warning tone). Add schema versioning + `migrate()` to `localStorageAdapter.ts`. Add migration tests proving today's real data survives. Add JSON export/import to Settings. This phase touches no new features — everything after it depends on this being solid first.
+
+**Phase 2 — PWA/iOS verification.** 0.1 found this essentially complete. Device-verify on a real iPhone: standalone launch, safe-area rendering, offline shell, no input-zoom, correct icons. Fix anything that fails; otherwise this is a checklist, not a build.
+
+**Phase 3 — Onboarding and universal profile.** Replace personal-specific defaults in `lib/data/defaults.ts`. Expand `OnboardingGate.tsx` per the Onboarding section. Add domain enable/disable. Add MVD configuration. Generalize `PainFlags` toward `InjuryProfile` (keep `PainFlags` working as a compatible view for the existing training engine).
+
+**Phase 4 — Adaptive nutrition engine.** `calculateSmoothedWeightTrend` in `trends.ts`, `estimateExpenditure`/`runWeeklyCheckIn` in new `expenditure.ts`. Wire into Nutrition and Progress. Tests for calibrating state, data-quality guards, recalibration math.
+
+**Phase 5 — Streaks, Forge Score, adherence-neutral sweep.** Build `lib/engine/streaks.ts`; migrate `skills/page.tsx` and `coachContext.ts`'s ad hoc `skillMissedTwoDays` onto it. Add app-wide daily streak + flame on Today. Configurable Forge Score weights with renormalization. Full neutral-copy sweep across the app (not just the two confirmed bugs — check everything touched by this phase).
+
+**Phase 6 — Health tab.** New types, `healthRules.ts`, BP tracker + AHA categories + crisis flow, fitness markers, Health Score (via `ScoreRing.tsx`'s pattern), bloodwork manual entry + paste parser + AI review scaffolding, doctor-ready export foundation. Update nav + `sw.js` routes in the same commit.
+
+**Phase 7 — Training upgrade.** Exercise library tagging, workout builder, `InjuryProfile` intake + `generateInjuryModification` (generalizing the existing pain engine), red-flag escalation, logger speed pass.
+
+**Phase 8 — Mind and Relationships.** Thought record + reframing in Mind (feed pattern detection through LifeGraph, don't build a separate detector). Full Relationships tab: check-in, prompt decks, conflict debrief, assessments, social connection tools. Verify all four disclaimers are present verbatim. Update nav + `sw.js` routes.
+
+**Phase 9 — Money, Skills, Progress.** Recurring expenses, debt, savings, emergency fund, safe-to-spend. Additional skill tracks. Remaining Progress charts, weekly reports, print/export flows.
+
+**Phase 10 — Coach and LifeGraph.** Extend `mockCoach.ts` and `app/api/coach/route.ts` (grow schema/prompt, don't rewrite) for the two new output fields and new domain rules. Build `/api/research`. Build `lib/engine/lifeGraph.ts` with the co-occurrence approach above, minimum sample-size guard included from day one.
+
+**Phase 11 — Final polish.** Empty states, loading states, accessibility pass, Lighthouse, README updates (every new section, new nav pattern, expanded onboarding, AI setup, iOS install), Vercel deploy config check, final full-repo review against this spec.
+
+**Phase 12 — Monetization architecture (optional; do not execute unless explicitly requested).** See Subscription Tiers below.
+
+---
+
+# SUBSCRIPTION TIERS (architecture only — Phase 12, optional)
+
+Do not implement payments unless explicitly approved. Design the architecture — feature flags — so subscriptions can be added later without a rearchitecture. Never gate core safety features behind payment (crisis language, red-flag escalation, and the four required disclaimers are always free, at every tier).
+
+- **Free:** basic logging, Today dashboard, limited history, basic Forge Score, basic workouts, basic spending, basic journal, limited AI reviews.
+- **Plus:** unlimited history, advanced charts, custom plans, daily AI reviews, saved meals/workouts, export/import.
+- **Pro:** bloodwork AI, injury-aware training intelligence, adaptive nutrition, advanced money tools, relationship tools, PDF exports.
+- **Max:** unlimited deep AI reviews, research mode, document parsing, voice/photo logging placeholders, wearable integration placeholders, LifeGraph correlations.
+- **Household:** multi-user, couples/family dashboards, shared goals, relationship prompts, household budget.
+
+Feature flags: `free` · `plus` · `pro` · `max` · `household`. If this phase is executed, it's flag-gating existing features, not building new product surface — keep it that way.
+
+---
+
+# ACCEPTANCE CRITERIA
+
+Forge30 v2 is ready when a user can: open the app installed full-screen on iPhone · understand what to do today immediately · configure the app for their own goals · log essentials quickly · track nutrition, training, health, money, mind, relationships, social, and skills · receive adaptive calorie targets from real data · keep consistency through imperfect days · enter blood pressure and receive safe category feedback · input bloodwork and receive educational insights · build workouts around goals, equipment, and injuries · get injury-aware exercise swaps with explanations · track spending and safe-to-spend · debrief conflict and draft calm repair language · improve friendships/social outreach · complete daily skill tasks · tap any score and understand it · export their data · see an occasional honest "possible pattern" surfaced from their own history · receive AI feedback that connects multiple domains into one clear plan for tomorrow.
+
+---
+
+# QUALITY BAR
+
+No lorem ipsum. No broken links. No generic dashboards. No clutter. No shame UI. No unexplained scores. No personal-specific defaults. No diagnosis. No unsafe relationship advice. No financial/legal/tax/investment advice. No hardcoded one-user injury/workout/diet assumptions. No direct `localStorage` calls outside `StorageAdapter`. No scoring math inside UI components. No phase complete without verification. No regression of whatever the test count and clean build are at the start of the phase — check, don't assume.
+
+Build Forge30 v2 like a product people would actually keep on their home screen. The current build already clears that bar for what it covers — v2 widens what it covers without losing what already works.
