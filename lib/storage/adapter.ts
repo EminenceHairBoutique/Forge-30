@@ -67,6 +67,9 @@ export interface StorageAdapter {
   listSkillTasks(from: ISODate, to: ISODate): Promise<SkillTask[]>;
   saveSkillTask(t: SkillTask): Promise<void>;
   deleteSkillTask(id: string): Promise<void>;
+  /** Weeks of the book plan marked read. */
+  getCheckedBooks(): Promise<number[]>;
+  saveCheckedBooks(weeks: number[]): Promise<void>;
 
   // Body metrics
   getBodyMetric(date: ISODate): Promise<BodyMetric | null>;

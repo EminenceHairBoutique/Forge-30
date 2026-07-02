@@ -26,6 +26,7 @@ const KEYS = {
   spending: `${PREFIX}:spending`,
   sundayReviews: `${PREFIX}:sundayReviews`,
   skillTasks: `${PREFIX}:skillTasks`,
+  books: `${PREFIX}:books`,
   bodyMetrics: `${PREFIX}:bodyMetrics`,
   aiReviews: `${PREFIX}:aiReviews`,
 } as const;
@@ -235,6 +236,14 @@ export class LocalStorageAdapter implements StorageAdapter {
       KEYS.skillTasks,
       read<SkillTask[]>(KEYS.skillTasks, []).filter((t) => t.id !== id)
     );
+  }
+
+  async getCheckedBooks(): Promise<number[]> {
+    return read<number[]>(KEYS.books, []);
+  }
+
+  async saveCheckedBooks(weeks: number[]): Promise<void> {
+    write(KEYS.books, weeks);
   }
 
   // -- Body metrics ------------------------------------------------------------------------
