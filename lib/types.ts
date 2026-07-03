@@ -278,6 +278,69 @@ export interface StreakState {
   celebratedMilestones: number[];
 }
 
+// --- Health tab (E7) ----------------------------------------------------------
+
+export type BodyPosition = "seated" | "standing" | "lying";
+export type CuffLocation = "leftArm" | "rightArm" | "wrist";
+
+/** One blood-pressure reading with measurement context (spec §Health). */
+export interface BloodPressureEntry {
+  id: string;
+  date: ISODate;
+  /** Local time "HH:MM". */
+  time: string;
+  systolic: number;
+  diastolic: number;
+  pulse: number | null;
+  position: BodyPosition;
+  cuffLocation: CuffLocation;
+  /** Context that commonly skews readings. */
+  caffeine: boolean;
+  exercise: boolean;
+  stress: boolean;
+  notes: string;
+  createdAt: ISODateTime;
+}
+
+/** One lab value. Lab-provided reference range always beats the dictionary. */
+export interface Biomarker {
+  /** Canonical dictionary name when recognized, else as entered. */
+  name: string;
+  value: number;
+  unit: string;
+  refLow: number | null;
+  refHigh: number | null;
+  /** The lab's own flag (H/L/etc.), verbatim, if present. */
+  labFlag?: string;
+  notes?: string;
+}
+
+/** A bloodwork panel (large store — reports can be long). */
+export interface BloodworkReport {
+  id: string;
+  date: ISODate;
+  labName: string;
+  markers: Biomarker[];
+  notes: string;
+  createdAt: ISODateTime;
+}
+
+/** Fitness/recovery markers beyond BodyMetric (spec §Health §Fitness markers). */
+export interface HealthMarkerEntry {
+  id: string;
+  date: ISODate;
+  restingHR: number | null;
+  hrv: number | null;
+  cardioMinutes: number | null;
+  zone2Minutes: number | null;
+  gripStrengthLb: number | null;
+  pushUps: number | null;
+  plankSec: number | null;
+  mileTimeSec: number | null;
+  bodyFatPct: number | null;
+  createdAt: ISODateTime;
+}
+
 // --- Journal system (E6) ------------------------------------------------------
 
 export type JournalKind = "freewrite" | "thoughtRecord" | "voice";

@@ -1,7 +1,10 @@
 import type {
   AIReview,
+  BloodPressureEntry,
+  BloodworkReport,
   BodyMetric,
   DailyLog,
+  HealthMarkerEntry,
   ISODate,
   JournalConsent,
   JournalEntry,
@@ -105,6 +108,17 @@ export interface StorageAdapter {
   /** Weeks of the book plan marked read. */
   getCheckedBooks(): Promise<number[]>;
   saveCheckedBooks(weeks: number[]): Promise<void>;
+
+  // Health (E7)
+  listBloodPressure(from: ISODate, to: ISODate): Promise<BloodPressureEntry[]>;
+  saveBloodPressure(entry: BloodPressureEntry): Promise<void>;
+  deleteBloodPressure(id: string): Promise<void>;
+  listHealthMarkers(from: ISODate, to: ISODate): Promise<HealthMarkerEntry[]>;
+  saveHealthMarker(entry: HealthMarkerEntry): Promise<void>;
+  /** Bloodwork reports live in the large store — panels can be long. */
+  listBloodwork(): Promise<BloodworkReport[]>;
+  saveBloodwork(report: BloodworkReport): Promise<void>;
+  deleteBloodwork(id: string): Promise<void>;
 
   // Body metrics
   getBodyMetric(date: ISODate): Promise<BodyMetric | null>;

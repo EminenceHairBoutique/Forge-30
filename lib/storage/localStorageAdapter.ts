@@ -1,7 +1,10 @@
 import type {
   AIReview,
+  BloodPressureEntry,
+  BloodworkReport,
   BodyMetric,
   DailyLog,
+  HealthMarkerEntry,
   ISODate,
   JournalConsent,
   JournalEntry,
@@ -48,6 +51,8 @@ const KEYS = {
   tomorrowPlans: `${PREFIX}:tomorrowPlans`,
   streaks: `${PREFIX}:streaks`,
   journalConsent: `${PREFIX}:journalConsent`,
+  bloodPressure: `${PREFIX}:bloodPressure`,
+  healthMarkers: `${PREFIX}:healthMarkers`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -429,6 +434,48 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async saveCheckedBooks(weeks: number[]): Promise<void> {
     write(KEYS.books, weeks);
+  }
+
+  // -- Health (E7) ---------------------------------------------------------------
+  async listBloodPressure(from: ISODate, to: ISODate): Promise<BloodPressureEntry[]> {
+    return read<BloodPressureEntry[]>(KEYS.bloodPressure, [])
+      .filter((e) => inRange(e.date, from, to))
+      .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+  }
+
+  async saveBloodPressure(entry: BloodPressureEntry): Promise<void> {
+    const all = read<BloodPressureEntry[]>(KEYS.bloodPressure, []).filter((e) => e.id !== entry.id);
+    all.push(entry);
+    write(KEYS.bloodPressure, all);
+  }
+
+  async deleteBloodPressure(id: string): Promise<void> {
+    write(KEYS.bloodPressure, read<BloodPressureEntry[]>(KEYS.bloodPressure, []).filter((e) => e.id !== id));
+  }
+
+  async listHealthMarkers(from: ISODate, to: ISODate): Promise<HealthMarkerEntry[]> {
+    return read<HealthMarkerEntry[]>(KEYS.healthMarkers, [])
+      .filter((e) => inRange(e.date, from, to))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async saveHealthMarker(entry: HealthMarkerEntry): Promise<void> {
+    const all = read<HealthMarkerEntry[]>(KEYS.healthMarkers, []).filter((e) => e.id !== entry.id);
+    all.push(entry);
+    write(KEYS.healthMarkers, all);
+  }
+
+  async listBloodwork(): Promise<BloodworkReport[]> {
+    const all = await this.large.list<BloodworkReport>("bloodwork");
+    return Object.values(all).sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async saveBloodwork(report: BloodworkReport): Promise<void> {
+    await this.large.put("bloodwork", report.id, report);
+  }
+
+  async deleteBloodwork(id: string): Promise<void> {
+    await this.large.delete("bloodwork", id);
   }
 
   // -- Body metrics ------------------------------------------------------------------------

@@ -41,7 +41,7 @@ const LOG_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: 
   { href: "/mind", label: "Mind", icon: Brain },
   { href: "/money", label: "Money", icon: Wallet },
   { href: "/skills", label: "Skills", icon: GraduationCap },
-  { href: "/health", label: "Health", icon: HeartPulse, soon: true },
+  { href: "/health", label: "Health", icon: HeartPulse },
   { href: "/relationships", label: "Relationships", icon: HeartHandshake, soon: true },
 ];
 
