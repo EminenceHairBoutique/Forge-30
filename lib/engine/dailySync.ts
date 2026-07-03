@@ -40,14 +40,16 @@ export async function syncDailyLog(
   date: ISODate,
   profile: UserProfile
 ): Promise<DaySnapshot> {
-  const [existing, meals, workout, journal, spending, skillTasks] = await Promise.all([
-    adapter.getDailyLog(date),
-    adapter.listMeals(date),
-    adapter.getWorkout(date),
-    adapter.getJournal(date),
-    adapter.listSpending(date),
-    adapter.listSkillTasks(date, date),
-  ]);
+  const [existing, meals, workout, journal, journalNotes, spending, skillTasks] =
+    await Promise.all([
+      adapter.getDailyLog(date),
+      adapter.listMeals(date),
+      adapter.getWorkout(date),
+      adapter.getJournal(date),
+      adapter.listJournalNotes(date, date),
+      adapter.listSpending(date),
+      adapter.listSkillTasks(date, date),
+    ]);
 
   const log: DailyLog = existing ?? emptyDailyLog(date);
   const totals = calculateMacroTotals(meals);
@@ -67,6 +69,10 @@ export async function syncDailyLog(
     log.stress = journal.stress;
     log.journalDone = true;
   }
+  // A journal note (free-write / thought record / voice) also counts as the
+  // day's mind reset — MVD-eligible (E6). Mood/stress still come only from
+  // the structured check-in.
+  if (journalNotes.length > 0) log.journalDone = true;
 
   log.spendingChecked = log.spendingChecked || spending.length > 0;
   log.skillMinutes = skillTasks.reduce((sum, t) => sum + t.minutes, 0);

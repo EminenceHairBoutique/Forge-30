@@ -41,6 +41,12 @@ export interface CoachInput {
   scoreState: "inProgress" | "final";
   /** Hard Day mode: targets collapsed to the MVD; tone is recovery, not audit. */
   hardDay: boolean;
+  /**
+   * Top journal themes — present ONLY when journal consent for the coach is
+   * on, and only from non-private entries (E6). Empty = no journal signal.
+   * Referenced gently as themes, never quoted, never diagnosed.
+   */
+  journalThemes: string[];
 }
 
 export interface CoachReview {
@@ -156,13 +162,18 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
       : "Money stayed visible and inside the line. That's the whole system working.";
 
   // 7. Mental adjustment — stress >7 → breathing reset + journal-before-conversations.
+  // With journal consent on, the top recurring theme is named gently (a theme,
+  // never a quote, never an interpretation) — the UI adds the attribution line.
+  const topTheme = input.journalThemes[0];
   const mentalAdjustment = highStress
     ? `Stress was ${input.stress}/10. Do the 60-second breathing reset before any emotionally charged conversation, and journal the trigger before you respond to it.`
-    : !input.journalDone
-      ? "No check-in today. Two minutes tonight: mood, stress, one trigger. The pattern only shows up if you log it."
-      : input.mood > 0 && input.mood <= 4
-        ? "Mood ran low today. Keep the wind-down honest tonight and let sleep do the heavy lifting."
-        : "Head was steady today. Bank it — do the reset once tomorrow anyway, before you need it.";
+    : topTheme
+      ? `"${topTheme}" keeps showing up in your journal this week. No verdict there — just worth a two-minute look at what's underneath it, on paper or with someone you trust.`
+      : !input.journalDone
+        ? "No check-in today. Two minutes tonight: mood, stress, one trigger. The pattern only shows up if you log it."
+        : input.mood > 0 && input.mood <= 4
+          ? "Mood ran low today. Keep the wind-down honest tonight and let sleep do the heavy lifting."
+          : "Head was steady today. Bank it — do the reset once tomorrow anyway, before you need it.";
 
   // 8. #1 priority — highest-impact single item. Mid-day it points at the
   // rest of today; after the boundary it points at tomorrow.

@@ -7,6 +7,7 @@ import { DISCLAIMERS } from "@/lib/engine/safetyCopy";
 import { toISODate, uid } from "@/lib/utils";
 import type { JournalEntry } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { JournalSection } from "@/components/journal/JournalSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -269,6 +270,9 @@ export default function MindPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Journal (E6): free-write, thought records, voice — with privacy controls. */}
+      <JournalSection />
 
       <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">{DISCLAIMERS.mentalHealth}</p>
     </div>

@@ -16,6 +16,7 @@ import {
 import { useStorage } from "@/lib/storage/provider";
 import { toISODate, uid } from "@/lib/utils";
 import { buildCoachInput } from "@/lib/engine/coachContext";
+import { JOURNAL_ATTRIBUTION } from "@/lib/engine/journalRules";
 import { generateMockAIFeedback, type CoachReview } from "@/lib/engine/mockCoach";
 import type { AIReview } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
@@ -97,6 +98,8 @@ export default function CoachPage() {
         id: review?.id ?? uid(),
         date: today,
         source,
+        // Consented journal themes shaped this review → attribution shows (E6).
+        journalInformed: input.journalThemes.length > 0,
         createdAt: new Date().toISOString(),
         ...content,
       };
@@ -147,6 +150,9 @@ export default function CoachPage() {
               <p className="mt-1.5 text-sm leading-relaxed text-ivory">{review[key]}</p>
             </Card>
           ))}
+          {review.journalInformed && (
+            <p className="text-center text-xs text-muted">{JOURNAL_ATTRIBUTION}</p>
+          )}
           <p className="text-center text-xs text-muted">
             Generated {new Date(review.createdAt).toLocaleTimeString()} ·{" "}
             {review.source === "live" ? "Anthropic API" : "deterministic mock engine"}

@@ -6,6 +6,7 @@ import { calculateSmoothedWeightTrend, calculateWeightTrend } from "./trends";
 import { syncDailyLog } from "./dailySync";
 import { resolveScoreState } from "./forgeScore";
 import { missedRecentDays } from "./streaks";
+import { notesForConsumer, themesForCoach } from "./journalRules";
 import type { CoachInput } from "./mockCoach";
 
 /**
@@ -33,11 +34,20 @@ export async function buildCoachInput(
   profile: UserProfile
 ): Promise<CoachInput> {
   const snap = await syncDailyLog(adapter, date, profile);
-  const [workout, metrics, skillsRecent] = await Promise.all([
+  const [workout, metrics, skillsRecent, journalConsent] = await Promise.all([
     adapter.getWorkout(date),
     adapter.listBodyMetrics(addDays(date, -6), date),
     adapter.listSkillTasks(addDays(date, -2), addDays(date, -1)),
+    adapter.getJournalConsent(),
   ]);
+
+  // Journal themes reach the coach ONLY through the consent gate (E6):
+  // consent.coach on, private entries excluded, themes only — never text.
+  let journalThemes: string[] = [];
+  if (journalConsent.coach) {
+    const notes = await adapter.listJournalNotes(addDays(date, -6), date);
+    journalThemes = themesForCoach(notesForConsumer(notes, journalConsent, "coach"));
+  }
 
   // Same "last two days both missed" signal, now sourced from the shared
   // streak helper instead of an ad hoc walk (E3). The start-date guard keeps
@@ -77,5 +87,6 @@ export async function buildCoachInput(
     weightTrend7d: smoothedWeekTrend(metrics),
     scoreState: resolveScoreState(new Date().getHours(), profile.dayBoundaryHour),
     hardDay: log.hardDay ?? false,
+    journalThemes,
   };
 }

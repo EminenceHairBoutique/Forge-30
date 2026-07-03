@@ -3,7 +3,9 @@ import type {
   BodyMetric,
   DailyLog,
   ISODate,
+  JournalConsent,
   JournalEntry,
+  JournalNote,
   MealEntry,
   SavedMeal,
   SkillTask,
@@ -70,10 +72,22 @@ export interface StorageAdapter {
   listWorkouts(from: ISODate, to: ISODate): Promise<WorkoutEntry[]>;
   listAllWorkouts(): Promise<WorkoutEntry[]>;
 
-  // Journal
+  // Journal (daily check-in)
   getJournal(date: ISODate): Promise<JournalEntry | null>;
   saveJournal(j: JournalEntry): Promise<void>;
   listJournals(from: ISODate, to: ISODate): Promise<JournalEntry[]>;
+
+  // Journal notes (E6 — free-write/thought-record/voice; large store)
+  listJournalNotes(from: ISODate, to: ISODate): Promise<JournalNote[]>;
+  saveJournalNote(note: JournalNote): Promise<void>;
+  deleteJournalNote(id: string): Promise<void>;
+  /** Consent-controlled deletion: wipes every note and every audio blob. */
+  deleteAllJournalData(): Promise<void>;
+  getJournalConsent(): Promise<JournalConsent>;
+  saveJournalConsent(consent: JournalConsent): Promise<void>;
+  /** Voice-note audio as a data URL, keyed by the note's audioId. */
+  getJournalAudio(audioId: string): Promise<string | null>;
+  saveJournalAudio(audioId: string, dataUrl: string): Promise<void>;
 
   // Spending
   listSpending(date: ISODate): Promise<SpendingEntry[]>;

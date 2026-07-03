@@ -28,6 +28,7 @@ const goodDay: CoachInput = {
   weightTrend7d: 1.2,
   scoreState: "final",
   hardDay: false,
+    journalThemes: [],
 };
 
 describe("generateMockAIFeedback", () => {
@@ -206,5 +207,25 @@ describe("hard day mode", () => {
     expect(r.scoreExplanation.toLowerCase()).toContain("minimum viable day");
     expect(r.wentWell.toLowerCase()).toContain("minimum");
     expect(r.tomorrowPriority.toLowerCase()).toContain("nothing carried over");
+  });
+});
+
+describe("journal themes (E6 — consent-gated upstream)", () => {
+  it("names the top theme gently in the mental adjustment when themes arrive", () => {
+    const r = generateMockAIFeedback({ ...goodDay, stress: 3, journalThemes: ["work", "sleep"] });
+    expect(r.mentalAdjustment).toContain("work");
+    expect(r.mentalAdjustment.toLowerCase()).toContain("journal");
+    // A theme is an observation, never a verdict or a diagnosis.
+    expect(r.mentalAdjustment.toLowerCase()).not.toMatch(/disorder|diagnos|you are|you have/);
+  });
+
+  it("with no themes the mental adjustment is untouched by the journal path", () => {
+    const withEmpty = generateMockAIFeedback({ ...goodDay, journalThemes: [] });
+    expect(withEmpty.mentalAdjustment).not.toContain("keeps showing up");
+  });
+
+  it("high stress still outranks the journal theme", () => {
+    const r = generateMockAIFeedback({ ...goodDay, stress: 9, journalThemes: ["money"] });
+    expect(r.mentalAdjustment).toContain("breathing reset");
   });
 });

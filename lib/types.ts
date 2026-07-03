@@ -278,6 +278,58 @@ export interface StreakState {
   celebratedMilestones: number[];
 }
 
+// --- Journal system (E6) ------------------------------------------------------
+
+export type JournalKind = "freewrite" | "thoughtRecord" | "voice";
+
+/**
+ * A journal note — free-write, CBT thought record, or voice note. Stored in
+ * the IndexedDB large store (bodies can be long; audio is heavy). Distinct
+ * from the daily `JournalEntry` check-in, which stays the structured
+ * mood/stress ritual; either one satisfies the MVD's check-in half.
+ */
+export interface JournalNote {
+  id: string;
+  date: ISODate;
+  kind: JournalKind;
+  /** Free-write body / voice-note caption. */
+  text: string;
+  /** User-chosen tags plus any accepted suggestions. */
+  tags: string[];
+  /**
+   * Private flag — this entry NEVER leaves the journal: excluded from the
+   * coach, assessments, and LifeGraph even when those consents are on.
+   * Always wins over every consent toggle.
+   */
+  private: boolean;
+  // CBT thought record fields (kind === "thoughtRecord").
+  situation?: string;
+  automaticThought?: string;
+  emotion?: string;
+  /** 0–10 intensity of the emotion at the time. */
+  emotionIntensity?: number;
+  evidenceFor?: string;
+  evidenceAgainst?: string;
+  reframe?: string;
+  // Voice note fields (kind === "voice").
+  /** Record id in the large store's journalAudio collection (data URL). */
+  audioId?: string;
+  durationSec?: number;
+  createdAt: ISODateTime;
+}
+
+/**
+ * Journal consent — which consumers may read non-private entries. Default
+ * OFF for every consumer: the journal is private until the user says
+ * otherwise, and per-entry `private` still excludes an entry even when a
+ * consumer is on. Every journal-informed output carries an attribution line.
+ */
+export interface JournalConsent {
+  coach: boolean;
+  assessments: boolean;
+  lifeGraph: boolean;
+}
+
 /** Tonight's intention for tomorrow — feeds the next Morning Plan (E2). */
 export interface TomorrowPlan {
   /** The date the plan is FOR (tomorrow at creation time). */
@@ -544,6 +596,11 @@ export interface AIReview {
   id: string;
   date: ISODate;
   source: "mock" | "live";
+  /**
+   * True when journal themes (consented, non-private) informed this review —
+   * drives the persistent attribution line in the UI (E6).
+   */
+  journalInformed?: boolean;
   scoreExplanation: string;
   wentWell: string;
   slipped: string;

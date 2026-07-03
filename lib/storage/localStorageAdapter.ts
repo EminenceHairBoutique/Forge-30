@@ -3,7 +3,9 @@ import type {
   BodyMetric,
   DailyLog,
   ISODate,
+  JournalConsent,
   JournalEntry,
+  JournalNote,
   MealEntry,
   SavedMeal,
   SkillTask,
@@ -45,6 +47,7 @@ const KEYS = {
   entitlements: `${PREFIX}:entitlements`,
   tomorrowPlans: `${PREFIX}:tomorrowPlans`,
   streaks: `${PREFIX}:streaks`,
+  journalConsent: `${PREFIX}:journalConsent`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -313,6 +316,51 @@ export class LocalStorageAdapter implements StorageAdapter {
     return Object.values(read<Record<ISODate, JournalEntry>>(KEYS.journals, {}))
       .filter((j) => inRange(j.date, from, to))
       .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  // -- Journal notes (E6 — large store: bodies can be long, audio is heavy) -------
+  async listJournalNotes(from: ISODate, to: ISODate): Promise<JournalNote[]> {
+    const all = await this.large.list<JournalNote>("journalNotes");
+    return Object.values(all)
+      .filter((n) => inRange(n.date, from, to))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async saveJournalNote(note: JournalNote): Promise<void> {
+    await this.large.put("journalNotes", note.id, note);
+  }
+
+  async deleteJournalNote(id: string): Promise<void> {
+    const note = await this.large.get<JournalNote>("journalNotes", id);
+    if (note?.audioId) await this.large.delete("journalAudio", note.audioId);
+    await this.large.delete("journalNotes", id);
+  }
+
+  async deleteAllJournalData(): Promise<void> {
+    await this.large.clear("journalNotes");
+    await this.large.clear("journalAudio");
+  }
+
+  async getJournalConsent(): Promise<JournalConsent> {
+    const stored = read<Partial<JournalConsent>>(KEYS.journalConsent, {});
+    // Default OFF for every consumer — absent keys never grant access.
+    return {
+      coach: stored.coach === true,
+      assessments: stored.assessments === true,
+      lifeGraph: stored.lifeGraph === true,
+    };
+  }
+
+  async saveJournalConsent(consent: JournalConsent): Promise<void> {
+    write(KEYS.journalConsent, consent);
+  }
+
+  async getJournalAudio(audioId: string): Promise<string | null> {
+    return (await this.large.get<string>("journalAudio", audioId)) ?? null;
+  }
+
+  async saveJournalAudio(audioId: string, dataUrl: string): Promise<void> {
+    await this.large.put("journalAudio", audioId, dataUrl);
   }
 
   // -- Spending ------------------------------------------------------------------------

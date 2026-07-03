@@ -121,6 +121,7 @@ describe("mock coach output routes clean through the safety check", () => {
     weightTrend7d: 0.1,
     scoreState: "final",
     hardDay: false,
+    journalThemes: [],
   };
 
   it("every part passes on the harshest realistic day — final, in-progress, and hard-day", () => {
@@ -129,6 +130,7 @@ describe("mock coach output routes clean through the safety check", () => {
       { ...base, scoreState: "inProgress" as const },
       { ...base, hardDay: true },
       { ...base, hardDay: true, scoreState: "inProgress" as const },
+      { ...base, stress: 3, journalThemes: ["relationship", "money"] },
     ]) {
       const review = generateMockAIFeedback(variant);
       for (const [part, text] of Object.entries(review)) {
