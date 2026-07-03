@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Wind, TimerOff, MessageCircleHeart, MoonStar, CheckCircle2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
+import { DISCLAIMERS } from "@/lib/engine/safetyCopy";
 import { toISODate, uid } from "@/lib/utils";
 import type { JournalEntry } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
@@ -269,10 +270,7 @@ export default function MindPage() {
         </CardContent>
       </Card>
 
-      <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">
-        Forge30 is for self-reflection and habit support. It is not therapy, diagnosis, crisis
-        support, medical care, legal advice, or financial advice.
-      </p>
+      <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">{DISCLAIMERS.mentalHealth}</p>
     </div>
   );
 }

@@ -24,6 +24,12 @@ export interface ExportFile {
   schemaVersion: number;
   exportedAt: string;
   collections: CollectionSnapshot;
+  /**
+   * Large-record collections (IndexedDB-backed — see largeStore.ts), keyed
+   * collection → recordId → record. Optional/additive: pre-E1 exports don't
+   * have it, and an absent block imports as "no large data".
+   */
+  large?: Record<string, Record<string, unknown>>;
 }
 
 /**
@@ -66,9 +72,15 @@ export function runMigrations(
   return { collections: current, version: SCHEMA_VERSION };
 }
 
-/** Builds the export payload (the adapter supplies the snapshot). */
-export function buildExport(collections: CollectionSnapshot, exportedAt: string): ExportFile {
-  return { app: "forge30", schemaVersion: SCHEMA_VERSION, exportedAt, collections };
+/** Builds the export payload (the adapter supplies the snapshots). */
+export function buildExport(
+  collections: CollectionSnapshot,
+  exportedAt: string,
+  large?: Record<string, Record<string, unknown>>
+): ExportFile {
+  const file: ExportFile = { app: "forge30", schemaVersion: SCHEMA_VERSION, exportedAt, collections };
+  if (large && Object.keys(large).length > 0) file.large = large;
+  return file;
 }
 
 /**
@@ -93,10 +105,18 @@ export function validateExport(raw: unknown): ExportFile {
   if (typeof candidate.collections !== "object" || candidate.collections === null || Array.isArray(candidate.collections)) {
     throw new Error("This export file has no data collections.");
   }
-  return {
+  const file: ExportFile = {
     app: "forge30",
     schemaVersion: candidate.schemaVersion,
     exportedAt: typeof candidate.exportedAt === "string" ? candidate.exportedAt : "",
     collections: candidate.collections as CollectionSnapshot,
   };
+  if (
+    typeof candidate.large === "object" &&
+    candidate.large !== null &&
+    !Array.isArray(candidate.large)
+  ) {
+    file.large = candidate.large as ExportFile["large"];
+  }
+  return file;
 }

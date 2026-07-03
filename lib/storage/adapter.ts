@@ -13,6 +13,7 @@ import type {
   WorkoutEntry,
 } from "@/lib/types";
 import type { ExportFile } from "./migrations";
+import type { Tier } from "@/lib/engine/entitlements";
 
 /**
  * Every read/write in the app goes through this interface. The MVP ships a
@@ -34,6 +35,10 @@ export interface StorageAdapter {
   exportAll(): Promise<ExportFile>;
   /** Replaces all stored data with the (validated, migrated) file contents. */
   importAll(file: ExportFile): Promise<void>;
+
+  // Entitlements (local until real subscription state lands — see expansion plan E16)
+  getTier(): Promise<Tier>;
+  saveTier(tier: Tier): Promise<void>;
 
   // Daily logs
   getDailyLog(date: ISODate): Promise<DailyLog | null>;

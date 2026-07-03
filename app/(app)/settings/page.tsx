@@ -6,6 +6,10 @@ import { Download, Save, Trash2, Upload } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { toISODate } from "@/lib/utils";
 import { validateExport, type ExportFile } from "@/lib/storage/migrations";
+import { flagEnabled } from "@/lib/flags";
+import { TIERS, isTier } from "@/lib/engine/entitlements";
+import { useTier } from "@/lib/hooks/useTier";
+import { Select } from "@/components/ui/select";
 import type { PainFlags, UserProfile } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +28,7 @@ const PAIN_FLAG_LABELS: { key: keyof PainFlags; label: string }[] = [
 
 export default function SettingsPage() {
   const { adapter, profile, saveProfile, touch } = useStorage();
+  const { tier } = useTier();
   const router = useRouter();
   const [draft, setDraft] = useState<UserProfile | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -257,6 +262,36 @@ export default function SettingsPage() {
           {dataMessage && <p className="text-sm text-muted">{dataMessage}</p>}
         </CardContent>
       </Card>
+
+      {flagEnabled("devTierSwitcher") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dev — entitlement tier (QA only)</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <Select
+              aria-label="QA tier"
+              value={tier}
+              onChange={async (e) => {
+                const next = e.target.value;
+                if (isTier(next)) {
+                  await adapter.saveTier(next);
+                  touch();
+                }
+              }}
+            >
+              {TIERS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-muted">
+              Exercises feature gates before payments exist. Not rendered in production builds.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-danger/30">
         <CardHeader>

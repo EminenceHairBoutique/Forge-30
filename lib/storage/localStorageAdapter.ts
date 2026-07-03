@@ -13,6 +13,8 @@ import type {
   WorkoutEntry,
 } from "@/lib/types";
 import type { StorageAdapter } from "./adapter";
+import { DEFAULT_TIER, isTier, type Tier } from "@/lib/engine/entitlements";
+import { createLargeStore } from "./largeStore";
 import {
   SCHEMA_VERSION,
   VERSION_KEY,
@@ -38,6 +40,7 @@ const KEYS = {
   books: `${PREFIX}:books`,
   bodyMetrics: `${PREFIX}:bodyMetrics`,
   aiReviews: `${PREFIX}:aiReviews`,
+  entitlements: `${PREFIX}:entitlements`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -146,12 +149,28 @@ export class LocalStorageAdapter implements StorageAdapter {
     for (const key of Object.values(KEYS)) window.localStorage.removeItem(key);
     window.localStorage.removeItem(VERSION_KEY);
     migrationChecked = false;
+    // Large-record collections (journal bodies, audio, assessments) live in
+    // IndexedDB — a full reset must not orphan them there.
+    await this.large.importAll({});
+  }
+
+  // -- Entitlements ------------------------------------------------------------
+  async getTier(): Promise<Tier> {
+    const stored = read<{ tier?: unknown }>(KEYS.entitlements, {});
+    return isTier(stored.tier) ? stored.tier : DEFAULT_TIER;
+  }
+
+  async saveTier(tier: Tier): Promise<void> {
+    write(KEYS.entitlements, { tier });
   }
 
   // -- Data lifecycle ----------------------------------------------------------
+  /** Large-record backend (IndexedDB, localStorage fallback) — see largeStore.ts. */
+  private large = createLargeStore();
+
   async exportAll(): Promise<ExportFile> {
     ensureMigrated();
-    return buildExport(snapshotCollections(), new Date().toISOString());
+    return buildExport(snapshotCollections(), new Date().toISOString(), await this.large.exportAll());
   }
 
   async importAll(file: ExportFile): Promise<void> {
@@ -167,6 +186,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
     window.localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
     migrationChecked = true;
+    await this.large.importAll(valid.large ?? {});
   }
 
   // -- Daily logs --------------------------------------------------------------

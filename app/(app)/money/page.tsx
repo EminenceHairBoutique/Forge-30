@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, CalendarCheck, HandCoins } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
+import { DISCLAIMERS } from "@/lib/engine/safetyCopy";
 import { useDay } from "@/lib/hooks/useDay";
 import { toISODate, addDays, formatMoney, mondayWeekday, cn } from "@/lib/utils";
 import { calculateSpendingBreakdown } from "@/lib/engine/trends";
@@ -190,6 +191,8 @@ export default function MoneyPage() {
           </CardContent>
         </Card>
       </div>
+
+      <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">{DISCLAIMERS.finance}</p>
 
       <SpendLogSheet open={logOpen} onOpenChange={setLogOpen} />
       <SundayReviewSheet open={reviewOpen} onOpenChange={setReviewOpen} />
