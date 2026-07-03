@@ -26,6 +26,7 @@ const goodDay: CoachInput = {
   skillMinutes: 15,
   skillMissedTwoDays: false,
   weightTrend7d: 1.2,
+  scoreState: "final",
 };
 
 describe("generateMockAIFeedback", () => {
@@ -122,5 +123,39 @@ describe("generateMockAIFeedback", () => {
   it("references what was actually logged in the wins", () => {
     const r = generateMockAIFeedback(goodDay);
     expect(r.wentWell).toContain("Upper Push");
+  });
+
+  it("never passes a verdict on an in-progress day, even at 0/100", () => {
+    const morning = generateMockAIFeedback({
+      ...goodDay,
+      scoreState: "inProgress",
+      forgeScore: 0,
+      calories: 0,
+      protein: 0,
+      workoutStatus: "notStarted",
+      journalDone: false,
+      spendingChecked: false,
+      skillMinutes: 0,
+      mobilityDone: false,
+      sleepHours: 0,
+    });
+    expect(morning.scoreExplanation.toLowerCase()).not.toContain("rough day");
+    expect(morning.scoreExplanation.toLowerCase()).toContain("in progress");
+    expect(morning.scoreExplanation.toLowerCase()).toContain("not a verdict");
+    // Unlogged items read as "still open", not failures.
+    expect(morning.slipped.toLowerCase()).toMatch(/yet|still open/);
+    expect(morning.slipped.toLowerCase()).not.toContain("didn't happen");
+  });
+
+  it("points the #1 priority at the rest of today while in progress", () => {
+    const r = generateMockAIFeedback({ ...goodDay, scoreState: "inProgress", calories: 2000 });
+    expect(r.tomorrowPriority).toContain("Rest of today's #1");
+    expect(r.tomorrowPriority).not.toContain("Tomorrow's #1");
+  });
+
+  it("keeps verdict framing for a completed day", () => {
+    const r = generateMockAIFeedback({ ...goodDay, forgeScore: 30, calories: 1500, protein: 90 });
+    expect(r.scoreExplanation).toContain("Today was a 30/100");
+    expect(r.tomorrowPriority).toContain("Tomorrow's #1");
   });
 });

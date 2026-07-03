@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_DAY_BOUNDARY_HOUR,
   calculateForgeScore,
   calorieProteinCredit,
+  resolveScoreState,
   type ForgeScoreInputs,
   type ForgeScoreTargets,
 } from "./forgeScore";
@@ -148,5 +150,29 @@ describe("calculateForgeScore", () => {
     const r = calculateForgeScore({ ...perfectDay, calories: 2640, protein: 142 }, targets);
     expect(r.score).toBeGreaterThanOrEqual(80);
     expect(r.score).toBeLessThan(100);
+  });
+});
+
+describe("resolveScoreState", () => {
+  it("is inProgress before the default 8 PM boundary", () => {
+    expect(resolveScoreState(0)).toBe("inProgress");
+    expect(resolveScoreState(8)).toBe("inProgress");
+    expect(resolveScoreState(19)).toBe("inProgress");
+  });
+
+  it("is final from the boundary hour onward", () => {
+    expect(resolveScoreState(DEFAULT_DAY_BOUNDARY_HOUR)).toBe("final");
+    expect(resolveScoreState(23)).toBe("final");
+  });
+
+  it("respects a user-configured boundary", () => {
+    expect(resolveScoreState(17, 18)).toBe("inProgress");
+    expect(resolveScoreState(18, 18)).toBe("final");
+    expect(resolveScoreState(1, 0)).toBe("final"); // boundary 0 = always a verdict
+  });
+
+  it("clamps out-of-range boundaries instead of misbehaving", () => {
+    expect(resolveScoreState(23, 99)).toBe("final"); // clamped to 23
+    expect(resolveScoreState(0, -5)).toBe("final"); // clamped to 0
   });
 });

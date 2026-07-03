@@ -53,6 +53,11 @@ export interface UserProfile {
   painFlags: PainFlags;
   /** Daily discretionary spending limit in dollars. */
   dailySpendingLimit: number;
+  /**
+   * Hour (0–23) when the day's score stops "building" and becomes a verdict.
+   * Optional/additive — absent on pre-v2 profiles; default 20 (8 PM).
+   */
+  dayBoundaryHour?: number;
   onboardingComplete: boolean;
 }
 

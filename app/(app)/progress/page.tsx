@@ -56,6 +56,15 @@ const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: "sleep", label: "Sleep (h)" },
 ];
 
+/** Fixed y-ranges for bounded metrics; unbounded ones (weight, kcal) auto-fit. */
+const METRIC_Y_DOMAIN: Partial<Record<Metric, [number, number]>> = {
+  forge: [0, 100],
+  workout: [0, 100],
+  moodStress: [0, 10],
+  pain: [0, 10],
+  sleep: [0, 12],
+};
+
 export default function ProgressPage() {
   const { adapter, profile, revision } = useStorage();
   const today = toISODate();
@@ -175,6 +184,10 @@ export default function ProgressPage() {
   }, [profile, metric, spending, metrics, logByDate, start, today]);
 
   if (!profile) return null;
+
+  const chartPointCount = chartData.filter((p) => p.a !== null || (p.b ?? null) !== null).length;
+  const latestChartPoint = [...chartData].reverse().find((p) => p.a !== null || (p.b ?? null) !== null);
+  const latestChartValue = latestChartPoint?.a ?? latestChartPoint?.b ?? null;
 
   const detailLog = dayDetail ? logByDate.get(dayDetail) : undefined;
   const detailWorkout = dayDetail ? workoutByDate.get(dayDetail) : undefined;
@@ -349,17 +362,25 @@ export default function ProgressPage() {
           </Select>
         </CardHeader>
         <CardContent>
-          {chartData.some((p) => p.a !== null || (p.b ?? null) !== null) ? (
+          {chartPointCount >= 2 ? (
             <TrendChart
               data={chartData}
               seriesA={metric === "moodStress" ? "Mood" : (METRIC_OPTIONS.find((o) => o.value === metric)?.label ?? "")}
               seriesB={metric === "moodStress" ? "Stress" : undefined}
               target={target}
+              yDomain={METRIC_Y_DOMAIN[metric]}
             />
           ) : (
-            <p className="py-10 text-center text-sm text-muted">
-              No data yet for this metric. It fills in as you log.
-            </p>
+            <div className="flex flex-col items-center gap-1.5 py-10 text-center">
+              <p className="display-num text-2xl text-ivory">
+                {chartPointCount === 1 ? latestChartValue : "—"}
+              </p>
+              <p className="text-sm text-muted">
+                {chartPointCount === 1
+                  ? "One day logged. A trend line starts at two — tomorrow's log draws it."
+                  : "No data yet for this metric. It fills in as you log."}
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

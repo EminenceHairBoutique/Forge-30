@@ -31,7 +31,8 @@ const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] 
   { key: "nutritionAdjustment", label: "Nutrition adjustment", icon: UtensilsCrossed },
   { key: "moneyAdjustment", label: "Money adjustment", icon: Wallet },
   { key: "mentalAdjustment", label: "Mental adjustment", icon: Brain },
-  { key: "tomorrowPriority", label: "Tomorrow's #1 priority", icon: Target },
+  // Content supplies the timeframe ("Tomorrow's #1" / "Rest of today's #1").
+  { key: "tomorrowPriority", label: "#1 priority", icon: Target },
 ];
 
 export default function CoachPage() {

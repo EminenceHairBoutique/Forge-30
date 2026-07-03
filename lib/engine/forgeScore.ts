@@ -78,6 +78,27 @@ export interface ForgeScoreResult {
 }
 
 /**
+ * Whether today's score is still building or is a finished-day verdict.
+ *
+ * A 0/100 at 8 AM isn't a rough day — it's an unstarted one. Until the
+ * user's evening boundary the score is presented as "score so far" and coach
+ * feedback is framed as a mid-day check-in; verdict language is only ever
+ * appropriate for a completed day (adherence-neutral rule at the system
+ * level). Pure: callers pass the current hour; engines never read the clock.
+ */
+export type ScoreState = "inProgress" | "final";
+
+export const DEFAULT_DAY_BOUNDARY_HOUR = 20;
+
+export function resolveScoreState(
+  hourOfDay: number,
+  boundaryHour: number = DEFAULT_DAY_BOUNDARY_HOUR
+): ScoreState {
+  const boundary = clamp(Math.round(boundaryHour), 0, 23);
+  return hourOfDay >= boundary ? "final" : "inProgress";
+}
+
+/**
  * Partial credit for calorie/protein components: within ±10% of target = full
  * points, then linear falloff to 0 at ±30% deviation.
  *

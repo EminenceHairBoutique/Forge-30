@@ -17,6 +17,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
+import { resolveScoreState } from "@/lib/engine/forgeScore";
 import { useDay } from "@/lib/hooks/useDay";
 import { toISODate, daysBetween, clamp, formatMoney, fromISODate } from "@/lib/utils";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
@@ -92,7 +93,10 @@ export default function TodayPage() {
       </header>
 
       <div className="flex justify-center py-2">
-        <ScoreRing result={scoreResult} />
+        <ScoreRing
+          result={scoreResult}
+          state={resolveScoreState(new Date().getHours(), profile.dayBoundaryHour)}
+        />
       </div>
 
       {/* AI Coach one-liner */}

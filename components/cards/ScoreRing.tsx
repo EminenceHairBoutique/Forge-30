@@ -2,33 +2,43 @@
 
 import { Ring } from "./Ring";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import type { ForgeScoreResult } from "@/lib/engine/forgeScore";
+import type { ForgeScoreResult, ScoreState } from "@/lib/engine/forgeScore";
 import { cn } from "@/lib/utils";
 
 /**
  * The hero Forge Score ring on Today. Tapping it opens the full score
- * breakdown (components earned + penalties applied).
+ * breakdown (components earned + penalties applied). While the day is in
+ * progress the ring reads "score so far" — a building number, not a verdict.
  */
-export function ScoreRing({ result }: { result: ForgeScoreResult }) {
+export function ScoreRing({
+  result,
+  state = "final",
+}: {
+  result: ForgeScoreResult;
+  state?: ScoreState;
+}) {
   const { score, components, penalties } = result;
+  const building = state === "inProgress";
   return (
     <Sheet>
       <SheetTrigger asChild>
         <button
           type="button"
           className="flex flex-col items-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-gold/50 rounded-full"
-          aria-label={`Forge Score ${score} out of 100 — tap for breakdown`}
+          aria-label={`Forge Score ${score} out of 100${building ? " so far, day in progress" : ""} — tap for breakdown`}
         >
           <Ring value={score} max={100} size={176} stroke={12} label={`Forge Score ${score}/100`}>
             <span className="display-num text-6xl leading-none text-ivory">{score}</span>
             <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Forge Score
+              {building ? "Score so far" : "Forge Score"}
             </span>
           </Ring>
-          <span className="text-xs text-muted">tap for breakdown</span>
+          <span className="text-xs text-muted">
+            {building ? "day in progress · tap for breakdown" : "tap for breakdown"}
+          </span>
         </button>
       </SheetTrigger>
-      <SheetContent title={`Forge Score ${score}/100`}>
+      <SheetContent title={building ? `Score so far — ${score}/100` : `Forge Score ${score}/100`}>
         <ul className="flex flex-col gap-1">
           {components.map((c) => (
             <li key={c.key} className="flex items-center justify-between py-1.5 text-sm">

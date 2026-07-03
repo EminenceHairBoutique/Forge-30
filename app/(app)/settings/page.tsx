@@ -159,7 +159,30 @@ export default function SettingsPage() {
                 onChange={(e) => setDraft({ ...draft, weightGoal: e.target.value })}
               />
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="st-boundary">Day wraps up at (hour, 0–23)</Label>
+              <Input
+                id="st-boundary"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="23"
+                placeholder="20"
+                value={draft.dayBoundaryHour ?? ""}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    dayBoundaryHour:
+                      e.target.value === "" ? undefined : Math.min(23, Math.max(0, Math.round(Number(e.target.value) || 0))),
+                  })
+                }
+              />
+            </div>
           </div>
+          <p className="text-xs text-muted">
+            Before that hour, Today shows your score as still building; after it, the day gets
+            its review. Default 20 (8&nbsp;PM).
+          </p>
         </CardContent>
       </Card>
 

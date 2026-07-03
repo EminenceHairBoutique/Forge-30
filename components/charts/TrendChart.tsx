@@ -35,6 +35,7 @@ export function TrendChart({
   unit = "",
   target,
   height = 220,
+  yDomain,
 }: {
   data: TrendPoint[];
   seriesA: string;
@@ -43,6 +44,11 @@ export function TrendChart({
   /** Optional target reference line (e.g. calorie target). */
   target?: number;
   height?: number;
+  /**
+   * Fixed y-axis range for bounded metrics (e.g. [0, 100] for Forge Score).
+   * Without it a single point renders a meaningless auto axis.
+   */
+  yDomain?: [number, number];
 }) {
   const hasB = !!seriesB;
   return (
@@ -76,7 +82,7 @@ export function TrendChart({
             tickLine={false}
             axisLine={false}
             width={46}
-            domain={["auto", "auto"]}
+            domain={yDomain ?? ["auto", "auto"]}
           />
           <Tooltip
             cursor={{ stroke: "var(--text-secondary)", strokeWidth: 1 }}

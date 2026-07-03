@@ -92,8 +92,7 @@ export function summarizeWeek(s: WeeklySummary, profile: UserProfile): string {
   if (s.unnecessarySpendingTotal > profile.dailySpendingLimit * 3) {
     parts.push(`Unnecessary spending hit $${s.unnecessarySpendingTotal} — cap it next week.`);
   }
-  if (s.mostMissedHabit !== "—") {
-    parts.push(`Most-missed habit: ${s.mostMissedHabit}.`);
-  }
+  // Most-missed habit is rendered by the report card itself — repeating it
+  // here printed the line twice on Progress.
   return parts.join(" ");
 }

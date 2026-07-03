@@ -4,6 +4,7 @@ import { addDays, clamp, daysBetween } from "@/lib/utils";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
 import { calculateWeightTrend } from "./trends";
 import { syncDailyLog } from "./dailySync";
+import { resolveScoreState } from "./forgeScore";
 import type { CoachInput } from "./mockCoach";
 
 /**
@@ -56,5 +57,6 @@ export async function buildCoachInput(
     skillMinutes: log.skillMinutes,
     skillMissedTwoDays,
     weightTrend7d: calculateWeightTrend(metrics),
+    scoreState: resolveScoreState(new Date().getHours(), profile.dayBoundaryHour),
   };
 }

@@ -167,7 +167,9 @@ export default function MoneyPage() {
                     <span className="font-normal text-muted capitalize">· {e.category}</span>
                   </p>
                   <div className="mt-0.5 flex flex-wrap gap-1">
-                    <Badge variant={e.necessary ? "success" : "warning"}>
+                    {/* Category label the user chose, not a safety signal —
+                        orange stays reserved for genuine safety colors. */}
+                    <Badge variant={e.necessary ? "default" : "gold"}>
                       {e.necessary ? "necessary" : "unnecessary"}
                     </Badge>
                     <Badge>{e.business ? "business" : "personal"}</Badge>

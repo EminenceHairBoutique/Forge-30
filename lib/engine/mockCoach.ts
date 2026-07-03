@@ -34,6 +34,11 @@ export interface CoachInput {
   skillMissedTwoDays: boolean;
   /** lb change across the trailing 7 days; null = not enough weigh-ins. */
   weightTrend7d: number | null;
+  /**
+   * "inProgress" before the user's evening boundary: the review is a mid-day
+   * check-in, never a verdict on the day. "final" after it.
+   */
+  scoreState: "inProgress" | "final";
 }
 
 export interface CoachReview {
@@ -56,14 +61,16 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
   const overspent = input.unnecessarySpend > input.dailySpendingLimit;
   const workoutDone = input.workoutStatus === "complete" || input.workoutStatus === "rest";
 
-  // 1. Score explanation
+  // 1. Score explanation — verdict language only for a completed day.
   const scoreExplanation =
-    `Today was a ${input.forgeScore}/100 on day ${input.dayNumber}. ` +
-    (input.forgeScore >= 80
-      ? "That's a winning day — the loop held."
-      : input.forgeScore >= 50
-        ? "A partial day: some pillars held, some didn't. The gaps below are fixable tomorrow."
-        : "A rough day on paper. One bad day doesn't break 30 — but tomorrow needs a plan, not momentum.");
+    input.scoreState === "inProgress"
+      ? `Day ${input.dayNumber} is still in progress — ${input.forgeScore}/100 so far, and every point below is still open. This is a snapshot to steer the rest of today, not a verdict.`
+      : `Today was a ${input.forgeScore}/100 on day ${input.dayNumber}. ` +
+        (input.forgeScore >= 80
+          ? "That's a winning day — the loop held."
+          : input.forgeScore >= 50
+            ? "A partial day: some pillars held, some didn't. The gaps below are fixable tomorrow."
+            : "A rough day on paper. One bad day doesn't break 30 — but tomorrow needs a plan, not momentum.");
 
   // 2. What went well
   const wins: string[] = [];
@@ -76,25 +83,31 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
   if (input.journalDone) wins.push("you did the mind check-in");
   if (input.spendingChecked && !overspent) wins.push("spending stayed visible and inside the limit");
   if (input.skillMinutes >= 10) wins.push(`${input.skillMinutes} minutes of skill work went in`);
+  const inProgress = input.scoreState === "inProgress";
   const wentWell =
     wins.length > 0
       ? `${wins[0]!.charAt(0).toUpperCase()}${wins[0]!.slice(1)}${wins.slice(1).length ? ", and " + wins.slice(1).join(", ") : ""}.`
-      : "Nothing logged as a win today — that itself is the finding. Log first, judge later.";
+      : inProgress
+        ? "Nothing on the board yet — the day's still open, and the first log starts the loop."
+        : "Nothing logged as a win today — that itself is the finding. Log first, judge later.";
 
-  // 3. What slipped
+  // 3. What slipped — mid-day, an unlogged item is "still open", not a slip.
   const slips: string[] = [];
-  if (input.calories === 0 && input.protein === 0) slips.push("no meals were logged");
+  if (input.calories === 0 && input.protein === 0)
+    slips.push(inProgress ? "no meals logged yet" : "no meals were logged");
   else {
-    if (caloriesShort > 400) slips.push(`calories came in ${caloriesShort} short`);
-    if (proteinShort > 30) slips.push(`protein missed by ${proteinShort}g`);
+    if (caloriesShort > 400) slips.push(`calories are ${caloriesShort} short${inProgress ? " so far" : ""}`);
+    if (proteinShort > 30) slips.push(`protein is ${proteinShort}g behind${inProgress ? " so far" : ""}`);
   }
-  if (!workoutDone && input.workoutStatus !== "inProgress") slips.push("the workout didn't happen");
+  if (!workoutDone && input.workoutStatus !== "inProgress")
+    slips.push(inProgress ? "the workout is still open" : "the workout didn't happen");
   if (highPain) slips.push(`pain hit ${input.sessionPainScore}/10 in training`);
   if (input.sleepHours > 0 && input.sleepHours < 6) slips.push(`sleep was only ${input.sleepHours}h`);
   if (highStress) slips.push(`stress ran at ${input.stress}/10`);
   if (overspent) slips.push(`unnecessary spending hit $${input.unnecessarySpend.toFixed(0)} against a $${input.dailySpendingLimit.toFixed(0)} limit`);
-  if (!input.journalDone) slips.push("no mind check-in");
-  if (input.skillMinutes < 10) slips.push("skill practice didn't get its 10 minutes");
+  if (!input.journalDone) slips.push(inProgress ? "the mind check-in is still open" : "no mind check-in");
+  if (input.skillMinutes < 10)
+    slips.push(inProgress ? "skill practice hasn't had its 10 minutes yet" : "skill practice didn't get its 10 minutes");
   const slipped =
     slips.length > 0
       ? `${slips[0]!.charAt(0).toUpperCase()}${slips[0]!.slice(1)}${slips.slice(1).length ? "; " + slips.slice(1).join("; ") : ""}.`
@@ -104,7 +117,9 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
   const physicalAdjustment = highPain
     ? `Pain was ${input.sessionPainScore}/10: cut loads 15–25% tomorrow, skip heavy overhead pressing, and keep pulls chest-supported. Serratus slides, dead bugs, and breathing drills before bed.`
     : !workoutDone
-      ? `Tomorrow's session is the anchor. Do the warm-up checklist first — it's the gate, not a suggestion.`
+      ? inProgress
+        ? "Today's session is still open. When you get to it, the warm-up checklist comes first — it's the gate, not a suggestion."
+        : "Tomorrow's session is the anchor. Do the warm-up checklist first — it's the gate, not a suggestion."
       : input.mobilityDone
         ? "Training and mobility both landed. Keep loads where they are and add a rep before you add weight."
         : "Training happened but mobility didn't. Ten minutes of the prehab circuit tonight or tomorrow morning.";
@@ -140,26 +155,30 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
         ? "Mood ran low today. Keep the wind-down honest tonight and let sleep do the heavy lifting."
         : "Head was steady today. Bank it — do the reset once tomorrow anyway, before you need it.";
 
-  // 8. Tomorrow's #1 priority — highest-impact single item.
+  // 8. #1 priority — highest-impact single item. Mid-day it points at the
+  // rest of today; after the boundary it points at tomorrow.
+  const lead = inProgress ? "Rest of today's #1" : "Tomorrow's #1";
   let tomorrowPriority: string;
   if (highPain) {
-    tomorrowPriority = "Tomorrow's #1: train pain-first — reduced loads, no overhead pressing, log every set's pain score.";
+    tomorrowPriority = `${lead}: train pain-first — reduced loads, no overhead pressing, log every set's pain score.`;
   } else if (input.calories === 0) {
-    tomorrowPriority = "Tomorrow's #1: log every meal. The system can't coach what it can't see.";
+    tomorrowPriority = `${lead}: log every meal. The system can't coach what it can't see.`;
   } else if (caloriesShort > 400 || proteinShort > 30) {
-    tomorrowPriority = "Tomorrow's #1: hit the food targets — shake before bed if the numbers aren't in by dinner.";
+    tomorrowPriority = `${lead}: hit the food targets — shake before bed if the numbers aren't in by dinner.`;
   } else if (weightFlat) {
-    tomorrowPriority = "Tomorrow's #1: add the extra 250 calories. Flat scale, flat progress.";
+    tomorrowPriority = `${lead}: add the extra 250 calories. Flat scale, flat progress.`;
   } else if (highStress) {
-    tomorrowPriority = "Tomorrow's #1: the breathing reset before your hardest conversation, not after it.";
+    tomorrowPriority = `${lead}: the breathing reset before your hardest conversation, not after it.`;
   } else if (overspent) {
-    tomorrowPriority = "Tomorrow's #1: spend nothing unnecessary. One clean day resets the pattern.";
+    tomorrowPriority = `${lead}: spend nothing unnecessary. One clean day resets the pattern.`;
   } else if (input.skillMissedTwoDays) {
-    tomorrowPriority = "Tomorrow's #1: skills dropped two days running — do the 10-minute minimum task, nothing bigger.";
+    tomorrowPriority = `${lead}: skills dropped two days running — do the 10-minute minimum task, nothing bigger.`;
   } else if (!workoutDone) {
-    tomorrowPriority = "Tomorrow's #1: the workout, warm-up first. Everything else follows a training day.";
+    tomorrowPriority = `${lead}: the workout, warm-up first. Everything else follows a training day.`;
   } else {
-    tomorrowPriority = "Tomorrow's #1: repeat today. Consistency is the whole game now.";
+    tomorrowPriority = inProgress
+      ? `${lead}: keep doing exactly this. Close the day the way you started it.`
+      : `${lead}: repeat today. Consistency is the whole game now.`;
   }
 
   return {
