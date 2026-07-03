@@ -8,6 +8,7 @@ import type {
   SavedMeal,
   SkillTask,
   SpendingEntry,
+  StreakState,
   SundayReview,
   TomorrowPlan,
   UserProfile,
@@ -44,6 +45,10 @@ export interface StorageAdapter {
   // Daily rituals (E2)
   getTomorrowPlan(date: ISODate): Promise<TomorrowPlan | null>;
   saveTomorrowPlan(plan: TomorrowPlan): Promise<void>;
+
+  // Streaks (E3) — keyed by streak id ("daily", a skill trackId, …)
+  getStreak(id: string): Promise<StreakState | null>;
+  saveStreak(state: StreakState): Promise<void>;
 
   // Daily logs
   getDailyLog(date: ISODate): Promise<DailyLog | null>;

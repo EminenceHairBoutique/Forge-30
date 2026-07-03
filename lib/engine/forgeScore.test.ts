@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_DAY_BOUNDARY_HOUR,
+  DEFAULT_WEIGHTS,
   calculateForgeScore,
   calorieProteinCredit,
+  renormalizeWeights,
   resolveScoreState,
   type ForgeScoreInputs,
   type ForgeScoreTargets,
 } from "./forgeScore";
+import type { ForgeScoreWeights } from "@/lib/types";
 
 const targets: ForgeScoreTargets = {
   calorieTarget: 3050,
@@ -150,6 +153,47 @@ describe("calculateForgeScore", () => {
     const r = calculateForgeScore({ ...perfectDay, calories: 2640, protein: 142 }, targets);
     expect(r.score).toBeGreaterThanOrEqual(80);
     expect(r.score).toBeLessThan(100);
+  });
+});
+
+describe("configurable weights", () => {
+  const sum = (w: ForgeScoreWeights) => Object.values(w).reduce((a, b) => a + b, 0);
+
+  it("default weights sum to 100 and passing them explicitly matches omitting them", () => {
+    expect(sum(DEFAULT_WEIGHTS)).toBe(100);
+    const a = calculateForgeScore(perfectDay, targets);
+    const b = calculateForgeScore(perfectDay, targets, DEFAULT_WEIGHTS);
+    expect(b.score).toBe(a.score);
+    expect(b.components).toEqual(a.components);
+  });
+
+  it("renormalizeWeights is a no-op (up to rounding) when nothing is disabled", () => {
+    const r = renormalizeWeights(DEFAULT_WEIGHTS);
+    expect(sum(r)).toBeCloseTo(100, 5);
+    expect(r).toEqual(DEFAULT_WEIGHTS);
+  });
+
+  it("redistributes a disabled domain's weight, keeping the total at 100", () => {
+    const r = renormalizeWeights(DEFAULT_WEIGHTS, ["skill"]);
+    expect(r.skill).toBe(0);
+    expect(sum(r)).toBeCloseTo(100, 5);
+    // Remaining components scale up proportionally (15/95 * 100).
+    expect(r.calories).toBeCloseTo((15 / 95) * 100, 5);
+  });
+
+  it("a perfect day still scores 100 under renormalized weights with a domain off", () => {
+    const weights = renormalizeWeights(DEFAULT_WEIGHTS, ["skill"]);
+    // No skill logged, but skill is disabled — the day is still perfect.
+    const r = calculateForgeScore({ ...perfectDay, skillMinutes: 0 }, targets, weights);
+    expect(r.score).toBe(100);
+  });
+
+  it("shifts the score when a component is weighted more heavily", () => {
+    // Move mobility+skill (15) into sleep → sleep worth 25, total still 100.
+    const heavySleep = { ...DEFAULT_WEIGHTS, sleep: 25, mobility: 0, skill: 0 };
+    const poorSleep = calculateForgeScore({ ...perfectDay, sleepHours: 5 }, targets, heavySleep);
+    // A perfect day but no sleep loses exactly the 25-point sleep component.
+    expect(poorSleep.score).toBe(75);
   });
 });
 

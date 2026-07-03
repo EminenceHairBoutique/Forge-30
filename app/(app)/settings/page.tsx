@@ -9,8 +9,13 @@ import { validateExport, type ExportFile } from "@/lib/storage/migrations";
 import { flagEnabled } from "@/lib/flags";
 import { TIERS, isTier } from "@/lib/engine/entitlements";
 import { useTier } from "@/lib/hooks/useTier";
+import {
+  DEFAULT_WEIGHTS,
+  renormalizeWeights,
+  type ScoreComponentKey,
+} from "@/lib/engine/forgeScore";
 import { Select } from "@/components/ui/select";
-import type { PainFlags, UserProfile } from "@/lib/types";
+import type { ForgeScoreWeights, PainFlags, UserProfile } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +29,18 @@ const PAIN_FLAG_LABELS: { key: keyof PainFlags; label: string }[] = [
   { key: "scapular", label: "Scapular pain" },
   { key: "upperTrapDominant", label: "Upper-trap dominant movement" },
   { key: "leftArmAggravation", label: "Left arm aggravation" },
+];
+
+const WEIGHT_FIELDS: { key: ScoreComponentKey; label: string }[] = [
+  { key: "calories", label: "Calories" },
+  { key: "protein", label: "Protein" },
+  { key: "water", label: "Hydration" },
+  { key: "workout", label: "Training / movement" },
+  { key: "mobility", label: "Mobility / prehab" },
+  { key: "sleep", label: "Sleep / recovery" },
+  { key: "spending", label: "Spending check" },
+  { key: "mind", label: "Mental reset" },
+  { key: "skill", label: "Skill progress" },
 ];
 
 export default function SettingsPage() {
@@ -206,6 +223,59 @@ export default function SettingsPage() {
               }
             />
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Forge Score weights</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted">
+            Tune how much each habit counts toward your daily score. The bars renormalize to 100
+            automatically — this measures what <em>you</em> care about, never right or wrong.
+          </p>
+          {(() => {
+            const weights: ForgeScoreWeights = draft.scoreWeights ?? DEFAULT_WEIGHTS;
+            const effective = renormalizeWeights(weights);
+            return (
+              <div className="flex flex-col gap-2.5">
+                {WEIGHT_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="flex items-center gap-3">
+                    <label htmlFor={`wt-${key}`} className="w-36 shrink-0 text-sm text-ivory">
+                      {label}
+                    </label>
+                    <input
+                      id={`wt-${key}`}
+                      type="range"
+                      min={0}
+                      max={25}
+                      step={1}
+                      value={weights[key]}
+                      aria-label={`${label} weight`}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          scoreWeights: { ...weights, [key]: Number(e.target.value) },
+                        })
+                      }
+                      className="h-2 flex-1 accent-gold"
+                    />
+                    <span className="w-10 shrink-0 text-right text-sm font-semibold text-gold tabular-nums">
+                      {Math.round(effective[key])}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+          <button
+            type="button"
+            onClick={() => setDraft({ ...draft, scoreWeights: undefined })}
+            className="self-start text-xs font-semibold text-muted underline underline-offset-2 active:text-ivory"
+          >
+            Reset to default weights
+          </button>
         </CardContent>
       </Card>
 

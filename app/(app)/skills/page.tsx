@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, CheckCircle2, Flame, Sparkle, Undo2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
-import { toISODate, addDays, clamp, daysBetween, uid } from "@/lib/utils";
+import { computeStreak } from "@/lib/engine/streaks";
+import { toISODate, clamp, daysBetween, uid } from "@/lib/utils";
 import { SKILL_TRACKS, getDailySkillTask } from "@/lib/data/skills";
 import { BOOK_PLAN } from "@/lib/data/books";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
@@ -17,17 +18,10 @@ import { Label } from "@/components/ui/label";
 import { CheckItem } from "@/components/ui/checkbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
+/** Per-track streak via the shared engine (freezes/earn-back included). */
 function streakFor(tasks: SkillTask[], trackId: string, today: string): number {
-  const days = new Set(tasks.filter((t) => t.trackId === trackId).map((t) => t.date));
-  let streak = 0;
-  let cursor = today;
-  // A missing today doesn't break the streak until the day is over.
-  if (!days.has(cursor)) cursor = addDays(cursor, -1);
-  while (days.has(cursor)) {
-    streak += 1;
-    cursor = addDays(cursor, -1);
-  }
-  return streak;
+  const days = tasks.filter((t) => t.trackId === trackId).map((t) => t.date);
+  return computeStreak(`skill:${trackId}`, days, today).current;
 }
 
 export default function SkillsPage() {

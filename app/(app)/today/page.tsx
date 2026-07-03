@@ -20,6 +20,10 @@ import { useStorage } from "@/lib/storage/provider";
 import { resolveScoreState } from "@/lib/engine/forgeScore";
 import { mvdStatus, shouldShowEveningReview, shouldShowMorningPlan } from "@/lib/engine/dayPhase";
 import { useDay } from "@/lib/hooks/useDay";
+import { useDailyStreak } from "@/lib/hooks/useDailyStreak";
+import { StreakFlame } from "@/components/today/StreakFlame";
+import { StreakCelebrationCard } from "@/components/today/StreakCelebrationCard";
+import { StreakComebackCard } from "@/components/today/StreakComebackCard";
 import { toISODate, daysBetween, clamp, formatMoney, fromISODate } from "@/lib/utils";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
 import type { AIReview, TomorrowPlan, WorkoutStatus } from "@/lib/types";
@@ -47,6 +51,7 @@ export default function TodayPage() {
   const { adapter, profile, revision } = useStorage();
   const today = toISODate();
   const { snapshot, updateLog, loading } = useDay(today);
+  const { streak, celebrate } = useDailyStreak();
   const [review, setReview] = useState<AIReview | null>(null);
   const [todayIntent, setTodayIntent] = useState<TomorrowPlan | null>(null);
   const [hardDayOpen, setHardDayOpen] = useState(false);
@@ -138,10 +143,22 @@ export default function TodayPage() {
         </button>
       )}
 
-      <div className="flex flex-col items-center py-2">
+      {streak && streak.pendingMilestone !== null && (
+        <StreakCelebrationCard
+          milestone={streak.pendingMilestone}
+          onDismiss={() => celebrate(streak.pendingMilestone!)}
+        />
+      )}
+
+      {streak && streak.current === 0 && streak.longest > 0 && !streak.metToday && (
+        <StreakComebackCard streak={streak} />
+      )}
+
+      <div className="flex flex-col items-center gap-2 py-2">
+        {streak && <StreakFlame streak={streak} />}
         <ScoreRing result={scoreResult} state={scoreState} />
         {!log.hardDay && scoreState === "inProgress" && (
-          <Button variant="ghost" size="sm" className="mt-1" onClick={() => setHardDayOpen(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setHardDayOpen(true)}>
             <LifeBuoy className="size-4" /> Having a hard day?
           </Button>
         )}

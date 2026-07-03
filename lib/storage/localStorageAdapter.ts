@@ -8,6 +8,7 @@ import type {
   SavedMeal,
   SkillTask,
   SpendingEntry,
+  StreakState,
   SundayReview,
   TomorrowPlan,
   UserProfile,
@@ -43,6 +44,7 @@ const KEYS = {
   aiReviews: `${PREFIX}:aiReviews`,
   entitlements: `${PREFIX}:entitlements`,
   tomorrowPlans: `${PREFIX}:tomorrowPlans`,
+  streaks: `${PREFIX}:streaks`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -165,6 +167,17 @@ export class LocalStorageAdapter implements StorageAdapter {
     const all = read<Record<ISODate, TomorrowPlan>>(KEYS.tomorrowPlans, {});
     all[plan.date] = plan;
     write(KEYS.tomorrowPlans, all);
+  }
+
+  // -- Streaks -------------------------------------------------------------------
+  async getStreak(id: string): Promise<StreakState | null> {
+    return read<Record<string, StreakState>>(KEYS.streaks, {})[id] ?? null;
+  }
+
+  async saveStreak(state: StreakState): Promise<void> {
+    const all = read<Record<string, StreakState>>(KEYS.streaks, {});
+    all[state.id] = state;
+    write(KEYS.streaks, all);
   }
 
   // -- Entitlements ------------------------------------------------------------

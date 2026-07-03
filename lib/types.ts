@@ -58,6 +58,11 @@ export interface UserProfile {
    * Optional/additive — absent on pre-v2 profiles; default 20 (8 PM).
    */
   dayBoundaryHour?: number;
+  /**
+   * User-adjustable Forge Score weights (E3). Absent on pre-v2 profiles ⇒ the
+   * engine's DEFAULT_WEIGHTS. Renormalized to 100 when a domain is disabled.
+   */
+  scoreWeights?: ForgeScoreWeights;
   onboardingComplete: boolean;
 }
 
@@ -96,6 +101,50 @@ export interface DailyLog {
   hardDay?: boolean;
   /** Morning Plan card dismissed for this date. */
   morningPlanSeen?: boolean;
+}
+
+/**
+ * Per-component Forge Score weights (E3). Keys mirror `ScoreComponent["key"]`
+ * in `lib/engine/forgeScore.ts`. Default set sums to 100; renormalized to 100
+ * whenever a domain is disabled.
+ */
+export interface ForgeScoreWeights {
+  calories: number;
+  protein: number;
+  water: number;
+  workout: number;
+  mobility: number;
+  sleep: number;
+  spending: number;
+  mind: number;
+  skill: number;
+}
+
+/**
+ * Persisted streak (E3) — the app-wide Minimum Viable Day streak, a skill
+ * track's streak, etc. Everything but `celebratedMilestones` is re-derived
+ * from the history of met days by `computeStreak`; the celebration list is the
+ * one piece of genuine user state (which milestone cards have been dismissed).
+ * Consistency, never quality — a streak never shames and hard days don't break
+ * it.
+ */
+export interface StreakState {
+  /** "daily" for the app-wide MVD streak, or a skill trackId, etc. */
+  id: string;
+  current: number;
+  longest: number;
+  /** Freezes banked (0–maxFreezes). */
+  freezes: number;
+  lastMetDate: ISODate | null;
+  /** Today isn't met yet but the run is alive — log to keep it. */
+  atRisk: boolean;
+  metToday: boolean;
+  /** Inside the 48h earn-back window after a recent break. */
+  inRepairWindow: boolean;
+  /** A milestone reached but not yet celebrated, else null. */
+  pendingMilestone: number | null;
+  /** Milestone thresholds whose card the user has already seen/dismissed. */
+  celebratedMilestones: number[];
 }
 
 /** Tonight's intention for tomorrow — feeds the next Morning Plan (E2). */

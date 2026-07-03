@@ -90,7 +90,8 @@ export async function syncDailyLog(
       proteinTarget: profile.proteinTarget,
       waterTarget: profile.waterTarget,
       dailySpendingLimit: profile.dailySpendingLimit,
-    }
+    },
+    profile.scoreWeights
   );
 
   log.forgeScore = scoreResult.score;

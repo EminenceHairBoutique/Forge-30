@@ -5,6 +5,7 @@ import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
 import { calculateWeightTrend } from "./trends";
 import { syncDailyLog } from "./dailySync";
 import { resolveScoreState } from "./forgeScore";
+import { missedRecentDays } from "./streaks";
 import type { CoachInput } from "./mockCoach";
 
 /**
@@ -24,12 +25,15 @@ export async function buildCoachInput(
     adapter.listSkillTasks(addDays(date, -2), addDays(date, -1)),
   ]);
 
-  const yesterday = addDays(date, -1);
-  const dayBefore = addDays(date, -2);
+  // Same "last two days both missed" signal, now sourced from the shared
+  // streak helper instead of an ad hoc walk (E3). The start-date guard keeps
+  // day 1–2 quiet.
   const skillMissedTwoDays =
-    !skillsRecent.some((t) => t.date === yesterday) &&
-    !skillsRecent.some((t) => t.date === dayBefore) &&
-    daysBetween(profile.startDate, date) >= 2;
+    missedRecentDays(
+      skillsRecent.map((t) => t.date),
+      date,
+      2
+    ) && daysBetween(profile.startDate, date) >= 2;
 
   const log = snap.log;
   return {
