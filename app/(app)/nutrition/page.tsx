@@ -136,9 +136,11 @@ export default function NutritionPage() {
         }
       />
 
+      {/* Helpful suggestion, not a problem — gold, never warning-orange
+          (warning stays reserved for genuine safety signals). */}
       {recommendation?.addCaloriesBanner && (
-        <Card className="flex items-center gap-3 border-warning/30 bg-warning/5 p-3">
-          <TrendingUp className="size-5 shrink-0 text-warning" />
+        <Card className="flex items-center gap-3 border-gold/30 bg-gold/5 p-3">
+          <TrendingUp className="size-5 shrink-0 text-gold" />
           <p className="text-sm text-ivory">
             Your 7-day weight trend is flat. <strong>Add 250 calories per day</strong> — the rice +
             olive oil booster is the easiest way in.

@@ -158,13 +158,9 @@ export default function TodayPage() {
           icon={Dumbbell}
           href="/training"
           value={WORKOUT_LABEL[log.workoutStatus]}
-          tone={
-            log.workoutStatus === "complete"
-              ? "success"
-              : log.workoutStatus === "skipped"
-                ? "danger"
-                : "default"
-          }
+          // Adherence-neutral: a skipped workout is a missed habit, not a
+          // safety event — danger/warning never color ordinary variance.
+          tone={log.workoutStatus === "complete" ? "success" : "default"}
           sub={log.painScore > 0 ? `Pain ${log.painScore}/10 logged` : undefined}
         />
         <StatCard

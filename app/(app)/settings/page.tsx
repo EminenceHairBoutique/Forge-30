@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Trash2 } from "lucide-react";
+import { Download, Save, Trash2, Upload } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
+import { toISODate } from "@/lib/utils";
+import { validateExport, type ExportFile } from "@/lib/storage/migrations";
 import type { PainFlags, UserProfile } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +28,9 @@ export default function SettingsPage() {
   const [draft, setDraft] = useState<UserProfile | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImport, setPendingImport] = useState<{ file: ExportFile; name: string } | null>(null);
+  const [dataMessage, setDataMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile && !draft) setDraft(profile);
@@ -38,6 +43,37 @@ export default function SettingsPage() {
   const save = async () => {
     await saveProfile(draft);
     setSavedAt(new Date().toLocaleTimeString());
+  };
+
+  const exportData = async () => {
+    const file = await adapter.exportAll();
+    const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `forge30-export-${toISODate()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setDataMessage("Export downloaded. Keep it somewhere safe.");
+  };
+
+  const pickImportFile = async (picked: File | null) => {
+    setDataMessage(null);
+    setPendingImport(null);
+    if (!picked) return;
+    try {
+      const file = validateExport(JSON.parse(await picked.text()));
+      setPendingImport({ file, name: picked.name });
+    } catch (err) {
+      setDataMessage(err instanceof Error ? err.message : "That file couldn't be read.");
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!pendingImport) return;
+    await adapter.importAll(pendingImport.file);
+    // Reload so every page re-reads the imported data from a clean slate.
+    window.location.reload();
   };
 
   const resetAll = async () => {
@@ -149,6 +185,55 @@ export default function SettingsPage() {
         <Save className="size-5" /> Save settings
       </Button>
       {savedAt && <p className="text-center text-xs text-muted">Saved {savedAt}</p>}
+
+      {/* Backup & restore */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data — backup & restore</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm text-muted">
+            All data lives on this device. Export a JSON backup regularly; import restores it
+            here or on another device.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="secondary" onClick={exportData}>
+              <Download className="size-4 text-gold" /> Export data
+            </Button>
+            <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="size-4 text-gold" /> Import data
+            </Button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            aria-label="Choose a Forge30 export file"
+            onChange={(e) => {
+              void pickImportFile(e.target.files?.[0] ?? null);
+              e.target.value = "";
+            }}
+          />
+          {pendingImport && (
+            <div className="flex flex-col gap-2 rounded-(--radius-control) border border-line bg-elevated p-3">
+              <p className="text-sm text-ivory">
+                Import <span className="font-semibold">{pendingImport.name}</span>? This replaces
+                everything currently stored on this device.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button size="sm" onClick={confirmImport}>
+                  Replace & import
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setPendingImport(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+          {dataMessage && <p className="text-sm text-muted">{dataMessage}</p>}
+        </CardContent>
+      </Card>
 
       <Card className="border-danger/30">
         <CardHeader>

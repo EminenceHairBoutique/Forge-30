@@ -13,6 +13,15 @@ import type {
   WorkoutEntry,
 } from "@/lib/types";
 import type { StorageAdapter } from "./adapter";
+import {
+  SCHEMA_VERSION,
+  VERSION_KEY,
+  buildExport,
+  runMigrations,
+  validateExport,
+  type CollectionSnapshot,
+  type ExportFile,
+} from "./migrations";
 
 const PREFIX = "forge30";
 
@@ -35,8 +44,66 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
+/** Reads every existing collection into a snapshot keyed by collection name. */
+function snapshotCollections(): CollectionSnapshot {
+  const snapshot: CollectionSnapshot = {};
+  if (!canUseStorage()) return snapshot;
+  for (const [name, key] of Object.entries(KEYS)) {
+    const raw = window.localStorage.getItem(key);
+    if (raw === null) continue;
+    try {
+      snapshot[name] = JSON.parse(raw);
+    } catch {
+      // Corrupted blob: leave it out of the snapshot rather than crash.
+    }
+  }
+  return snapshot;
+}
+
+function writeCollections(collections: CollectionSnapshot): void {
+  for (const [name, key] of Object.entries(KEYS)) {
+    if (name in collections) write(key, collections[name]);
+  }
+}
+
+let migrationChecked = false;
+
+/**
+ * Lazy, idempotent schema check run before the first storage access (not in
+ * the constructor — the adapter is instantiated during render). Pre-versioning
+ * installs (data present, no version key) are schema 1 by definition; fresh
+ * installs are stamped current. Data from a *newer* schema is left untouched.
+ */
+function ensureMigrated(): void {
+  if (migrationChecked || !canUseStorage()) return;
+  migrationChecked = true;
+  try {
+    const rawVersion = window.localStorage.getItem(VERSION_KEY);
+    const hasData = Object.values(KEYS).some((k) => window.localStorage.getItem(k) !== null);
+    const parsed = rawVersion === null ? NaN : Number(rawVersion);
+    const stored = Number.isInteger(parsed) && parsed >= 1 ? parsed : hasData ? 1 : SCHEMA_VERSION;
+
+    if (stored > SCHEMA_VERSION) {
+      // Newer-app data (e.g. synced back from a future build): never touch it.
+      console.warn(
+        `Forge30: stored data is schema ${stored}, this build supports ${SCHEMA_VERSION}. Leaving data untouched.`
+      );
+      return;
+    }
+    if (stored < SCHEMA_VERSION) {
+      const { collections } = runMigrations(snapshotCollections(), stored);
+      writeCollections(collections);
+    }
+    window.localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+  } catch {
+    // Storage failure: run un-migrated rather than crash; next load retries.
+    migrationChecked = false;
+  }
+}
+
 function read<T>(key: string, fallback: T): T {
   if (!canUseStorage()) return fallback;
+  ensureMigrated();
   try {
     const raw = window.localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -47,6 +114,7 @@ function read<T>(key: string, fallback: T): T {
 
 function write(key: string, value: unknown): void {
   if (!canUseStorage()) return;
+  ensureMigrated();
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
@@ -76,6 +144,29 @@ export class LocalStorageAdapter implements StorageAdapter {
   async resetAll(): Promise<void> {
     if (!canUseStorage()) return;
     for (const key of Object.values(KEYS)) window.localStorage.removeItem(key);
+    window.localStorage.removeItem(VERSION_KEY);
+    migrationChecked = false;
+  }
+
+  // -- Data lifecycle ----------------------------------------------------------
+  async exportAll(): Promise<ExportFile> {
+    ensureMigrated();
+    return buildExport(snapshotCollections(), new Date().toISOString());
+  }
+
+  async importAll(file: ExportFile): Promise<void> {
+    const valid = validateExport(file);
+    const { collections } = runMigrations(valid.collections, valid.schemaVersion);
+    if (!canUseStorage()) return;
+    // Write the new data first, then remove only the keys absent from the
+    // file — if a quota failure interrupts mid-import, the previous data is
+    // still largely in place instead of already wiped.
+    writeCollections(collections);
+    for (const [name, key] of Object.entries(KEYS)) {
+      if (!(name in collections)) window.localStorage.removeItem(key);
+    }
+    window.localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+    migrationChecked = true;
   }
 
   // -- Daily logs --------------------------------------------------------------
