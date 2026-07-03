@@ -8,6 +8,8 @@ import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
 import { calculateWeeklySummary, summarizeWeek } from "@/lib/engine/weeklySummary";
 import { getBodyRecommendations } from "@/lib/engine/bodyRules";
 import { computePersonalRecords } from "@/lib/engine/trainingRules";
+import { calculateSmoothedWeightTrend } from "@/lib/engine/trends";
+import { estimateExpenditure } from "@/lib/engine/expenditure";
 import type {
   BodyMetric,
   CalendarState,
@@ -36,6 +38,7 @@ const STATE_STYLE: Record<CalendarState, { label: string; className: string }> =
 type Metric =
   | "forge"
   | "weight"
+  | "expenditure"
   | "calories"
   | "protein"
   | "workout"
@@ -47,6 +50,7 @@ type Metric =
 const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: "forge", label: "Forge Score" },
   { value: "weight", label: "Weight (lb)" },
+  { value: "expenditure", label: "Expenditure (est. kcal)" },
   { value: "calories", label: "Calories" },
   { value: "protein", label: "Protein (g)" },
   { value: "workout", label: "Workout completion %" },
@@ -137,6 +141,9 @@ export default function ProgressPage() {
     for (const s of spending)
       spendByDate.set(s.date, (spendByDate.get(s.date) ?? 0) + s.amount);
     const metricByDate = new Map(metrics.map((m) => [m.date, m]));
+    const trendByDate = new Map(
+      calculateSmoothedWeightTrend(metrics).map((p) => [p.date, p.trendLb])
+    );
     let workoutsDone = 0;
 
     const lastDay = Math.min(daysBetween(start, today) + 1, PROGRAM_LENGTH_DAYS);
@@ -151,7 +158,18 @@ export default function ProgressPage() {
           points.push({ label, a: log ? log.forgeScore : null });
           break;
         case "weight":
-          points.push({ label, a: bm && bm.weightLb > 0 ? bm.weightLb : null });
+          points.push({
+            label,
+            a: bm && bm.weightLb > 0 ? bm.weightLb : null,
+            b: trendByDate.get(date) ?? null,
+          });
+          break;
+        case "expenditure":
+          // Rolling estimate: what the engine would have said on that day.
+          points.push({
+            label,
+            a: estimateExpenditure({ logs, metrics, today: date }).tdee,
+          });
           break;
         case "calories":
           points.push({ label, a: log && log.calories > 0 ? log.calories : null });
@@ -181,7 +199,7 @@ export default function ProgressPage() {
       }
     }
     return points;
-  }, [profile, metric, spending, metrics, logByDate, start, today]);
+  }, [profile, metric, spending, metrics, logs, logByDate, start, today]);
 
   if (!profile) return null;
 
@@ -365,8 +383,16 @@ export default function ProgressPage() {
           {chartPointCount >= 2 ? (
             <TrendChart
               data={chartData}
-              seriesA={metric === "moodStress" ? "Mood" : (METRIC_OPTIONS.find((o) => o.value === metric)?.label ?? "")}
-              seriesB={metric === "moodStress" ? "Stress" : undefined}
+              seriesA={
+                metric === "moodStress"
+                  ? "Mood"
+                  : metric === "weight"
+                    ? "Scale weight"
+                    : (METRIC_OPTIONS.find((o) => o.value === metric)?.label ?? "")
+              }
+              seriesB={
+                metric === "moodStress" ? "Stress" : metric === "weight" ? "Trend weight" : undefined
+              }
               target={target}
               yDomain={METRIC_Y_DOMAIN[metric]}
             />

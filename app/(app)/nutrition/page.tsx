@@ -18,9 +18,16 @@ import { getMealPlanForDate, MEAL_PLAN, PREP_CHECKLIST, generateGroceryList } fr
 import { QUICK_ADDS } from "@/lib/data/quickAdds";
 import { calculateMacroTotals, getNutritionRecommendation } from "@/lib/engine/nutritionRules";
 import { calculateWeightTrend } from "@/lib/engine/trends";
+import {
+  estimateExpenditure,
+  goalRateFromWeightGoal,
+  runWeeklyCheckIn,
+  type ExpenditureEstimate,
+} from "@/lib/engine/expenditure";
 import type { MealEntry, MealSlot, PlannedMeal } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { MacroRings } from "@/components/cards/MacroRings";
+import { ExpenditureCard } from "@/components/cards/ExpenditureCard";
 import { AddMealSheet } from "@/components/forms/AddMealSheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +48,7 @@ export default function NutritionPage() {
   const { snapshot, updateLog } = useDay(today);
   const [meals, setMeals] = useState<MealEntry[]>([]);
   const [weightTrend7d, setWeightTrend7d] = useState<number | null>(null);
+  const [expenditure, setExpenditure] = useState<ExpenditureEstimate | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetSlot, setSheetSlot] = useState<MealSlot>("addon");
 
@@ -48,11 +56,15 @@ export default function NutritionPage() {
     let cancelled = false;
     Promise.all([
       adapter.listMeals(today),
-      adapter.listBodyMetrics(addDays(today, -6), today),
-    ]).then(([m, metrics]) => {
+      // Fetch the expenditure engine's full window; the raw 7-day fallback
+      // trend reads the tail of the same list.
+      adapter.listBodyMetrics(addDays(today, -34), today),
+      adapter.listDailyLogs(addDays(today, -20), today),
+    ]).then(([m, metrics, logs]) => {
       if (cancelled) return;
       setMeals(m.sort((a, b) => a.loggedAt.localeCompare(b.loggedAt)));
-      setWeightTrend7d(calculateWeightTrend(metrics));
+      setWeightTrend7d(calculateWeightTrend(metrics.filter((x) => x.date >= addDays(today, -6))));
+      setExpenditure(estimateExpenditure({ logs, metrics, today }));
     });
     return () => {
       cancelled = true;
@@ -137,8 +149,10 @@ export default function NutritionPage() {
       />
 
       {/* Helpful suggestion, not a problem — gold, never warning-orange
-          (warning stays reserved for genuine safety signals). */}
-      {recommendation?.addCaloriesBanner && (
+          (warning stays reserved for genuine safety signals). Fallback path:
+          once the expenditure engine is calibrated, its weekly check-in
+          supersedes this rule-of-thumb banner. */}
+      {recommendation?.addCaloriesBanner && expenditure?.status !== "estimated" && (
         <Card className="flex items-center gap-3 border-gold/30 bg-gold/5 p-3">
           <TrendingUp className="size-5 shrink-0 text-gold" />
           <p className="text-sm text-ivory">
@@ -153,6 +167,19 @@ export default function NutritionPage() {
         calorieTarget={profile.calorieTarget}
         proteinTarget={profile.proteinTarget}
       />
+
+      {/* Adaptive Expenditure Engine — real-world TDEE from logged intake +
+          smoothed trend weight; plain-language calibrating state until then. */}
+      {expenditure && (
+        <ExpenditureCard
+          estimate={expenditure}
+          checkIn={runWeeklyCheckIn({
+            estimate: expenditure,
+            currentCalorieTarget: profile.calorieTarget,
+            goalRateLbPerWeek: goalRateFromWeightGoal(profile.weightGoal),
+          })}
+        />
+      )}
 
       {/* Water tracker */}
       <Card>

@@ -2,11 +2,25 @@ import type { StorageAdapter } from "@/lib/storage/adapter";
 import type { UserProfile } from "@/lib/types";
 import { addDays, clamp, daysBetween } from "@/lib/utils";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
-import { calculateWeightTrend } from "./trends";
+import { calculateSmoothedWeightTrend, calculateWeightTrend } from "./trends";
 import { syncDailyLog } from "./dailySync";
 import { resolveScoreState } from "./forgeScore";
 import { missedRecentDays } from "./streaks";
 import type { CoachInput } from "./mockCoach";
+
+/**
+ * 7-day weight movement for the coach: the EWMA-smoothed change when the
+ * series supports it, falling back to the raw first-to-last delta (which
+ * itself is null under 2 weigh-ins). Same semantic the coach always had —
+ * just noise-damped now that the expenditure engine's smoother exists (E4).
+ */
+function smoothedWeekTrend(metrics: Parameters<typeof calculateWeightTrend>[0]): number | null {
+  const smoothed = calculateSmoothedWeightTrend(metrics);
+  if (smoothed.length >= 2) {
+    return Math.round((smoothed[smoothed.length - 1]!.trendLb - smoothed[0]!.trendLb) * 10) / 10;
+  }
+  return calculateWeightTrend(metrics);
+}
 
 /**
  * Builds the structured summary of today + trailing 7-day trends that feeds
@@ -60,7 +74,7 @@ export async function buildCoachInput(
     dailySpendingLimit: profile.dailySpendingLimit,
     skillMinutes: log.skillMinutes,
     skillMissedTwoDays,
-    weightTrend7d: calculateWeightTrend(metrics),
+    weightTrend7d: smoothedWeekTrend(metrics),
     scoreState: resolveScoreState(new Date().getHours(), profile.dayBoundaryHour),
     hardDay: log.hardDay ?? false,
   };
