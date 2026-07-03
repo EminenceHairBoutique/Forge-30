@@ -79,7 +79,7 @@ export default function TodayPage() {
 
   const { log, scoreResult, unnecessarySpend } = snapshot;
   const scoreState = resolveScoreState(new Date().getHours(), profile.dayBoundaryHour);
-  const mvd = mvdStatus(log);
+  const mvd = mvdStatus(log, profile.mvd);
   const dayNumber = clamp(daysBetween(profile.startDate, today) + 1, 1, PROGRAM_LENGTH_DAYS);
   const dateLabel = fromISODate(today).toLocaleDateString("en-US", {
     weekday: "long",
@@ -114,7 +114,7 @@ export default function TodayPage() {
       {shouldShowMorningPlan(log, scoreState) && !log.hardDay && (
         <MorningPlanCard
           date={today}
-          log={log}
+          mvd={mvd}
           plan={todayIntent}
           onDismiss={() => updateLog({ morningPlanSeen: true })}
           onHardDay={() => setHardDayOpen(true)}
@@ -288,6 +288,7 @@ export default function TodayPage() {
         open={hardDayOpen}
         onOpenChange={setHardDayOpen}
         log={log}
+        mvd={mvd}
         onSetHardDay={(v) => updateLog({ hardDay: v })}
       />
       <PlanTomorrowSheet open={planTomorrowOpen} onOpenChange={setPlanTomorrowOpen} />

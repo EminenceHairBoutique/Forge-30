@@ -11,8 +11,10 @@
  * proving existing data survives.
  */
 
+import { DEFAULT_DOMAINS, DEFAULT_MVD, DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
+
 /** Bump this whenever a persisted shape changes, and add a MIGRATIONS step. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const VERSION_KEY = "forge30:schemaVersion";
 
@@ -43,7 +45,26 @@ export interface ExportFile {
  * old version, so re-applying a step to already-migrated data must be a
  * no-op (e.g. "add field if missing", never "rename blindly").
  */
-const MIGRATIONS: Record<number, (c: CollectionSnapshot) => CollectionSnapshot> = {};
+const MIGRATIONS: Record<number, (c: CollectionSnapshot) => CollectionSnapshot> = {
+  // v1 → v2 (E5, universal profile): the profile gains the structured trio —
+  // domain toggles, Minimum Viable Day definition, notification prefs — filled
+  // with defaults. Idempotent: only missing fields are added; a profile that
+  // already has them (or no profile at all) passes through untouched.
+  1: (c) => {
+    const profile = c.profile;
+    if (typeof profile !== "object" || profile === null) return c;
+    const p = profile as Record<string, unknown>;
+    return {
+      ...c,
+      profile: {
+        ...p,
+        domains: p.domains ?? { ...DEFAULT_DOMAINS },
+        mvd: p.mvd ?? { ...DEFAULT_MVD },
+        notifications: p.notifications ?? { ...DEFAULT_NOTIFICATIONS },
+      },
+    };
+  },
+};
 
 export class UnsupportedSchemaError extends Error {
   constructor(found: number) {

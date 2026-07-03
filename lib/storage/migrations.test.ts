@@ -186,12 +186,40 @@ function v1Fixture(): CollectionSnapshot {
 }
 
 describe("runMigrations", () => {
-  it("passes today's real v1 data through completely untouched", () => {
+  it("v1 → v2 leaves every non-profile collection byte-identical", () => {
     const fixture = v1Fixture();
     const pristine = structuredClone(fixture);
     const result = runMigrations(fixture, 1);
-    expect(result.collections).toEqual(pristine);
+    for (const key of Object.keys(pristine)) {
+      if (key === "profile") continue;
+      expect(result.collections[key], key).toEqual(pristine[key]);
+    }
     expect(result.version).toBe(SCHEMA_VERSION);
+  });
+
+  it("v1 → v2 keeps every existing profile field and adds only the new trio", () => {
+    const pristineProfile = structuredClone(v1Fixture().profile) as Record<string, unknown>;
+    const result = runMigrations(v1Fixture(), 1);
+    const migrated = result.collections.profile as Record<string, unknown>;
+    // Every v1 field survives with its exact value (the user's own targets).
+    for (const [key, value] of Object.entries(pristineProfile)) {
+      expect(migrated[key], key).toEqual(value);
+    }
+    // The new structured fields arrive with defaults.
+    expect(migrated.domains).toMatchObject({ nutrition: true, relationships: true });
+    expect(migrated.mvd).toEqual({ meal: true, checkIn: true, water: false, movement: false });
+    expect(migrated.notifications).toMatchObject({ morningPlan: true });
+  });
+
+  it("v1 → v2 is idempotent: re-running never overwrites user customization", () => {
+    const once = runMigrations(v1Fixture(), 1).collections;
+    const profile = once.profile as Record<string, unknown>;
+    // Simulate the user turning a domain off, then an interrupted re-migration.
+    (profile.domains as Record<string, boolean>).relationships = false;
+    const twice = runMigrations(structuredClone(once), 1).collections;
+    expect((twice.profile as Record<string, unknown>).domains).toMatchObject({
+      relationships: false,
+    });
   });
 
   it("migrates an empty snapshot (fresh install) cleanly", () => {

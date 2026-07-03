@@ -4,6 +4,7 @@ import {
   DEFAULT_WEIGHTS,
   calculateForgeScore,
   calorieProteinCredit,
+  disabledComponents,
   renormalizeWeights,
   resolveScoreState,
   type ForgeScoreInputs,
@@ -185,6 +186,23 @@ describe("configurable weights", () => {
     const weights = renormalizeWeights(DEFAULT_WEIGHTS, ["skill"]);
     // No skill logged, but skill is disabled — the day is still perfect.
     const r = calculateForgeScore({ ...perfectDay, skillMinutes: 0 }, targets, weights);
+    expect(r.score).toBe(100);
+  });
+
+  it("domain toggles map to their score components; absent toggles disable nothing", () => {
+    expect(disabledComponents(undefined)).toEqual([]);
+    expect(disabledComponents({ nutrition: true, money: true })).toEqual([]);
+    expect(disabledComponents({ money: false, skills: false }).sort()).toEqual([
+      "skill",
+      "spending",
+    ]);
+    // A perfect day minus the disabled domains still scores 100.
+    const weights = renormalizeWeights(DEFAULT_WEIGHTS, disabledComponents({ money: false, skills: false }));
+    const r = calculateForgeScore(
+      { ...perfectDay, spendingChecked: false, skillMinutes: 0 },
+      targets,
+      weights
+    );
     expect(r.score).toBe(100);
   });
 

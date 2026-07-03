@@ -57,7 +57,10 @@ describe("LocalStorageAdapter schema detection", () => {
     storage.setItem("forge30:profile", JSON.stringify(profileFixture));
 
     const profile = await adapter.getProfile(); // first access triggers ensureMigrated
-    expect(profile).toEqual(profileFixture);
+    // Every v1 field survives; the v2 migration adds the structured trio.
+    expect(profile).toMatchObject(profileFixture);
+    expect(profile?.domains?.nutrition).toBe(true);
+    expect(profile?.mvd).toEqual({ meal: true, checkIn: true, water: false, movement: false });
     expect(storage.getItem(VERSION_KEY)).toBe(String(SCHEMA_VERSION));
   });
 
@@ -83,7 +86,7 @@ describe("LocalStorageAdapter schema detection", () => {
     storage.setItem(VERSION_KEY, "banana");
     storage.setItem("forge30:profile", JSON.stringify(profileFixture));
 
-    expect(await adapter.getProfile()).toEqual(profileFixture);
+    expect(await adapter.getProfile()).toMatchObject(profileFixture);
     expect(storage.getItem(VERSION_KEY)).toBe(String(SCHEMA_VERSION));
   });
 });

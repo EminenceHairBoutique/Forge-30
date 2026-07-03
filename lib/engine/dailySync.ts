@@ -2,7 +2,13 @@ import type { StorageAdapter } from "@/lib/storage/adapter";
 import type { CalendarState, DailyLog, ISODate, UserProfile } from "@/lib/types";
 import { emptyDailyLog } from "@/lib/data/defaults";
 import { calculateMacroTotals } from "./nutritionRules";
-import { calculateForgeScore, type ForgeScoreResult } from "./forgeScore";
+import {
+  DEFAULT_WEIGHTS,
+  calculateForgeScore,
+  disabledComponents,
+  renormalizeWeights,
+  type ForgeScoreResult,
+} from "./forgeScore";
 
 export interface DaySnapshot {
   log: DailyLog;
@@ -91,7 +97,8 @@ export async function syncDailyLog(
       waterTarget: profile.waterTarget,
       dailySpendingLimit: profile.dailySpendingLimit,
     },
-    profile.scoreWeights
+    // User weights (E3), with disabled domains' weight redistributed (E5).
+    renormalizeWeights(profile.scoreWeights ?? DEFAULT_WEIGHTS, disabledComponents(profile.domains))
   );
 
   log.forgeScore = scoreResult.score;

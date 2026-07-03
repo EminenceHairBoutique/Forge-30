@@ -1,20 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { mvdStatus, shouldShowEveningReview, shouldShowMorningPlan } from "./dayPhase";
+import { mvdStatus, shouldShowEveningReview, shouldShowMorningPlan, type MvdLog } from "./dayPhase";
 
-describe("mvdStatus", () => {
+/** Full MvdLog fixture; override just what a test cares about. */
+function log(overrides: Partial<MvdLog> = {}): MvdLog {
+  return {
+    calories: 0,
+    protein: 0,
+    journalDone: false,
+    waterMl: 0,
+    workoutStatus: "notStarted",
+    steps: 0,
+    ...overrides,
+  };
+}
+
+describe("mvdStatus — default definition", () => {
   it("is met with one meal logged + the check-in", () => {
-    expect(mvdStatus({ calories: 1150, protein: 65, journalDone: true })).toEqual({
+    expect(mvdStatus(log({ calories: 1150, protein: 65, journalDone: true }))).toEqual({
       met: true,
       remaining: [],
     });
   });
 
   it("counts a protein-only log (e.g. a shake) as the meal", () => {
-    expect(mvdStatus({ calories: 0, protein: 46, journalDone: true }).met).toBe(true);
+    expect(mvdStatus(log({ protein: 46, journalDone: true })).met).toBe(true);
   });
 
   it("lists what's still open in neutral language", () => {
-    const s = mvdStatus({ calories: 0, protein: 0, journalDone: false });
+    const s = mvdStatus(log());
     expect(s.met).toBe(false);
     expect(s.remaining).toEqual(["log one meal", "do the 2-minute check-in"]);
     for (const item of s.remaining) {
@@ -23,8 +36,31 @@ describe("mvdStatus", () => {
   });
 
   it("requires both halves", () => {
-    expect(mvdStatus({ calories: 500, protein: 20, journalDone: false }).met).toBe(false);
-    expect(mvdStatus({ calories: 0, protein: 0, journalDone: true }).met).toBe(false);
+    expect(mvdStatus(log({ calories: 500, protein: 20 })).met).toBe(false);
+    expect(mvdStatus(log({ journalDone: true })).met).toBe(false);
+  });
+});
+
+describe("mvdStatus — user-defined MVD (E5)", () => {
+  it("honors a custom definition with water + movement", () => {
+    const def = { meal: false, checkIn: false, water: true, movement: true };
+    expect(mvdStatus(log(), def).remaining).toEqual([
+      "log some water",
+      "move a little — any workout or a walk",
+    ]);
+    expect(mvdStatus(log({ waterMl: 500, steps: 2000 }), def).met).toBe(true);
+  });
+
+  it("counts a rest day as movement — recovery is a plan, not a miss", () => {
+    const def = { meal: false, checkIn: false, water: false, movement: true };
+    expect(mvdStatus(log({ workoutStatus: "rest" }), def).met).toBe(true);
+  });
+
+  it("an all-unchecked definition falls back to the default, never trivially met", () => {
+    const empty = { meal: false, checkIn: false, water: false, movement: false };
+    const s = mvdStatus(log(), empty);
+    expect(s.met).toBe(false);
+    expect(s.remaining).toContain("log one meal");
   });
 });
 

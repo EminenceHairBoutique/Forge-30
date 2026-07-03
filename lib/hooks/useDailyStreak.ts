@@ -28,7 +28,7 @@ export function useDailyStreak() {
         adapter.listDailyLogs(profile.startDate, today),
         adapter.getStreak(DAILY_ID),
       ]);
-      const metDates = logs.filter((l) => mvdStatus(l).met).map((l) => l.date);
+      const metDates = logs.filter((l) => mvdStatus(l, profile.mvd).met).map((l) => l.date);
       const next = computeStreak(DAILY_ID, metDates, today, undefined, prev ?? undefined);
       if (cancelled) return;
       setStreak(next);

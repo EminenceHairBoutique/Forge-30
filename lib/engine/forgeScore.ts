@@ -1,4 +1,4 @@
-import type { ForgeScoreWeights, WorkoutStatus } from "@/lib/types";
+import type { DomainToggles, ForgeScoreWeights, WorkoutStatus } from "@/lib/types";
 import { clamp } from "@/lib/utils";
 
 /**
@@ -67,6 +67,29 @@ export const DEFAULT_WEIGHTS: ForgeScoreWeights = {
 };
 
 export type ScoreComponentKey = keyof ForgeScoreWeights;
+
+/**
+ * Which score components each toggleable domain owns (E5). Sleep has no
+ * domain — recovery is universal. Health/relationships/social carry no score
+ * components yet; their toggles gate tabs as those land (E7/E11/E12).
+ */
+const DOMAIN_COMPONENTS: Partial<Record<keyof DomainToggles, ScoreComponentKey[]>> = {
+  nutrition: ["calories", "protein", "water"],
+  training: ["workout", "mobility"],
+  mind: ["mind"],
+  money: ["spending"],
+  skills: ["skill"],
+};
+
+/** Score components turned off by the profile's domain toggles. */
+export function disabledComponents(domains?: Partial<DomainToggles>): ScoreComponentKey[] {
+  if (!domains) return [];
+  const off: ScoreComponentKey[] = [];
+  for (const [domain, keys] of Object.entries(DOMAIN_COMPONENTS)) {
+    if (domains[domain as keyof DomainToggles] === false) off.push(...keys);
+  }
+  return off;
+}
 
 /**
  * Scale a weight set so the *enabled* components sum to 100, preserving their

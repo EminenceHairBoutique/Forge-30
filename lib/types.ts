@@ -39,6 +39,105 @@ export interface PainFlags {
   leftArmAggravation: boolean;
 }
 
+// --- Universal profile vocabulary (E5) ---------------------------------------
+
+export type Sex = "male" | "female" | "other" | "unspecified";
+
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "veryActive";
+
+export type TrainingExperience = "beginner" | "intermediate" | "advanced";
+
+export type EquipmentAccess = "none" | "minimal" | "homeGym" | "fullGym";
+
+export type DietPreference =
+  | "omnivore"
+  | "vegetarian"
+  | "vegan"
+  | "pescatarian"
+  | "other";
+
+/** The v2 goal menu (spec §Onboarding). */
+export type GoalId =
+  | "gainMuscle"
+  | "loseFat"
+  | "recomposition"
+  | "maintain"
+  | "healthMarkers"
+  | "bloodPressure"
+  | "strength"
+  | "cardio"
+  | "sleep"
+  | "stress"
+  | "relationship"
+  | "dating"
+  | "friendships"
+  | "finances"
+  | "discipline"
+  | "skills"
+  | "generalReset";
+
+/**
+ * Which life domains the app tracks for this user. Turning one off hides its
+ * surfaces and hands its Forge Score weight to the rest (renormalization —
+ * see forgeScore.ts). Health/relationships/social gate v2 tabs as they land.
+ */
+export interface DomainToggles {
+  nutrition: boolean;
+  training: boolean;
+  mind: boolean;
+  money: boolean;
+  skills: boolean;
+  health: boolean;
+  relationships: boolean;
+  social: boolean;
+}
+
+/**
+ * The user's own Minimum Viable Day. At least one part must be on — an empty
+ * MVD would be trivially met and hollow out the streak; the engine falls back
+ * to the default (meal + check-in) if everything is unchecked.
+ */
+export interface MvdDefinition {
+  /** Log at least one meal. */
+  meal: boolean;
+  /** Do the 2-minute mind check-in. */
+  checkIn: boolean;
+  /** Log any water. */
+  water: boolean;
+  /** Any movement: a workout, a rest-day walk, any steps. */
+  movement: boolean;
+}
+
+/** Stored now, consumed by push/reminders in E9. */
+export interface NotificationPrefs {
+  morningPlan: boolean;
+  eveningReview: boolean;
+  streakReminder: boolean;
+}
+
+/**
+ * Structured injury description (E5) — generalizes PainFlags. Until the
+ * training engine flips over (E8-T), PainFlags stays the authoritative input
+ * and injuries can be derived from it; both live on the profile.
+ */
+export interface InjuryProfile {
+  id: string;
+  /** e.g. "thoracic spine", "left shoulder". */
+  bodyArea: string;
+  /** Professional diagnosis if one exists — user-reported, never inferred. */
+  diagnosis: string;
+  symptoms: string;
+  /** 0–10 typical pain. */
+  painScore: number;
+  aggravatingMovements: string[];
+  relievingMovements: string[];
+  medicalRestrictions: string;
+  onsetDate: ISODate | null;
+  /** Currently receiving professional care for it. */
+  professionalCare: boolean;
+  notes: string;
+}
+
 export interface UserProfile {
   name: string;
   /** Day 1 of the 30-day program. */
@@ -63,6 +162,38 @@ export interface UserProfile {
    * engine's DEFAULT_WEIGHTS. Renormalized to 100 when a domain is disabled.
    */
   scoreWeights?: ForgeScoreWeights;
+
+  // --- Universal profile (E5). All optional/additive; schema v2's migration
+  // fills the structured trio (domains/mvd/notifications) with defaults.
+  age?: number | null;
+  sex?: Sex;
+  heightIn?: number | null;
+  /** Starting body weight (lb) from onboarding; trend weight supersedes it. */
+  weightLb?: number | null;
+  goalWeightLb?: number | null;
+  primaryGoal?: GoalId;
+  secondaryGoals?: GoalId[];
+  activityLevel?: ActivityLevel;
+  trainingExperience?: TrainingExperience;
+  equipment?: EquipmentAccess;
+  dietPreference?: DietPreference;
+  /** Free text: allergies, dislikes, religious restrictions. */
+  dietaryRestrictions?: string;
+  sleepTargetHours?: number;
+  /** Free text: what the money domain is working toward. */
+  budgetGoal?: string;
+  relationshipStatus?: string;
+  socialGoals?: string;
+  /** Free text, user-reported; the app never diagnoses. */
+  healthConcerns?: string;
+  /** Optional; context for the coach, never medical advice. */
+  medications?: string;
+  trackBloodPressure?: boolean;
+  trackFitnessMarkers?: boolean;
+  domains?: DomainToggles;
+  mvd?: MvdDefinition;
+  notifications?: NotificationPrefs;
+  injuries?: InjuryProfile[];
   onboardingComplete: boolean;
 }
 

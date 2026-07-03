@@ -15,7 +15,14 @@ import {
   type ScoreComponentKey,
 } from "@/lib/engine/forgeScore";
 import { Select } from "@/components/ui/select";
-import type { ForgeScoreWeights, PainFlags, UserProfile } from "@/lib/types";
+import { DEFAULT_DOMAINS, DEFAULT_MVD } from "@/lib/data/defaults";
+import type {
+  DomainToggles,
+  ForgeScoreWeights,
+  MvdDefinition,
+  PainFlags,
+  UserProfile,
+} from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +36,24 @@ const PAIN_FLAG_LABELS: { key: keyof PainFlags; label: string }[] = [
   { key: "scapular", label: "Scapular pain" },
   { key: "upperTrapDominant", label: "Upper-trap dominant movement" },
   { key: "leftArmAggravation", label: "Left arm aggravation" },
+];
+
+const DOMAIN_LABELS: { key: keyof DomainToggles; label: string; sub?: string }[] = [
+  { key: "nutrition", label: "Nutrition" },
+  { key: "training", label: "Training" },
+  { key: "mind", label: "Mind" },
+  { key: "money", label: "Money" },
+  { key: "skills", label: "Skills" },
+  { key: "health", label: "Health markers", sub: "BP, biomarkers (v2)" },
+  { key: "relationships", label: "Relationships", sub: "coming in v2" },
+  { key: "social", label: "Social & friends", sub: "coming in v2" },
+];
+
+const MVD_LABELS: { key: keyof MvdDefinition; label: string; sub?: string }[] = [
+  { key: "meal", label: "Log one meal" },
+  { key: "checkIn", label: "2-minute check-in" },
+  { key: "water", label: "Log some water" },
+  { key: "movement", label: "Move a little", sub: "any workout, rest day, or a walk" },
 ];
 
 const WEIGHT_FIELDS: { key: ScoreComponentKey; label: string }[] = [
@@ -214,7 +239,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="flex flex-col">
           {PAIN_FLAG_LABELS.map(({ key, label }) => (
-            <CheckItem
+            <CheckItem variant="toggle"
               key={key}
               label={label}
               checked={draft.painFlags[key]}
@@ -223,6 +248,52 @@ export default function SettingsPage() {
               }
             />
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Domains & Minimum Viable Day</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <Label>Tracked domains — off-domains hand their score weight to the rest</Label>
+            <div className="rounded-(--radius-card) border border-line bg-surface p-1">
+              {DOMAIN_LABELS.map(({ key, label, sub }) => (
+                <CheckItem variant="toggle"
+                  key={key}
+                  label={label}
+                  sublabel={sub}
+                  checked={(draft.domains ?? DEFAULT_DOMAINS)[key]}
+                  onCheckedChange={(v) =>
+                    setDraft({
+                      ...draft,
+                      domains: { ...(draft.domains ?? DEFAULT_DOMAINS), [key]: v },
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label>Minimum Viable Day — the floor that keeps a streak alive</Label>
+            <div className="rounded-(--radius-card) border border-line bg-surface p-1">
+              {MVD_LABELS.map(({ key, label, sub }) => (
+                <CheckItem variant="toggle"
+                  key={key}
+                  label={label}
+                  sublabel={sub}
+                  checked={(draft.mvd ?? DEFAULT_MVD)[key]}
+                  onCheckedChange={(v) =>
+                    setDraft({ ...draft, mvd: { ...(draft.mvd ?? DEFAULT_MVD), [key]: v } })
+                  }
+                />
+              ))}
+            </div>
+            <p className="text-xs text-muted">
+              If everything is unchecked, the default (one meal + the check-in) applies.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

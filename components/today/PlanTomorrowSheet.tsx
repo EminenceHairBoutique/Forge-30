@@ -85,7 +85,7 @@ export function PlanTomorrowSheet({
             <Label>Meals you intend ({plan.meals.label} rotation)</Label>
             <div className="rounded-(--radius-card) border border-line bg-surface p-1">
               {mealNames.map((name) => (
-                <CheckItem
+                <CheckItem variant="toggle"
                   key={name}
                   label={name}
                   checked={meals.has(name)}

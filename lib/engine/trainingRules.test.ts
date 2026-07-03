@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computePersonalRecords,
   getPainAwareWorkoutAdjustment,
+  injuriesFromPainFlags,
   weeklyVolumeByMuscle,
 } from "./trainingRules";
 import type { PainFlags, WorkoutEntry } from "@/lib/types";
@@ -106,5 +107,29 @@ describe("weeklyVolumeByMuscle", () => {
       ]),
     ]);
     expect(v.chest).toBe(2);
+  });
+});
+
+describe("injuriesFromPainFlags (E5 derived view)", () => {
+  it("maps each active flag to a structured InjuryProfile with a stable id", () => {
+    const injuries = injuriesFromPainFlags(allFlags);
+    expect(injuries).toHaveLength(5);
+    expect(injuries.map((i) => i.id)).toContain("painflag:thoracic");
+    for (const inj of injuries) {
+      expect(inj.diagnosis).toBe(""); // user-reported only — never inferred
+      expect(inj.aggravatingMovements.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("returns an empty list when no flags are set (de-personalized default)", () => {
+    expect(
+      injuriesFromPainFlags({
+        thoracic: false,
+        rib: false,
+        scapular: false,
+        upperTrapDominant: false,
+        leftArmAggravation: false,
+      })
+    ).toEqual([]);
   });
 });

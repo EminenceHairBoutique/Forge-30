@@ -1,4 +1,10 @@
-import type { ExerciseDef, PainFlags, PersonalRecord, WorkoutEntry } from "@/lib/types";
+import type {
+  ExerciseDef,
+  InjuryProfile,
+  PainFlags,
+  PersonalRecord,
+  WorkoutEntry,
+} from "@/lib/types";
 import { PAIN_RELIEF_DRILLS } from "@/lib/data/workoutPlan";
 
 /**
@@ -66,6 +72,37 @@ export function getPainAwareWorkoutAdjustment(args: {
     appendedDrills: PAIN_RELIEF_DRILLS,
     messages,
   };
+}
+
+/**
+ * Derived view (E5): the boolean PainFlags expressed as structured
+ * InjuryProfile records. PainFlags remains the authoritative input to
+ * getPainAwareWorkoutAdjustment until E8-T flips the training engine onto
+ * InjuryProfile directly; deterministic ids keep the view stable across runs.
+ */
+export function injuriesFromPainFlags(flags: PainFlags): InjuryProfile[] {
+  const defs: { key: keyof PainFlags; bodyArea: string; symptoms: string; aggravating: string[] }[] = [
+    { key: "thoracic", bodyArea: "thoracic spine (mid-back)", symptoms: "mid-back pain", aggravating: ["heavy overhead pressing"] },
+    { key: "rib", bodyArea: "ribs", symptoms: "rib pain", aggravating: ["heavy overhead pressing", "loaded twisting"] },
+    { key: "scapular", bodyArea: "scapula", symptoms: "scapular pain", aggravating: ["free-standing pulls"] },
+    { key: "upperTrapDominant", bodyArea: "upper trapezius", symptoms: "over-recruited upper traps", aggravating: ["shrugging through reps"] },
+    { key: "leftArmAggravation", bodyArea: "left arm", symptoms: "left-arm aggravation under load", aggravating: ["heavy pressing"] },
+  ];
+  return defs
+    .filter((d) => flags[d.key])
+    .map((d) => ({
+      id: `painflag:${d.key}`,
+      bodyArea: d.bodyArea,
+      diagnosis: "",
+      symptoms: d.symptoms,
+      painScore: 0,
+      aggravatingMovements: d.aggravating,
+      relievingMovements: ["serratus wall slides", "dead bugs", "breathing drills"],
+      medicalRestrictions: "",
+      onsetDate: null,
+      professionalCare: false,
+      notes: "Derived from v1 pain flags.",
+    }));
 }
 
 /** Best set (heaviest weight, ties broken by reps) per exercise across history. */

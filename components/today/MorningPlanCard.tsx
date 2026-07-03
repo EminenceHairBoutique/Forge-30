@@ -4,9 +4,9 @@ import { Sunrise, Dumbbell, UtensilsCrossed, Target, Wallet } from "lucide-react
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getDailyPlan } from "@/lib/engine/plan";
-import { mvdStatus } from "@/lib/engine/dayPhase";
+import type { MvdStatus } from "@/lib/engine/dayPhase";
 import { formatMoney } from "@/lib/utils";
-import type { DailyLog, TomorrowPlan } from "@/lib/types";
+import type { TomorrowPlan } from "@/lib/types";
 
 /**
  * Morning Plan — the 15-second first-open view: today's plan, one focus,
@@ -14,20 +14,20 @@ import type { DailyLog, TomorrowPlan } from "@/lib/types";
  */
 export function MorningPlanCard({
   date,
-  log,
+  mvd,
   plan,
   onDismiss,
   onHardDay,
 }: {
   date: string;
-  log: DailyLog;
+  /** Today's Minimum Viable Day status, per the user's own definition. */
+  mvd: MvdStatus;
   /** Last night's intention for today, if one was set. */
   plan: TomorrowPlan | null;
   onDismiss: () => void;
   onHardDay: () => void;
 }) {
   const daily = getDailyPlan(date);
-  const mvd = mvdStatus(log);
 
   return (
     <Card className="animate-rise flex flex-col gap-3 border-gold/30 bg-gold/5 p-4">
@@ -65,8 +65,8 @@ export function MorningPlanCard({
       </div>
 
       <p className="text-xs text-muted">
-        Minimum Viable Day: one meal + the 2-minute check-in.{" "}
-        {mvd.met ? "Already met." : "That's the floor, everything else is building."}
+        Minimum Viable Day: {mvd.met ? "already met." : `${mvd.remaining.join(" + ")}.`}{" "}
+        {mvd.met ? "" : "That's the floor, everything else is building."}
       </p>
 
       <div className="flex gap-2">
