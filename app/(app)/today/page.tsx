@@ -18,15 +18,22 @@ import {
 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { resolveScoreState } from "@/lib/engine/forgeScore";
+import { mvdStatus, shouldShowEveningReview, shouldShowMorningPlan } from "@/lib/engine/dayPhase";
 import { useDay } from "@/lib/hooks/useDay";
 import { toISODate, daysBetween, clamp, formatMoney, fromISODate } from "@/lib/utils";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
-import type { AIReview, WorkoutStatus } from "@/lib/types";
+import type { AIReview, TomorrowPlan, WorkoutStatus } from "@/lib/types";
 import { ScoreRing } from "@/components/cards/ScoreRing";
 import { StatCard } from "@/components/cards/StatCard";
 import { QuickActions } from "@/components/shell/QuickActions";
 import { DailyCheckSheet } from "@/components/forms/DailyCheckSheet";
+import { MorningPlanCard } from "@/components/today/MorningPlanCard";
+import { EveningReviewCard } from "@/components/today/EveningReviewCard";
+import { HardDaySheet } from "@/components/today/HardDaySheet";
+import { PlanTomorrowSheet } from "@/components/today/PlanTomorrowSheet";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { LifeBuoy } from "lucide-react";
 
 const WORKOUT_LABEL: Record<WorkoutStatus, string> = {
   notStarted: "Not started",
@@ -41,11 +48,16 @@ export default function TodayPage() {
   const today = toISODate();
   const { snapshot, updateLog, loading } = useDay(today);
   const [review, setReview] = useState<AIReview | null>(null);
+  const [todayIntent, setTodayIntent] = useState<TomorrowPlan | null>(null);
+  const [hardDayOpen, setHardDayOpen] = useState(false);
+  const [planTomorrowOpen, setPlanTomorrowOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    adapter.getAIReview(today).then((r) => {
-      if (!cancelled) setReview(r);
+    Promise.all([adapter.getAIReview(today), adapter.getTomorrowPlan(today)]).then(([r, t]) => {
+      if (cancelled) return;
+      setReview(r);
+      setTodayIntent(t);
     });
     return () => {
       cancelled = true;
@@ -61,6 +73,8 @@ export default function TodayPage() {
   }
 
   const { log, scoreResult, unnecessarySpend } = snapshot;
+  const scoreState = resolveScoreState(new Date().getHours(), profile.dayBoundaryHour);
+  const mvd = mvdStatus(log);
   const dayNumber = clamp(daysBetween(profile.startDate, today) + 1, 1, PROGRAM_LENGTH_DAYS);
   const dateLabel = fromISODate(today).toLocaleDateString("en-US", {
     weekday: "long",
@@ -92,11 +106,45 @@ export default function TodayPage() {
         </div>
       </header>
 
-      <div className="flex justify-center py-2">
-        <ScoreRing
-          result={scoreResult}
-          state={resolveScoreState(new Date().getHours(), profile.dayBoundaryHour)}
+      {shouldShowMorningPlan(log, scoreState) && !log.hardDay && (
+        <MorningPlanCard
+          date={today}
+          log={log}
+          plan={todayIntent}
+          onDismiss={() => updateLog({ morningPlanSeen: true })}
+          onHardDay={() => setHardDayOpen(true)}
         />
+      )}
+
+      {shouldShowEveningReview(scoreState, !!review) && (
+        <EveningReviewCard onPlanTomorrow={() => setPlanTomorrowOpen(true)} />
+      )}
+
+      {log.hardDay && (
+        <button type="button" onClick={() => setHardDayOpen(true)} className="w-full text-left">
+          <Card className="animate-rise flex items-start gap-3 border-gold/30 bg-gold/5 p-4">
+            <LifeBuoy className="mt-0.5 size-5 shrink-0 text-gold" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+                Hard day — minimum viable day only
+              </p>
+              <p className="mt-0.5 text-sm text-ivory">
+                {mvd.met
+                  ? "MVD met. You're done — anything else is a bonus."
+                  : `Still open: ${mvd.remaining.join(" and ")}. Then you're done.`}
+              </p>
+            </div>
+          </Card>
+        </button>
+      )}
+
+      <div className="flex flex-col items-center py-2">
+        <ScoreRing result={scoreResult} state={scoreState} />
+        {!log.hardDay && scoreState === "inProgress" && (
+          <Button variant="ghost" size="sm" className="mt-1" onClick={() => setHardDayOpen(true)}>
+            <LifeBuoy className="size-4" /> Having a hard day?
+          </Button>
+        )}
       </div>
 
       {/* AI Coach one-liner */}
@@ -218,6 +266,14 @@ export default function TodayPage() {
       </div>
 
       <QuickActions />
+
+      <HardDaySheet
+        open={hardDayOpen}
+        onOpenChange={setHardDayOpen}
+        log={log}
+        onSetHardDay={(v) => updateLog({ hardDay: v })}
+      />
+      <PlanTomorrowSheet open={planTomorrowOpen} onOpenChange={setPlanTomorrowOpen} />
     </div>
   );
 }

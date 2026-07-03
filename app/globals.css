@@ -93,6 +93,27 @@ textarea {
   display: none;
 }
 
+/* Ritual-card entrance: subtle rise, ≤400ms, disabled for reduced motion. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise-in 0.35s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-breathe {
+    animation: none;
+  }
+}
+
 /* Gentle breathing animation for the Mind reset tool. */
 @keyframes breathe {
   0%,

@@ -27,6 +27,7 @@ const goodDay: CoachInput = {
   skillMissedTwoDays: false,
   weightTrend7d: 1.2,
   scoreState: "final",
+  hardDay: false,
 };
 
 describe("generateMockAIFeedback", () => {
@@ -157,5 +158,53 @@ describe("generateMockAIFeedback", () => {
     const r = generateMockAIFeedback({ ...goodDay, forgeScore: 30, calories: 1500, protein: 90 });
     expect(r.scoreExplanation).toContain("Today was a 30/100");
     expect(r.tomorrowPriority).toContain("Tomorrow's #1");
+  });
+});
+
+describe("hard day mode", () => {
+  const hardDayEmpty: CoachInput = {
+    ...goodDay,
+    hardDay: true,
+    scoreState: "inProgress",
+    forgeScore: 0,
+    calories: 0,
+    protein: 0,
+    workoutStatus: "notStarted",
+    journalDone: false,
+    spendingChecked: false,
+    skillMinutes: 0,
+    mobilityDone: false,
+    sleepHours: 0,
+    stress: 9,
+  };
+
+  it("reframes everything around the Minimum Viable Day, no audit", () => {
+    const r = generateMockAIFeedback(hardDayEmpty);
+    expect(r.scoreExplanation).toContain("Minimum Viable Day");
+    expect(r.slipped.toLowerCase()).toContain("don't get audited");
+    expect(r.slipped).not.toMatch(/short|behind|didn't happen/);
+    expect(r.physicalAdjustment.toLowerCase()).toContain("no training required");
+    expect(r.tomorrowPriority.toLowerCase()).toMatch(/minimum viable day|one meal/);
+  });
+
+  it("contains zero guilt copy and stays deterministic", () => {
+    const r = generateMockAIFeedback(hardDayEmpty);
+    for (const text of Object.values(r)) {
+      expect(text.toLowerCase()).not.toMatch(/fail|lazy|excuse|ruin|behind|slipped/);
+    }
+    expect(generateMockAIFeedback(hardDayEmpty)).toEqual(generateMockAIFeedback(hardDayEmpty));
+  });
+
+  it("acknowledges an MVD that was still met on a hard final day", () => {
+    const r = generateMockAIFeedback({
+      ...hardDayEmpty,
+      scoreState: "final",
+      calories: 800,
+      protein: 40,
+      journalDone: true,
+    });
+    expect(r.scoreExplanation.toLowerCase()).toContain("minimum viable day");
+    expect(r.wentWell.toLowerCase()).toContain("minimum");
+    expect(r.tomorrowPriority.toLowerCase()).toContain("nothing carried over");
   });
 });

@@ -58,5 +58,6 @@ export async function buildCoachInput(
     skillMissedTwoDays,
     weightTrend7d: calculateWeightTrend(metrics),
     scoreState: resolveScoreState(new Date().getHours(), profile.dayBoundaryHour),
+    hardDay: log.hardDay ?? false,
   };
 }

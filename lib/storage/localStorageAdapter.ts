@@ -9,6 +9,7 @@ import type {
   SkillTask,
   SpendingEntry,
   SundayReview,
+  TomorrowPlan,
   UserProfile,
   WorkoutEntry,
 } from "@/lib/types";
@@ -41,6 +42,7 @@ const KEYS = {
   bodyMetrics: `${PREFIX}:bodyMetrics`,
   aiReviews: `${PREFIX}:aiReviews`,
   entitlements: `${PREFIX}:entitlements`,
+  tomorrowPlans: `${PREFIX}:tomorrowPlans`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -152,6 +154,17 @@ export class LocalStorageAdapter implements StorageAdapter {
     // Large-record collections (journal bodies, audio, assessments) live in
     // IndexedDB — a full reset must not orphan them there.
     await this.large.importAll({});
+  }
+
+  // -- Daily rituals -------------------------------------------------------------
+  async getTomorrowPlan(date: ISODate): Promise<TomorrowPlan | null> {
+    return read<Record<ISODate, TomorrowPlan>>(KEYS.tomorrowPlans, {})[date] ?? null;
+  }
+
+  async saveTomorrowPlan(plan: TomorrowPlan): Promise<void> {
+    const all = read<Record<ISODate, TomorrowPlan>>(KEYS.tomorrowPlans, {});
+    all[plan.date] = plan;
+    write(KEYS.tomorrowPlans, all);
   }
 
   // -- Entitlements ------------------------------------------------------------

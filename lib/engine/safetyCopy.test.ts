@@ -120,14 +120,20 @@ describe("mock coach output routes clean through the safety check", () => {
     skillMissedTwoDays: true,
     weightTrend7d: 0.1,
     scoreState: "final",
+    hardDay: false,
   };
 
-  it("every part passes on the harshest realistic day, final and in-progress", () => {
-    for (const scoreState of ["final", "inProgress"] as const) {
-      const review = generateMockAIFeedback({ ...base, scoreState });
+  it("every part passes on the harshest realistic day — final, in-progress, and hard-day", () => {
+    for (const variant of [
+      { ...base, scoreState: "final" as const },
+      { ...base, scoreState: "inProgress" as const },
+      { ...base, hardDay: true },
+      { ...base, hardDay: true, scoreState: "inProgress" as const },
+    ]) {
+      const review = generateMockAIFeedback(variant);
       for (const [part, text] of Object.entries(review)) {
         const result = checkSafetyCopy(text);
-        expect(result.violations, `${scoreState}/${part}: ${text}`).toEqual([]);
+        expect(result.violations, `${variant.scoreState}/hard:${variant.hardDay}/${part}: ${text}`).toEqual([]);
       }
     }
   });

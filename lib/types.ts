@@ -89,6 +89,26 @@ export interface DailyLog {
   calendarState: CalendarState;
   /** Ids of checked meal-prep checklist items (see PREP_CHECKLIST). */
   prepChecklist?: string[];
+  /**
+   * Hard Day mode: targets collapse to the Minimum Viable Day and coach tone
+   * switches to recovery framing. Never reduces streaks, never shames.
+   */
+  hardDay?: boolean;
+  /** Morning Plan card dismissed for this date. */
+  morningPlanSeen?: boolean;
+}
+
+/** Tonight's intention for tomorrow — feeds the next Morning Plan (E2). */
+export interface TomorrowPlan {
+  /** The date the plan is FOR (tomorrow at creation time). */
+  date: ISODate;
+  /** One focus line, e.g. "protein before 2pm". */
+  focus: string;
+  /** Planned meal names the user intends (from the rotation or their own). */
+  intendedMeals: string[];
+  /** Intended discretionary cap for the day; null = no intention set. */
+  spendingIntention: number | null;
+  createdAt: ISODateTime;
 }
 
 // ---------------------------------------------------------------------------

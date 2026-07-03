@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Sparkles,
   Gauge,
@@ -53,6 +53,18 @@ export default function CoachPage() {
       cancelled = true;
     };
   }, [adapter, today]);
+
+  // Deep link from the Evening Review card: /coach?auto=1 generates on arrival.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (!loaded || !profile || review || autoRan.current) return;
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("auto")) {
+      autoRan.current = true;
+      window.history.replaceState(null, "", "/coach");
+      void generate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, profile, review]);
 
   const generate = async () => {
     if (!profile) return;

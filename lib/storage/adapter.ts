@@ -9,6 +9,7 @@ import type {
   SkillTask,
   SpendingEntry,
   SundayReview,
+  TomorrowPlan,
   UserProfile,
   WorkoutEntry,
 } from "@/lib/types";
@@ -39,6 +40,10 @@ export interface StorageAdapter {
   // Entitlements (local until real subscription state lands — see expansion plan E16)
   getTier(): Promise<Tier>;
   saveTier(tier: Tier): Promise<void>;
+
+  // Daily rituals (E2)
+  getTomorrowPlan(date: ISODate): Promise<TomorrowPlan | null>;
+  saveTomorrowPlan(plan: TomorrowPlan): Promise<void>;
 
   // Daily logs
   getDailyLog(date: ISODate): Promise<DailyLog | null>;

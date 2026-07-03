@@ -39,6 +39,8 @@ export interface CoachInput {
    * check-in, never a verdict on the day. "final" after it.
    */
   scoreState: "inProgress" | "final";
+  /** Hard Day mode: targets collapsed to the MVD; tone is recovery, not audit. */
+  hardDay: boolean;
 }
 
 export interface CoachReview {
@@ -53,6 +55,13 @@ export interface CoachReview {
 }
 
 export function generateMockAIFeedback(input: CoachInput): CoachReview {
+  // Hard Day mode: the whole review reframes around the Minimum Viable Day.
+  // No slip audit, no target math — recovery is the assignment (spec: never
+  // punish hard days; warm recovery language always).
+  if (input.hardDay) {
+    return generateHardDayReview(input);
+  }
+
   const proteinShort = Math.max(0, Math.round(input.proteinTarget - input.protein));
   const caloriesShort = Math.max(0, input.calorieTarget - input.calories);
   const weightFlat = input.weightTrend7d !== null && Math.abs(input.weightTrend7d) < 0.5;
@@ -190,5 +199,39 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
     moneyAdjustment,
     mentalAdjustment,
     tomorrowPriority,
+  };
+}
+
+/** Recovery-framed review for Hard Day mode — deterministic like everything else. */
+function generateHardDayReview(input: CoachInput): CoachReview {
+  const mealLogged = input.calories > 0 || input.protein > 0;
+  const mvdDone = mealLogged && input.journalDone;
+  const open = mvdDone ? "" : mealLogged ? "the 2-minute check-in" : input.journalDone ? "one logged meal" : "one meal and the check-in";
+
+  return {
+    scoreExplanation:
+      input.scoreState === "inProgress"
+        ? `You called a hard day, and calling it is the right move. Today's whole assignment is the Minimum Viable Day — one meal and the check-in. The score is paused as a verdict; showing up at all is the win today.`
+        : `Hard day, day ${input.dayNumber}. ${mvdDone ? "You still landed the Minimum Viable Day — that's the streak protected and the loop intact." : "The day is closed; whatever got logged, got logged. Tomorrow starts clean."}`,
+    wentWell: mvdDone
+      ? "You kept the minimum alive on a day that didn't want to cooperate. That's the skill this app exists to build."
+      : mealLogged
+        ? "A meal made it into the log even on a hard day — that's not nothing, that's the habit holding."
+        : input.journalDone
+          ? "You did the check-in on a hard day. Naming it is most of the work."
+          : "You told the app it's a hard day instead of disappearing. That's the honest version of consistency.",
+    slipped: "Nothing on the usual list counts against you today. Hard days don't get audited.",
+    physicalAdjustment:
+      "No training required. If moving would help, a short walk or five minutes of easy mobility counts — and stopping counts too.",
+    nutritionAdjustment: mealLogged
+      ? "Food's handled at the minimum level. Don't chase the targets tonight — normal service resumes tomorrow."
+      : "One easy meal is the whole nutrition goal. Something simple you don't have to think about.",
+    moneyAdjustment:
+      "If stress wants to spend, give it the 60-second pause first. No budget review needed today.",
+    mentalAdjustment:
+      "Do the 60-second breathing reset once, and keep the wind-down gentle. If today keeps being heavy, talking to someone you trust — or a professional — is a strong move.",
+    tomorrowPriority: mvdDone
+      ? "Tomorrow's #1: nothing carried over. Start it as a normal day and see how it feels."
+      : `Rest of today's #1: ${open || "the Minimum Viable Day"} — then you're done, guilt-free.`,
   };
 }
