@@ -17,7 +17,7 @@ export function StreakComebackCard({ streak }: { streak: StreakState }) {
         <RotateCcw className="size-4 text-gold" />
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+        <p className="microlabel text-muted">
           Fresh start
         </p>
         <p className="mt-0.5 text-sm text-ivory">

@@ -1,15 +1,20 @@
+"use client";
+
+import { useId } from "react";
 import { clamp } from "@/lib/utils";
 
 /**
- * SVG progress ring. Track is a recessive elevated tone; the data arc is thin
- * (per mark specs) with a rounded cap, gold while in progress and success
- * green only at 100%.
+ * SVG progress ring. Track is the recessive --ring-track tone; the data arc
+ * is thin (per mark specs) with a rounded cap, gold while in progress and
+ * teal only at 100%.
  *
- * HUD gauge options (A2): `ticks` draws instrument tick marks around a thin
- * outer track (majors every `majorEvery`); `glow` applies the rationed gold
+ * Gauge options: `ticks` draws instrument tick marks around a thin outer
+ * track (majors every `majorEvery`); `glow` applies the rationed ember
  * drop-shadow (hero score ring, milestones, completed states only);
- * `pulse` renders the arc with the in-progress sweep-pulse animation
- * (motion-safe via the global reduced-motion block).
+ * `pulse` renders the arc with the in-progress sweep-pulse animation;
+ * `gradient` swaps the arc stroke for molten SVG gradient stops; `sweep`
+ * slows the dashoffset transition to the 1.1s hero reveal. All motion is
+ * reduced-motion-safe via the global .gauge-arc block.
  */
 export function Ring({
   value,
@@ -23,6 +28,8 @@ export function Ring({
   majorEvery = 3,
   glow = false,
   pulse = false,
+  gradient,
+  sweep = false,
 }: {
   value: number;
   max: number;
@@ -38,12 +45,19 @@ export function Ring({
   majorEvery?: number;
   glow?: boolean;
   pulse?: boolean;
+  /** Molten gradient stops for the arc stroke (top → bottom). */
+  gradient?: [string, string, string];
+  /** Hero reveal: 1.1s eased sweep instead of the default 700ms. */
+  sweep?: boolean;
 }) {
+  const gradId = useId();
   const pct = max > 0 ? clamp(value / max, 0, 1) : 0;
   // With ticks on, the arc insets to leave an 8px outer band for the gauge.
   const r = (size - stroke) / 2 - (ticks > 0 ? 8 : 0);
   const c = 2 * Math.PI * r;
-  const arc = color ?? (pct >= 1 ? "var(--accent-success)" : "var(--accent-gold)");
+  const arc = gradient
+    ? `url(#${gradId})`
+    : (color ?? (pct >= 1 ? "var(--accent-success)" : "var(--accent-gold)"));
 
   // Tick geometry: drawn just outside the arc on a thin outer track.
   const tickOuter = size / 2 - 1;
@@ -72,8 +86,18 @@ export function Ring({
         width={size}
         height={size}
         className="-rotate-90"
-        style={glow ? { filter: "drop-shadow(0 0 12px rgba(201,169,97,0.35))" } : undefined}
+        style={glow ? { filter: "drop-shadow(0 0 12px rgba(255,138,61,0.35))" } : undefined}
       >
+        {gradient && (
+          <defs>
+            {/* The svg is rotated -90°, so x-axis here reads top→bottom on screen. */}
+            <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={gradient[0]} />
+              <stop offset="50%" stopColor={gradient[1]} />
+              <stop offset="100%" stopColor={gradient[2]} />
+            </linearGradient>
+          </defs>
+        )}
         {ticks > 0 && (
           <>
             {/* Thin outer track ring behind the ticks. */}
@@ -92,7 +116,7 @@ export function Ring({
                 y1={t.y1}
                 x2={t.x2}
                 y2={t.y2}
-                stroke={t.major ? "rgba(245,241,232,0.35)" : "rgba(245,241,232,0.15)"}
+                stroke={t.major ? "rgba(255,244,228,0.35)" : "rgba(255,244,228,0.15)"}
                 strokeWidth={1}
               />
             ))}
@@ -103,7 +127,7 @@ export function Ring({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="var(--bg-elevated)"
+          stroke="var(--ring-track)"
           strokeWidth={stroke}
         />
         <circle
@@ -117,9 +141,8 @@ export function Ring({
           strokeDasharray={c}
           strokeDashoffset={c * (1 - pct)}
           className={
-            pulse
-              ? "animate-sweep-pulse transition-[stroke-dashoffset] duration-700"
-              : "transition-[stroke-dashoffset] duration-700"
+            (sweep ? "gauge-arc gauge-arc-sweep" : "gauge-arc") +
+            (pulse ? " animate-sweep-pulse" : "")
           }
         />
       </svg>

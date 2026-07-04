@@ -170,7 +170,7 @@ export default function SkillsPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="rounded-(--radius-control) border border-gold/30 bg-gold/5 px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                <p className="microlabel text-gold">
                   Today's task
                 </p>
                 <p className="mt-0.5 text-sm font-medium text-ivory">{todayTask}</p>

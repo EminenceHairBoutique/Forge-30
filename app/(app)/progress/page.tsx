@@ -232,7 +232,7 @@ export default function ProgressPage() {
 
       {recommendations.length > 0 && (
         <Card className="border-gold/30 bg-gold/5 p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gold">
+          <p className="flex items-center gap-2 microlabel text-gold">
             <Stethoscope className="size-4" /> Coach recommendations
           </p>
           <ul className="mt-2 flex flex-col gap-1.5">

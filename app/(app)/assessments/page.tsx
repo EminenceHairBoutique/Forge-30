@@ -151,14 +151,14 @@ export default function AssessmentsPage() {
                 <>
                   {report.sections.map((s) => (
                     <div key={s.heading}>
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+                      <p className="microlabel text-gold">
                         {s.heading}
                       </p>
                       <p className="mt-1 text-sm leading-relaxed text-ivory">{s.body}</p>
                     </div>
                   ))}
                   <div className="rounded-(--radius-control) border border-gold/30 bg-gold/5 px-3 py-2.5">
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-gold">
+                    <p className="flex items-center gap-1.5 microlabel text-gold">
                       <BookOpenCheck className="size-3.5" /> Growth plan
                     </p>
                     <ul className="mt-1 flex flex-col gap-1">
@@ -226,7 +226,7 @@ export default function AssessmentsPage() {
 
               {detailPrev && (
                 <div className="rounded-(--radius-control) bg-elevated px-3 py-2.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+                  <p className="microlabel text-muted">
                     Since last time
                   </p>
                   <p className="mt-1 text-sm text-ivory">
@@ -241,7 +241,7 @@ export default function AssessmentsPage() {
 
               {detail.validity.notes.length > 0 && (
                 <div className="rounded-(--radius-control) bg-elevated px-3 py-2.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+                  <p className="microlabel text-muted">
                     {confidenceNote(detail.validity.confidenceLevel)}
                   </p>
                   {detail.validity.notes.map((n) => (

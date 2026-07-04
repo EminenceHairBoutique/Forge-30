@@ -30,12 +30,21 @@ export function HealthScoreRing({ result }: { result: HealthScoreResult }) {
             max={100}
             size={148}
             stroke={10}
+            ticks={30}
+            majorEvery={3}
+            gradient={["#ffd98a", "#ffb13d", "#ff6a3d"]}
             label={score === null ? "Health Score not started" : `Health Score ${score}/100`}
           >
-            <span className="display-num text-5xl leading-none text-ivory">
+            <span
+              className={
+                score === null
+                  ? "display-num text-5xl leading-none text-muted"
+                  : "display-num text-molten text-5xl leading-none"
+              }
+            >
               {score === null ? "—" : score}
             </span>
-            <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <span className="mt-1 microlabel text-muted">
               Health Score
             </span>
           </Ring>

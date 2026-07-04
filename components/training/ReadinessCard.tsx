@@ -29,7 +29,7 @@ export function ReadinessCard({
         <div className="flex items-start gap-3">
           <BatteryMedium className="mt-0.5 size-5 shrink-0 text-gold" />
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+            <p className="microlabel text-muted">
               Readiness {readiness.score}/100
             </p>
             <p className="mt-0.5 text-sm text-ivory">{readiness.suggestion}</p>
@@ -45,7 +45,7 @@ export function ReadinessCard({
         <div className="flex items-start gap-3 border-t border-line pt-2.5">
           <TrendingDown className="mt-0.5 size-5 shrink-0 text-gold" />
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+            <p className="microlabel text-gold">
               Deload week suggested
             </p>
             <p className="mt-0.5 text-sm text-ivory">{deload.reason}</p>

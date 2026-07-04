@@ -138,7 +138,7 @@ export function JournalSection() {
           {/* Weekly reflection — deterministic counts, observations only. */}
           {weekSummary.entryCount > 0 && (
             <div className="rounded-(--radius-control) border border-gold/25 bg-gold/5 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+              <p className="microlabel text-gold">
                 This week
               </p>
               {weekSummary.lines.map((line) => (
@@ -193,7 +193,7 @@ export function JournalSection() {
             )}
             {visible.slice(0, 20).map((n) => (
               <div key={n.id} className="rounded-(--radius-control) bg-elevated px-3 py-2">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted">
+                <div className="flex items-center gap-2 microlabel text-muted">
                   <span>{n.date}</span>
                   <span className="text-gold">{KIND_LABEL[n.kind]}</span>
                   {n.private && <Lock className="size-3 text-gold" aria-label="Private entry" />}

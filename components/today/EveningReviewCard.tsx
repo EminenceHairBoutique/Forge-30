@@ -16,7 +16,7 @@ export function EveningReviewCard({ onPlanTomorrow }: { onPlanTomorrow: () => vo
 
   return (
     <Card className="animate-rise flex flex-col gap-3 border-gold/30 bg-gold/5 p-4">
-      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-gold">
+      <p className="flex items-center gap-2 microlabel text-gold">
         <Moon className="size-4" /> Evening review
       </p>
       <p className="text-sm text-ivory">

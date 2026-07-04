@@ -102,7 +102,7 @@ export function CoachModePanel({ mode }: { mode: CoachModeId }) {
   if (mode === "hardDay") {
     return (
       <Card className="border-gold/25 bg-gold/5 p-4">
-        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-gold">
+        <p className="flex items-center gap-2 microlabel text-gold">
           <LifeBuoy className="size-3.5" /> Hard day
         </p>
         <p className="mt-1.5 text-sm leading-relaxed text-ivory">
@@ -123,7 +123,7 @@ export function CoachModePanel({ mode }: { mode: CoachModeId }) {
     <div className="flex flex-col gap-3">
       {sections.map((s, i) => (
         <Card key={`${s.label}-${i}`} className="p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+          <p className="microlabel text-muted">
             {s.label}
           </p>
           <p className="mt-1.5 text-sm leading-relaxed text-ivory">{s.text}</p>

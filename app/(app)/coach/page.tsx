@@ -179,7 +179,7 @@ export default function CoachPage() {
                   key={key}
                   className={key === "tomorrowPriority" ? "notch-corner border-gold/40 bg-gold/5 p-4" : "p-4"}
                 >
-                  <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted">
+                  <p className="flex items-center gap-2 microlabel text-muted">
                     <Icon className="size-3.5 text-gold" /> {label}
                   </p>
                   <p className="mt-1.5 text-sm leading-relaxed text-ivory">{review[key]}</p>

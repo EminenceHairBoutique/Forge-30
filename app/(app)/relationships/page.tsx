@@ -531,7 +531,7 @@ export default function RelationshipsPage() {
                     .filter(([, items]) => items.length > 0)
                     .map(([heading, items]) => (
                       <div key={heading}>
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+                        <p className="microlabel text-gold">
                           {heading}
                         </p>
                         <ul className="mt-1 flex flex-col gap-1">
@@ -719,7 +719,7 @@ export default function RelationshipsPage() {
                 ] as const
               ).map(([heading, body]) => (
                 <div key={heading} className="rounded-(--radius-control) bg-elevated px-3 py-2.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+                  <p className="microlabel text-gold">
                     {heading}
                   </p>
                   <p className="mt-1 text-sm leading-relaxed text-ivory">{body}</p>
@@ -796,7 +796,7 @@ export default function RelationshipsPage() {
                 ))}
                 {analysis.healthyLines.length > 0 && (
                   <div className="rounded-(--radius-control) border border-success/30 bg-success/5 px-3 py-2.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-success">
+                    <p className="microlabel text-success">
                       The healthy side
                     </p>
                     {analysis.healthyLines.map((line) => (

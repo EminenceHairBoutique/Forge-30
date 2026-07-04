@@ -99,7 +99,7 @@ export default function TodayPage() {
     <div className="flex flex-col gap-4 pb-2">
       <header className="flex items-start justify-between pt-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+          <p className="microlabel text-gold">
             Day {dayNumber} of {PROGRAM_LENGTH_DAYS}
           </p>
           <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight">
@@ -139,7 +139,7 @@ export default function TodayPage() {
           <Card className="animate-rise flex items-start gap-3 border-gold/30 bg-gold/5 p-4">
             <LifeBuoy className="mt-0.5 size-5 shrink-0 text-gold" />
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+              <p className="microlabel text-gold">
                 Hard day — minimum viable day only
               </p>
               <p className="mt-0.5 text-sm text-ivory">
@@ -178,7 +178,7 @@ export default function TodayPage() {
         <Card className="flex items-start gap-3 border-gold/25 bg-gold/5 p-4 transition-colors active:border-gold/50 lg:hover:border-gold/50">
           <Sparkles className="mt-0.5 size-5 shrink-0 text-gold" />
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">AI Coach</p>
+            <p className="microlabel text-gold">AI Coach</p>
             <p className="mt-0.5 text-sm text-ivory">
               {review
                 ? review.tomorrowPriority

@@ -7,11 +7,13 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import { cn } from "@/lib/utils";
 
 /**
- * The hero Forge Score gauge on Today (HUD treatment: 30 day-ticks, thin
- * outer track, gold glow only at the final state — the one rationed hero
- * glow). Tapping it opens the full score breakdown (components earned +
- * penalties applied). While the day is in progress the gauge reads as a
- * pulsing partial sweep — a building number, not a verdict.
+ * The hero Forge Score gauge on Today — the Solaris signature. Molten
+ * gradient stroke over 30 day-ticks (structure encoding, one per program
+ * day), inner molten-core glow, gradient hero numeral, 1.1s sweep +
+ * count-up on the day-final reveal (the one rationed ember glow). Tapping
+ * it opens the full score breakdown (components earned + penalties
+ * applied). While the day is in progress the gauge reads as a pulsing
+ * partial sweep — a building number, not a verdict.
  */
 export function ScoreRing({
   result,
@@ -23,7 +25,7 @@ export function ScoreRing({
   const { score, components, penalties } = result;
   const building = state === "inProgress";
   // The evening reveal: the finished day's score counts up as the ring sweeps.
-  const shown = useCountUp(score, !building, 400);
+  const shown = useCountUp(score, !building, 1100);
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -41,9 +43,20 @@ export function ScoreRing({
             majorEvery={3}
             glow={!building && score > 0}
             pulse={building && score > 0}
+            gradient={["#ffd98a", "#ffb13d", "#ff6a3d"]}
+            sweep={!building}
             label={`Forge Score ${score}/100`}
           >
-            <span className="display-num text-6xl leading-none text-ivory">{shown}</span>
+            {/* Molten core: soft inner radiance behind the numeral. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-3 rounded-full"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 64%, rgba(255,120,50,0.22), transparent 62%)",
+              }}
+            />
+            <span className="display-num text-molten text-6xl leading-none">{shown}</span>
             <span className="microlabel mt-1 text-muted">
               {building ? "Score building" : "Forge Score"}
             </span>
@@ -72,7 +85,7 @@ export function ScoreRing({
         </ul>
         {penalties.length > 0 && (
           <>
-            <p className="mt-4 mb-1 text-xs font-semibold uppercase tracking-widest text-muted">
+            <p className="mt-4 mb-1 microlabel text-muted">
               Penalties
             </p>
             <ul className="flex flex-col gap-1">

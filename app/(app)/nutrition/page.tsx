@@ -304,7 +304,7 @@ export default function NutritionPage() {
 
       {/* Quick adds */}
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Quick adds</p>
+        <p className="mb-2 microlabel text-muted">Quick adds</p>
         <div className="no-scrollbar -mx-4 overflow-x-auto px-4">
           <div className="flex w-max gap-2">
             {QUICK_ADDS.map((q) => (
@@ -367,7 +367,7 @@ export default function NutritionPage() {
             <div className="flex flex-col gap-4">
               {MEAL_PLAN.map((day) => (
                 <div key={day.weekday}>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-gold">
+                  <p className="mb-1 microlabel text-gold">
                     {day.label}
                   </p>
                   {day.meals.map((m) => (

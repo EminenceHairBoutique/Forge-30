@@ -12,7 +12,7 @@ export function SupportResourcesCard() {
       role="status"
       className="rounded-(--radius-control) border border-gold/50 bg-gold/10 px-3.5 py-3"
     >
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-gold">
+      <p className="flex items-center gap-1.5 microlabel text-gold">
         <LifeBuoy className="size-3.5" /> Support, right now if you need it
       </p>
       <p className="mt-1.5 text-sm leading-relaxed text-ivory">

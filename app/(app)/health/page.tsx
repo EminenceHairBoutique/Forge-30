@@ -249,7 +249,7 @@ export default function HealthPage() {
                       {v}
                       <span className="text-xs text-muted"> {unit}</span>
                     </p>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">
+                    <p className="microlabel text-muted">
                       {label}
                     </p>
                   </div>
@@ -361,7 +361,7 @@ export default function HealthPage() {
               </div>
 
               <div className="rounded-(--radius-control) border border-gold/25 bg-gold/5 px-3 py-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+                <p className="microlabel text-gold">
                   What this says (and doesn&apos;t)
                 </p>
                 {detailSummary.lines.map((line) => (
@@ -372,7 +372,7 @@ export default function HealthPage() {
               </div>
 
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+                <p className="microlabel text-muted">
                   Questions for your clinician
                 </p>
                 <ul className="mt-1 flex flex-col gap-1.5">

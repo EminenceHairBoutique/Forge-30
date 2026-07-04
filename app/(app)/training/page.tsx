@@ -371,7 +371,7 @@ export default function TrainingPage() {
       {/* Pain adjustment banner */}
       {adjustment.active && (
         <Card className="border-warning/40 bg-warning/5 p-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-warning">
+          <p className="microlabel text-warning">
             Pain-aware adjustment active
           </p>
           <ul className="mt-2 flex flex-col gap-1.5">

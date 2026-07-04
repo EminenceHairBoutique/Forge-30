@@ -170,7 +170,7 @@ export function BuilderSheet({
                 ))}
                 {preview.days.map((day) => (
                   <div key={day.weekday} className="rounded-(--radius-control) bg-elevated px-3 py-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+                    <p className="microlabel text-gold">
                       {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][day.weekday]} — {day.label}
                     </p>
                     {!day.isRest && (

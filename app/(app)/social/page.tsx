@@ -173,7 +173,7 @@ export default function SocialPage() {
         <Card className="flex items-start gap-3 p-4">
           <Trophy className="mt-0.5 size-5 shrink-0 text-gold" />
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">
+            <p className="microlabel text-gold">
               This week&apos;s challenge
             </p>
             <p className="mt-0.5 text-sm text-ivory">{challenge}</p>
@@ -182,7 +182,7 @@ export default function SocialPage() {
         <Card className="flex items-start gap-3 p-4">
           <Lightbulb className="mt-0.5 size-5 shrink-0 text-gold" />
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+            <p className="microlabel text-muted">
               Low-pressure move
             </p>
             <p className="mt-0.5 text-sm text-ivory">{suggestion}</p>

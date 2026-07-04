@@ -26,7 +26,7 @@ export function MacroRings({
       <div className="flex items-center justify-around gap-2">
         <Ring value={totals.calories} max={calorieTarget} size={116} stroke={9} label="Calories">
           <span className="display-num text-2xl leading-none">{totals.calories.toLocaleString()}</span>
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted">
+          <span className="mt-0.5 microlabel text-muted">
             / {calorieTarget.toLocaleString()} kcal
           </span>
         </Ring>
@@ -64,7 +64,7 @@ export function MacroRings({
       </div>
       <div className="mt-4">
         <div className="mb-1 flex items-center justify-between text-xs">
-          <span className="font-semibold uppercase tracking-widest text-muted">Protein progress</span>
+          <span className="microlabel text-muted">Protein progress</span>
           <span className="tabular font-semibold text-ivory">
             {Math.round(totals.protein)} / {proteinTarget}g
           </span>

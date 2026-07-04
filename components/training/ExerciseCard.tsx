@@ -84,7 +84,7 @@ export function ExerciseCard({
         </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-1.5">
-        <div className="grid grid-cols-[1.6rem_1fr_1fr_4.2rem_4.2rem_2.9rem_2.2rem] items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+        <div className="grid grid-cols-[1.6rem_1fr_1fr_4.2rem_4.2rem_2.9rem_2.2rem] items-center gap-1.5 px-1 microlabel text-muted">
           <span>#</span>
           <span>lb</span>
           <span>reps</span>

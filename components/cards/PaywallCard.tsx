@@ -42,7 +42,7 @@ export function PaywallCard({
       </span>
       <p className="text-sm font-bold text-ivory">{title}</p>
       <p className="text-sm text-muted">{description}</p>
-      <p className="text-xs font-semibold uppercase tracking-widest text-gold">
+      <p className="microlabel text-gold">
         Part of Forge30 {tier}
       </p>
     </Card>
