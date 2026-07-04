@@ -807,6 +807,56 @@ export interface SpendingEntry {
   loggedAt: ISODateTime;
 }
 
+// --- Money planning (E13) -------------------------------------------------------
+
+export type RecurringCadence = "weekly" | "monthly" | "yearly";
+
+export interface RecurringExpense {
+  id: string;
+  name: string;
+  amount: number;
+  cadence: RecurringCadence;
+  category: SpendingCategory;
+  /** Essential bills vs. cancellable subscriptions — review fodder. */
+  essential: boolean;
+}
+
+export interface DebtItem {
+  id: string;
+  name: string;
+  balance: number;
+  aprPct: number;
+  minimumPayment: number;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  target: number;
+  saved: number;
+}
+
+/** Money-planning settings; category caps are monthly, user-set. */
+export interface MoneySettings {
+  monthlyIncome: number;
+  emergencyFundTarget: number;
+  emergencyFundSaved: number;
+  /** Monthly contribution set aside before safe-to-spend is computed. */
+  monthlySavingsContribution: number;
+  categoryCaps: Partial<Record<SpendingCategory, number>>;
+}
+
+/** Impulse-spending 24-hour pause: park it, decide tomorrow (E13). */
+export interface PendingPurchase {
+  id: string;
+  item: string;
+  amount: number;
+  createdAt: ISODateTime;
+  /** When the pause ends and the app asks "still want it?". */
+  decideAfter: ISODateTime;
+  status: "waiting" | "bought" | "skipped";
+}
+
 export interface SundayReview {
   id: string;
   /** Date of the Sunday the review was done. */

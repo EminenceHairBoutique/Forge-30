@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/cards/StatCard";
 import { SpendLogSheet } from "@/components/forms/SpendLogSheet";
 import { SundayReviewSheet } from "@/components/forms/SundayReviewSheet";
+import { MoneyPlanningSection } from "@/components/money/MoneyPlanningSection";
 
 export default function MoneyPage() {
   const { adapter, profile, revision, touch } = useStorage();
@@ -191,6 +192,10 @@ export default function MoneyPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Money planning (E13): safe-to-spend, cash flow, recurring, debts,
+          savings, caps, 24-hour pause, export. */}
+      <MoneyPlanningSection />
 
       <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">{DISCLAIMERS.finance}</p>
 

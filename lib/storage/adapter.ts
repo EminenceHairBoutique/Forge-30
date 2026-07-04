@@ -9,6 +9,7 @@ import type {
   ConflictDebrief,
   CustomWorkoutPlan,
   DailyLog,
+  DebtItem,
   HealthMarkerEntry,
   ISODate,
   JournalConsent,
@@ -16,9 +17,13 @@ import type {
   IncidentEntry,
   JournalNote,
   MealEntry,
+  MoneySettings,
   OutreachEntry,
+  PendingPurchase,
   ReconnectPerson,
+  RecurringExpense,
   SavedMeal,
+  SavingsGoal,
   RelationshipCheckIn,
   SkillTask,
   SocialReflection,
@@ -114,6 +119,22 @@ export interface StorageAdapter {
   getSundayReview(date: ISODate): Promise<SundayReview | null>;
   saveSundayReview(r: SundayReview): Promise<void>;
   listSundayReviews(): Promise<SundayReview[]>;
+
+  // Money planning (E13) — recurring bills, debts, goals, caps, impulse pauses
+  listRecurringExpenses(): Promise<RecurringExpense[]>;
+  saveRecurringExpense(e: RecurringExpense): Promise<void>;
+  deleteRecurringExpense(id: string): Promise<void>;
+  listDebts(): Promise<DebtItem[]>;
+  saveDebt(d: DebtItem): Promise<void>;
+  deleteDebt(id: string): Promise<void>;
+  listSavingsGoals(): Promise<SavingsGoal[]>;
+  saveSavingsGoal(g: SavingsGoal): Promise<void>;
+  deleteSavingsGoal(id: string): Promise<void>;
+  getMoneySettings(): Promise<MoneySettings>;
+  saveMoneySettings(s: MoneySettings): Promise<void>;
+  listPendingPurchases(): Promise<PendingPurchase[]>;
+  savePendingPurchase(p: PendingPurchase): Promise<void>;
+  deletePendingPurchase(id: string): Promise<void>;
 
   // Skills
   listSkillTasks(from: ISODate, to: ISODate): Promise<SkillTask[]>;

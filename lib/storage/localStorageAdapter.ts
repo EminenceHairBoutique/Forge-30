@@ -9,6 +9,7 @@ import type {
   ConflictDebrief,
   CustomWorkoutPlan,
   DailyLog,
+  DebtItem,
   HealthMarkerEntry,
   ISODate,
   JournalConsent,
@@ -16,9 +17,13 @@ import type {
   IncidentEntry,
   JournalNote,
   MealEntry,
+  MoneySettings,
   OutreachEntry,
+  PendingPurchase,
   ReconnectPerson,
+  RecurringExpense,
   SavedMeal,
+  SavingsGoal,
   RelationshipCheckIn,
   SkillTask,
   SocialReflection,
@@ -71,6 +76,11 @@ const KEYS = {
   reconnectList: `${PREFIX}:reconnectList`,
   socialReflections: `${PREFIX}:socialReflections`,
   socialSettings: `${PREFIX}:socialSettings`,
+  recurringExpenses: `${PREFIX}:recurringExpenses`,
+  debts: `${PREFIX}:debts`,
+  savingsGoals: `${PREFIX}:savingsGoals`,
+  moneySettings: `${PREFIX}:moneySettings`,
+  pendingPurchases: `${PREFIX}:pendingPurchases`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -437,6 +447,85 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async listSundayReviews(): Promise<SundayReview[]> {
     return read<SundayReview[]>(KEYS.sundayReviews, []).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  // -- Money planning (E13) ----------------------------------------------------------
+  async listRecurringExpenses(): Promise<RecurringExpense[]> {
+    return read<RecurringExpense[]>(KEYS.recurringExpenses, []);
+  }
+
+  async saveRecurringExpense(e: RecurringExpense): Promise<void> {
+    const all = read<RecurringExpense[]>(KEYS.recurringExpenses, []).filter((x) => x.id !== e.id);
+    all.push(e);
+    write(KEYS.recurringExpenses, all);
+  }
+
+  async deleteRecurringExpense(id: string): Promise<void> {
+    write(
+      KEYS.recurringExpenses,
+      read<RecurringExpense[]>(KEYS.recurringExpenses, []).filter((x) => x.id !== id)
+    );
+  }
+
+  async listDebts(): Promise<DebtItem[]> {
+    return read<DebtItem[]>(KEYS.debts, []);
+  }
+
+  async saveDebt(d: DebtItem): Promise<void> {
+    const all = read<DebtItem[]>(KEYS.debts, []).filter((x) => x.id !== d.id);
+    all.push(d);
+    write(KEYS.debts, all);
+  }
+
+  async deleteDebt(id: string): Promise<void> {
+    write(KEYS.debts, read<DebtItem[]>(KEYS.debts, []).filter((x) => x.id !== id));
+  }
+
+  async listSavingsGoals(): Promise<SavingsGoal[]> {
+    return read<SavingsGoal[]>(KEYS.savingsGoals, []);
+  }
+
+  async saveSavingsGoal(g: SavingsGoal): Promise<void> {
+    const all = read<SavingsGoal[]>(KEYS.savingsGoals, []).filter((x) => x.id !== g.id);
+    all.push(g);
+    write(KEYS.savingsGoals, all);
+  }
+
+  async deleteSavingsGoal(id: string): Promise<void> {
+    write(KEYS.savingsGoals, read<SavingsGoal[]>(KEYS.savingsGoals, []).filter((x) => x.id !== id));
+  }
+
+  async getMoneySettings(): Promise<MoneySettings> {
+    return read<MoneySettings>(KEYS.moneySettings, {
+      monthlyIncome: 0,
+      emergencyFundTarget: 0,
+      emergencyFundSaved: 0,
+      monthlySavingsContribution: 0,
+      categoryCaps: {},
+    });
+  }
+
+  async saveMoneySettings(s: MoneySettings): Promise<void> {
+    write(KEYS.moneySettings, s);
+  }
+
+  async listPendingPurchases(): Promise<PendingPurchase[]> {
+    return read<PendingPurchase[]>(KEYS.pendingPurchases, []).sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt)
+    );
+  }
+
+  async savePendingPurchase(p: PendingPurchase): Promise<void> {
+    const all = read<PendingPurchase[]>(KEYS.pendingPurchases, []).filter((x) => x.id !== p.id);
+    all.push(p);
+    write(KEYS.pendingPurchases, all);
+  }
+
+  async deletePendingPurchase(id: string): Promise<void> {
+    write(
+      KEYS.pendingPurchases,
+      read<PendingPurchase[]>(KEYS.pendingPurchases, []).filter((x) => x.id !== id)
+    );
   }
 
   // -- Skills ------------------------------------------------------------------------------
