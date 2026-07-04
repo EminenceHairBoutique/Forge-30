@@ -200,6 +200,8 @@ export interface UserProfile {
   mvd?: MvdDefinition;
   notifications?: NotificationPrefs;
   injuries?: InjuryProfile[];
+  /** Recording-consent jurisdiction (Phase NEXT C); unset = protective default. */
+  recordingJurisdiction?: string;
   onboardingComplete: boolean;
 }
 
@@ -849,6 +851,29 @@ export interface MoneySettings {
   /** Monthly contribution set aside before safe-to-spend is computed. */
   monthlySavingsContribution: number;
   categoryCaps: Partial<Record<SpendingCategory, number>>;
+}
+
+/**
+ * Consensual conversation recording (Phase NEXT C — FLAG(consensualRecording),
+ * dev-only until counsel review). Consent metadata is stored WITH the audio:
+ * a recording only ever exists downstream of the acknowledged flow.
+ */
+export interface Recording {
+  id: string;
+  date: ISODate;
+  durationSec: number;
+  /** Jurisdiction code selected at capture time. */
+  jurisdiction: string;
+  /** The regime the app enforced for this capture. */
+  effectiveRegime: "one-party" | "all-party";
+  /** On-screen acknowledgment affirmed before capture (always true by flow). */
+  consentAcknowledged: boolean;
+  /** The spoken notice was displayed for reading aloud at the start. */
+  spokenNoticeShown: boolean;
+  label: string;
+  /** Audio as a data URL — lives in the IndexedDB large store. */
+  audio: string;
+  createdAt: ISODateTime;
 }
 
 /** Impulse-spending 24-hour pause: park it, decide tomorrow (E13). */

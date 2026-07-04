@@ -234,9 +234,18 @@ Per `FORGE30_PHASE_NEXT_HUD_ASSESSMENTS_RECORDING.md`, sequenced A → B → C:
   point glow dot, glass nav/sheets, `TimelineRow`. AA contrast audit clean (worst pair
   muted-on-elevated 5.83:1); reduced-motion and reduced-transparency guards verified.
   Physical-device glass QA remains on the WAIT(device) checklist.
-- **B — assessment expansion: pending** (B-1 EQ + Trauma-Response → B-2 timed-task engine +
-  Cognitive Skills → B-3 Cluster B Trait Screening + Psyche Report synthesis).
-- **C — consensual recording: pending.** On land, `consensualRecording` flips to
-  development-only (`NODE_ENV === "development"`, the `devTierSwitcher` precedent) — complete
-  and demo-able in dev, off in every production build until counsel signs off per
-  `RECORDING_LEGAL_REVIEW.md`. `realtimeAnalysis` stays false.
+- **B — assessment expansion: SHIPPED.** B-1 EQ + Trauma-Response (content on the existing
+  engine, professional-support pathways); B-2 timed-task engine extension (TimedQuestion,
+  timedItemScore, validity isolation) + Cognitive Skills Profile with the verbatim
+  not-an-IQ-test label; B-3 Cluster B Trait Screening under its real name (transparent
+  intro, supportFlag self-harm routing shipped+tested first, impression-management line,
+  overlap panel, clinician export, pro-gated except crisis resources) + Psyche Report
+  synthesis + consent-gated journal annotations + recommendTracks wave-2 mappings.
+- **C — consensual recording: SHIPPED (dev-only).** `recordingLaw` engine + seed dataset
+  (counsel banner), protective default (unset/unknown/mixed/traveling ⇒ all-party),
+  consent-first RecordingSheet with persistent REC indicator, recordings large-store
+  collection. `consensualRecording` now evaluates to development-only
+  (`NODE_ENV === "development"`, the `devTierSwitcher` precedent) — complete and demo-able
+  in dev, OFF in every production build until counsel signs off per
+  `RECORDING_LEGAL_REVIEW.md`. `realtimeAnalysis` stays false. Geolocation assist
+  deliberately not implemented (manual picker only).

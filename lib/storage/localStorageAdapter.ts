@@ -21,6 +21,7 @@ import type {
   OutreachEntry,
   PendingPurchase,
   ReconnectPerson,
+  Recording,
   RecurringExpense,
   SavedMeal,
   SavingsGoal,
@@ -692,6 +693,20 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async saveSocialSettings(s: SocialSettings): Promise<void> {
     write(KEYS.socialSettings, s);
+  }
+
+  // -- Consensual recordings (Phase NEXT C) ------------------------------------------
+  async listRecordings(): Promise<Recording[]> {
+    const all = await this.large.list<Recording>("recordings");
+    return Object.values(all).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async saveRecording(r: Recording): Promise<void> {
+    await this.large.put("recordings", r.id, r);
+  }
+
+  async deleteRecording(id: string): Promise<void> {
+    await this.large.delete("recordings", id);
   }
 
   // -- Assessments (E10) -----------------------------------------------------------

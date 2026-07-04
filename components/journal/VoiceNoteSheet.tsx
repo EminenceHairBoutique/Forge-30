@@ -144,6 +144,14 @@ export function VoiceNoteSheet({
                 <p className="display-num text-3xl text-ivory" aria-live="polite">
                   {mmss}
                 </p>
+                {recording && (
+                  <p
+                    role="status"
+                    className="microlabel flex items-center gap-1.5 rounded-full border border-danger/50 bg-danger/10 px-3 py-1 text-danger"
+                  >
+                    <span className="size-2 rounded-full bg-danger" aria-hidden /> REC · recording in progress
+                  </p>
+                )}
                 {recording ? (
                   <Button size="lg" variant="secondary" onClick={stop}>
                     <Square className="size-5 text-danger" /> Stop

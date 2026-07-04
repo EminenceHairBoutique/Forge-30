@@ -21,8 +21,10 @@ export const FLAGS = {
   barcode: false,
   /** Screenshot OCR for thread analysis (bundle-size + legal review). */
   ocrThreads: false,
-  /** Consensual conversation recording (legal review required). */
-  consensualRecording: false,
+  /** Consensual conversation recording — complete and demo-able in
+   *  development; every production build stays OFF until counsel signs off
+   *  per RECORDING_LEGAL_REVIEW.md (legal). */
+  consensualRecording: process.env.NODE_ENV === "development",
   /** Real-time conversation analysis (legal review required). */
   realtimeAnalysis: false,
   /** Server-side Web Push sending (needs backend + VAPID keys). */
