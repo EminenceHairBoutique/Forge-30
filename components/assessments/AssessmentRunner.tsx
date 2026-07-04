@@ -22,11 +22,14 @@ export function AssessmentRunner({
   open,
   onOpenChange,
   onComplete,
+  subject = "self",
 }: {
   assessmentId: AssessmentId | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: (result: AssessmentResult) => void;
+  /** Couples passes (E11): who is answering this run. */
+  subject?: "self" | "partner";
 }) {
   const { adapter } = useStorage();
   const def = assessmentId ? getAssessmentDef(assessmentId) : undefined;
@@ -63,15 +66,18 @@ export function AssessmentRunner({
   };
 
   const finish = async (finalAnswers: Record<string, number>, finalRanking: string[], finalTimings: number[]) => {
-    const result = scoreAssessment({
-      def,
-      answers: finalAnswers,
-      timingsMs: finalTimings,
-      ranking: def.kind === "rank" ? finalRanking : undefined,
-      id: uid(),
-      date: toISODate(),
-      createdAt: new Date().toISOString(),
-    });
+    const result = {
+      ...scoreAssessment({
+        def,
+        answers: finalAnswers,
+        timingsMs: finalTimings,
+        ranking: def.kind === "rank" ? finalRanking : undefined,
+        id: uid(),
+        date: toISODate(),
+        createdAt: new Date().toISOString(),
+      }),
+      subject,
+    };
     await adapter.saveAssessmentResult(result);
     await adapter.clearAssessmentProgress(def.id);
     setAnswers({});

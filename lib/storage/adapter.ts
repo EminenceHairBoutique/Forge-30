@@ -6,15 +6,18 @@ import type {
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
+  ConflictDebrief,
   CustomWorkoutPlan,
   DailyLog,
   HealthMarkerEntry,
   ISODate,
   JournalConsent,
   JournalEntry,
+  IncidentEntry,
   JournalNote,
   MealEntry,
   SavedMeal,
+  RelationshipCheckIn,
   SkillTask,
   SpendingEntry,
   StreakState,
@@ -130,6 +133,16 @@ export interface StorageAdapter {
   listBloodwork(): Promise<BloodworkReport[]>;
   saveBloodwork(report: BloodworkReport): Promise<void>;
   deleteBloodwork(id: string): Promise<void>;
+
+  // Relationships (E11)
+  listRelationshipCheckIns(from: ISODate, to: ISODate): Promise<RelationshipCheckIn[]>;
+  saveRelationshipCheckIn(checkIn: RelationshipCheckIn): Promise<void>;
+  listConflictDebriefs(): Promise<ConflictDebrief[]>;
+  saveConflictDebrief(debrief: ConflictDebrief): Promise<void>;
+  /** Dated documentation timeline (large store) — private, exportable. */
+  listIncidents(): Promise<IncidentEntry[]>;
+  saveIncident(entry: IncidentEntry): Promise<void>;
+  deleteIncident(id: string): Promise<void>;
 
   // Assessments (E10 — large store; results and in-flight progress)
   listAssessmentResults(): Promise<AssessmentResult[]>;

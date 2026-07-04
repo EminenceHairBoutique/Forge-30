@@ -185,6 +185,8 @@ export interface UserProfile {
   /** Free text: what the money domain is working toward. */
   budgetGoal?: string;
   relationshipStatus?: string;
+  /** Relationships-tab mode (E11); orthogonal to the onboarding status text. */
+  relationshipMode?: RelationshipMode;
   socialGoals?: string;
   /** Free text, user-reported; the app never diagnoses. */
   healthConcerns?: string;
@@ -343,6 +345,70 @@ export interface HealthMarkerEntry {
   createdAt: ISODateTime;
 }
 
+// --- Relationships (E11) --------------------------------------------------------
+
+export type RelationshipMode =
+  | "singleDating"
+  | "relationship"
+  | "marriedLongTerm"
+  | "complicated"
+  | "familyFocus"
+  | "friendshipFocus"
+  | "socialConfidence";
+
+/** Daily relationship check-in (spec §Relationships). 0 = not answered. */
+export interface RelationshipCheckIn {
+  id: string;
+  date: ISODate;
+  mode: RelationshipMode;
+  /** 1–10. */
+  connection: number;
+  /** 1–10. */
+  communication: number;
+  conflict: boolean;
+  repairAttempt: boolean;
+  appreciationExpressed: boolean;
+  boundaryRespected: boolean;
+  /** 1–10. */
+  feelingHeard: number;
+  /** 1–10 — low values escalate to safety resources, always free. */
+  feelingSafe: number;
+  note: string;
+  createdAt: ISODateTime;
+}
+
+/** Conflict debrief — the user's own account, echoed back neutrally. */
+export interface ConflictDebrief {
+  id: string;
+  date: ISODate;
+  whatHappened: string;
+  whatIFelt: string;
+  whatINeeded: string;
+  whatTheyMayHaveNeeded: string;
+  didWell: string;
+  didPoorly: string;
+  repairAttempt: string;
+  boundaryNeeded: string;
+  nextCalmMessage: string;
+  createdAt: ISODateTime;
+}
+
+/**
+ * Timeline/documentation entry (E11) — dated, taggable, exportable. Keeping a
+ * dated private record is standard DV-support practice; entries stay on
+ * device and export only when the user asks.
+ */
+export interface IncidentEntry {
+  id: string;
+  date: ISODate;
+  title: string;
+  tags: string[];
+  notes: string;
+  /** Pattern findings carried over from a thread analysis, if any. */
+  patternFindings: string[];
+  createdAt: ISODateTime;
+}
+
 // --- Assessments (E10) ---------------------------------------------------------
 
 export type AssessmentId =
@@ -389,6 +455,8 @@ export interface AssessmentResult {
   id: string;
   assessmentId: AssessmentId;
   date: ISODate;
+  /** Couples passes (E11): who answered. Absent = self. */
+  subject?: "self" | "partner";
   traits: AssessmentTraitScore[];
   /** Rank-kind assessments: item keys in the user's priority order. */
   ranking?: string[];

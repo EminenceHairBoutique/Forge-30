@@ -6,15 +6,18 @@ import type {
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
+  ConflictDebrief,
   CustomWorkoutPlan,
   DailyLog,
   HealthMarkerEntry,
   ISODate,
   JournalConsent,
   JournalEntry,
+  IncidentEntry,
   JournalNote,
   MealEntry,
   SavedMeal,
+  RelationshipCheckIn,
   SkillTask,
   SpendingEntry,
   StreakState,
@@ -59,6 +62,7 @@ const KEYS = {
   healthMarkers: `${PREFIX}:healthMarkers`,
   customWorkoutPlan: `${PREFIX}:customWorkoutPlan`,
   notificationLog: `${PREFIX}:notificationLog`,
+  relationshipCheckIns: `${PREFIX}:relationshipCheckIns`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -504,6 +508,43 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async deleteBloodwork(id: string): Promise<void> {
     await this.large.delete("bloodwork", id);
+  }
+
+  // -- Relationships (E11) ---------------------------------------------------------
+  async listRelationshipCheckIns(from: ISODate, to: ISODate): Promise<RelationshipCheckIn[]> {
+    return read<RelationshipCheckIn[]>(KEYS.relationshipCheckIns, [])
+      .filter((c) => inRange(c.date, from, to))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async saveRelationshipCheckIn(checkIn: RelationshipCheckIn): Promise<void> {
+    const all = read<RelationshipCheckIn[]>(KEYS.relationshipCheckIns, []).filter(
+      (c) => c.date !== checkIn.date
+    );
+    all.push(checkIn);
+    write(KEYS.relationshipCheckIns, all);
+  }
+
+  async listConflictDebriefs(): Promise<ConflictDebrief[]> {
+    const all = await this.large.list<ConflictDebrief>("conflictDebriefs");
+    return Object.values(all).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async saveConflictDebrief(debrief: ConflictDebrief): Promise<void> {
+    await this.large.put("conflictDebriefs", debrief.id, debrief);
+  }
+
+  async listIncidents(): Promise<IncidentEntry[]> {
+    const all = await this.large.list<IncidentEntry>("incidents");
+    return Object.values(all).sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async saveIncident(entry: IncidentEntry): Promise<void> {
+    await this.large.put("incidents", entry.id, entry);
+  }
+
+  async deleteIncident(id: string): Promise<void> {
+    await this.large.delete("incidents", id);
   }
 
   // -- Assessments (E10) -----------------------------------------------------------

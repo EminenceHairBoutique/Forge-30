@@ -42,7 +42,7 @@ const LOG_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: 
   { href: "/money", label: "Money", icon: Wallet },
   { href: "/skills", label: "Skills", icon: GraduationCap },
   { href: "/health", label: "Health", icon: HeartPulse },
-  { href: "/relationships", label: "Relationships", icon: HeartHandshake, soon: true },
+  { href: "/relationships", label: "Relationships", icon: HeartHandshake },
 ];
 
 const MORE_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: boolean }[] = [
