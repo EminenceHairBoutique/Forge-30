@@ -24,7 +24,7 @@ export function QuickActions() {
           <Link
             key={href}
             href={href}
-            className="flex min-h-11 items-center gap-2 rounded-full border border-gold/30 bg-elevated px-4 text-sm font-semibold text-ivory shadow-lg active:bg-gold/20 lg:hover:border-gold/60"
+            className="press-scale flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ivory [background:var(--grad-glass),var(--bg-elevated-solid)] [box-shadow:inset_0_1px_0_rgba(255,244,228,0.14)] active:border-gold/50 lg:hover:border-gold/60"
           >
             <Icon className="size-4 text-gold" />
             {label}

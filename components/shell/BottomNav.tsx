@@ -67,7 +67,9 @@ export function BottomNav() {
   const tabClass = (active: boolean) =>
     cn(
       "flex min-w-11 flex-1 flex-col items-center justify-center gap-1 transition-colors",
-      active ? "text-gold" : "text-muted active:text-ivory"
+      active
+        ? "text-gold [text-shadow:0_0_12px_rgba(255,177,61,0.45)]"
+        : "text-muted active:text-ivory"
     );
 
   const DestinationGrid = ({

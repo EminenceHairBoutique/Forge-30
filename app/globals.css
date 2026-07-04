@@ -178,6 +178,24 @@ body {
     linear-gradient(90deg, rgba(255, 244, 228, 0.02) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+/* Both on one element: layer the wash over the grid (background-image is a
+   single property — the combined rule keeps both). */
+.solar-wash.grid-texture {
+  background-image:
+    radial-gradient(540px 400px at 50% 3%, rgba(255, 140, 50, 0.18), transparent 65%),
+    linear-gradient(rgba(255, 244, 228, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 244, 228, 0.02) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    24px 24px,
+    24px 24px;
+  background-repeat: no-repeat, repeat, repeat;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .solar-wash.grid-texture {
+    background-image: none;
+  }
+}
 
 /* Signature geometric accent: one 45°-clipped corner, hero cards only. */
 .notch-corner {
