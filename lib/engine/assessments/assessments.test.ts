@@ -44,7 +44,11 @@ describe("bank integrity", () => {
   it("every likert assessment has traits, reverse items, and an attention check", () => {
     for (const def of ASSESSMENT_BANK.filter((d) => d.kind === "likert")) {
       expect(def.traits.length, def.id).toBeGreaterThanOrEqual(4);
-      expect(def.questions.some((q) => q.kind === "likert" && q.reverse), def.id).toBe(true);
+      // Statement banks need mirrored-pair material; timed banks (B-2) have
+      // no likert statements, so the reverse-item rule doesn't apply there.
+      if (def.questions.some((q) => q.kind === "likert")) {
+        expect(def.questions.some((q) => q.kind === "likert" && q.reverse), def.id).toBe(true);
+      }
       expect(def.questions.some((q) => q.kind === "attention"), def.id).toBe(true);
     }
   });
@@ -63,7 +67,7 @@ describe("bank integrity", () => {
       const texts = [
         def.tagline,
         def.resultNote,
-        ...def.questions.map((q) => q.text),
+        ...def.questions.map((q) => (q.kind === "timed" ? q.prompt : q.text)),
         ...def.traits.flatMap((t) => [t.blurb, t.low, t.high, t.balanced]),
         ...(def.rankItems ?? []).map((i) => i.blurb),
       ];
