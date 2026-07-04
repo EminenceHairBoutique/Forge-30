@@ -1,5 +1,6 @@
 import { BottomNav } from "@/components/shell/BottomNav";
 import { OnboardingGate } from "@/components/shell/OnboardingGate";
+import { NotificationScheduler } from "@/components/shell/NotificationScheduler";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       <BottomNav />
+      <NotificationScheduler />
     </OnboardingGate>
   );
 }

@@ -47,6 +47,7 @@ export const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   morningPlan: true,
   eveningReview: true,
   streakReminder: false,
+  weeklyReport: true,
 };
 
 export function defaultProfile(): UserProfile {

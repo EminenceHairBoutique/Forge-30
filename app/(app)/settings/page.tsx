@@ -15,11 +15,14 @@ import {
   type ScoreComponentKey,
 } from "@/lib/engine/forgeScore";
 import { Select } from "@/components/ui/select";
-import { DEFAULT_DOMAINS, DEFAULT_MVD } from "@/lib/data/defaults";
+import { DEFAULT_DOMAINS, DEFAULT_MVD, DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
+import { notificationPermission } from "@/lib/push/subscription";
+import { flagEnabled as flagOn } from "@/lib/flags";
 import type {
   DomainToggles,
   ForgeScoreWeights,
   MvdDefinition,
+  NotificationPrefs,
   PainFlags,
   UserProfile,
 } from "@/lib/types";
@@ -56,6 +59,13 @@ const MVD_LABELS: { key: keyof MvdDefinition; label: string; sub?: string }[] = 
   { key: "movement", label: "Move a little", sub: "any workout, rest day, or a walk" },
 ];
 
+const NOTIFICATION_LABELS: { key: keyof NotificationPrefs; label: string; sub: string }[] = [
+  { key: "morningPlan", label: "Morning plan", sub: "one nudge before noon until you've seen it" },
+  { key: "eveningReview", label: "Evening review", sub: "when the day wraps and no review exists" },
+  { key: "streakReminder", label: "Streak protection", sub: "evening heads-up when today's still open" },
+  { key: "weeklyReport", label: "Weekly report", sub: "Sunday evening summary" },
+];
+
 const WEIGHT_FIELDS: { key: ScoreComponentKey; label: string }[] = [
   { key: "calories", label: "Calories" },
   { key: "protein", label: "Protein" },
@@ -78,6 +88,11 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<{ file: ExportFile; name: string } | null>(null);
   const [dataMessage, setDataMessage] = useState<string | null>(null);
+  const [permission, setPermission] = useState<string>("default");
+
+  useEffect(() => {
+    setPermission(notificationPermission());
+  }, []);
 
   useEffect(() => {
     if (profile && !draft) setDraft(profile);
@@ -248,6 +263,65 @@ export default function SettingsPage() {
               }
             />
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Notifications</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {permission === "unsupported" ? (
+            <p className="text-sm text-muted">
+              This browser doesn&apos;t support notifications. Everything still works — the
+              reminders just stay in-app.
+            </p>
+          ) : permission !== "granted" ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted">
+                Reminders are optional and quiet: a morning plan, the evening review, streak
+                protection, and the Sunday report. No shame copy, ever.
+              </p>
+              <Button
+                variant="secondary"
+                disabled={permission === "denied"}
+                onClick={async () => {
+                  const result = await Notification.requestPermission();
+                  setPermission(result);
+                }}
+              >
+                {permission === "denied"
+                  ? "Blocked in browser settings"
+                  : "Enable notifications"}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-success">Notifications are on for this device.</p>
+          )}
+          <div className="rounded-(--radius-card) border border-line bg-surface p-1">
+            {NOTIFICATION_LABELS.map(({ key, label, sub }) => (
+              <CheckItem
+                variant="toggle"
+                key={key}
+                label={label}
+                sublabel={sub}
+                checked={(draft.notifications ?? DEFAULT_NOTIFICATIONS)[key] ?? true}
+                onCheckedChange={(v) =>
+                  setDraft({
+                    ...draft,
+                    notifications: {
+                      ...DEFAULT_NOTIFICATIONS,
+                      ...(draft.notifications ?? {}),
+                      [key]: v,
+                    },
+                  })
+                }
+              />
+            ))}
+          </div>
+          <p className="text-xs text-muted">
+            Reminders fire while Forge30 is open{flagOn("pushServer") ? "" : "; true background push arrives with a later update"}.
+          </p>
         </CardContent>
       </Card>
 

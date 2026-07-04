@@ -113,6 +113,10 @@ export interface StorageAdapter {
   getCheckedBooks(): Promise<number[]>;
   saveCheckedBooks(weeks: number[]): Promise<void>;
 
+  // Notifications (E9) — last fired date per type, the once-per-day gate.
+  getNotificationLog(): Promise<Record<string, ISODate>>;
+  saveNotificationLog(log: Record<string, ISODate>): Promise<void>;
+
   // Health (E7)
   listBloodPressure(from: ISODate, to: ISODate): Promise<BloodPressureEntry[]>;
   saveBloodPressure(entry: BloodPressureEntry): Promise<void>;

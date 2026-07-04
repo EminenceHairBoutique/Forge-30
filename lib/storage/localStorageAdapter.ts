@@ -55,6 +55,7 @@ const KEYS = {
   bloodPressure: `${PREFIX}:bloodPressure`,
   healthMarkers: `${PREFIX}:healthMarkers`,
   customWorkoutPlan: `${PREFIX}:customWorkoutPlan`,
+  notificationLog: `${PREFIX}:notificationLog`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -449,6 +450,15 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async saveCheckedBooks(weeks: number[]): Promise<void> {
     write(KEYS.books, weeks);
+  }
+
+  // -- Notifications (E9) ----------------------------------------------------------
+  async getNotificationLog(): Promise<Record<string, ISODate>> {
+    return read<Record<string, ISODate>>(KEYS.notificationLog, {});
+  }
+
+  async saveNotificationLog(log: Record<string, ISODate>): Promise<void> {
+    write(KEYS.notificationLog, log);
   }
 
   // -- Health (E7) ---------------------------------------------------------------

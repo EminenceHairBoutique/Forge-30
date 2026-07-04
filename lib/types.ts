@@ -108,11 +108,13 @@ export interface MvdDefinition {
   movement: boolean;
 }
 
-/** Stored now, consumed by push/reminders in E9. */
+/** Notification preferences — consumed by the in-app scheduler (E9). */
 export interface NotificationPrefs {
   morningPlan: boolean;
   eveningReview: boolean;
   streakReminder: boolean;
+  /** Sunday-evening weekly report nudge. Optional/additive; absent = on. */
+  weeklyReport?: boolean;
 }
 
 /**
