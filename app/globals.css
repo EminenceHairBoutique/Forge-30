@@ -1,41 +1,67 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Forge30 design tokens — "Forge HUD": instrument-grade dark, hairline
-   precision, rationed glow. Dark mode only. One system, no fork.
+   Forge30 design tokens — "Solaris HUD": molten luxe base with instrument-
+   grade data details. Warm incandescent brand; precision telemetry where
+   numbers live. Dark mode only. One system, no fork.
 --------------------------------------------------------------------------- */
 
 :root {
-  --bg-base: #0a0a0b;
-  --bg-surface: #141416;
-  --bg-elevated: #1c1c1f;
-  --text-primary: #f5f1e8;
-  --text-secondary: #9b978c;
-  --accent-gold: #c9a961;
-  --accent-success: #3dff8b;
+  --bg-base: #0b0806;
+  /* Warm glass surfaces: translucent warm tints compositing over the base.
+     Solid equivalents (glass fallbacks, opaque contexts): #161210 / #1d1712. */
+  --bg-surface: rgba(255, 222, 180, 0.055);
+  --bg-elevated: rgba(255, 226, 190, 0.1);
+  --bg-surface-solid: #161210;
+  --bg-elevated-solid: #1d1712;
+  /* Safety components render on neutral cool-dark — a different instrument
+     mode. Never warm glass, never ember/gold inside a safety surface. */
+  --surface-safety: #16181a;
+  --text-primary: #fff4e4;
+  --text-secondary: #b3a18a;
+  --accent-gold: #ffb13d;
+  --accent-ember: #ff6a3d; /* gradient partner; hero/primary only */
+  --accent-gold-soft: #ffd98a; /* gradient top-stop, highlights */
+  --accent-success: #2de1c2; /* teal completion — reads against the warm field */
+  --accent-danger: #ff3b30; /* safety red; the ONLY safety color family (§2) */
+  /* RETIRING (§2): collides with ember. Kept alive only until the commit-4
+     usage sweep re-maps every caller; deleted there. Do not add new usages. */
   --accent-warning: #ff8a3d;
-  --accent-danger: #ff4d4d;
   /* Hairline strokes: cards carry 1px hairlines; active states swap to the
      gold hairline instead of a fill change. */
-  --stroke-hairline: rgba(245, 241, 232, 0.08);
-  --stroke-active: rgba(201, 169, 97, 0.35);
+  --stroke-hairline: rgba(255, 214, 160, 0.15);
+  --stroke-active: rgba(255, 177, 61, 0.5);
   --line: var(--stroke-hairline);
+  --ring-track: rgba(255, 214, 160, 0.09);
   /* Glass surface (nav, sheets, sticky headers) — budget: ≤3 blurred layers
      per screen; solid fallback where backdrop-filter is unsupported. */
-  --surface-glass: rgba(20, 20, 22, 0.72);
-  /* Glow is rationed: hero score ring, milestone/PR moments, completed
-     states. Nothing else. */
-  --glow-gold: 0 0 24px rgba(201, 169, 97, 0.25);
-  --glow-success: 0 0 20px rgba(61, 255, 139, 0.22);
+  --surface-glass: rgba(29, 23, 18, 0.72);
+  /* Glow is rationed: score ring, the one primary action, coach card;
+     teal only on completion/milestone moments. Nothing else. */
+  --glow-ember: 0 0 30px rgba(255, 138, 61, 0.3);
+  --glow-teal: 0 0 18px rgba(45, 225, 194, 0.35);
+  /* Legacy aliases (pre-Solaris names) — same values, kept for callers. */
+  --glow-gold: var(--glow-ember);
+  --glow-success: var(--glow-teal);
+  /* Gradients — defined once. Molten: hero numerals + gauge stroke (via SVG
+     stops); bar: progress fills; glass: pill buttons; glass-primary: the one
+     primary action per surface. */
+  --grad-molten: linear-gradient(180deg, #ffd98a, #ff6a3d);
+  --grad-bar: linear-gradient(90deg, #ffb13d, #ff6a3d);
+  --grad-glass: linear-gradient(135deg, rgba(255, 214, 160, 0.14), rgba(255, 150, 60, 0.04));
+  --grad-glass-primary: linear-gradient(135deg, rgba(255, 177, 61, 0.3), rgba(255, 106, 61, 0.1));
 }
 
 @theme inline {
   --color-base: var(--bg-base);
   --color-surface: var(--bg-surface);
   --color-elevated: var(--bg-elevated);
+  --color-safety: var(--surface-safety);
   --color-ivory: var(--text-primary);
   --color-muted: var(--text-secondary);
   --color-gold: var(--accent-gold);
+  --color-ember: var(--accent-ember);
+  --color-gold-soft: var(--accent-gold-soft);
   --color-success: var(--accent-success);
   --color-warning: var(--accent-warning);
   --color-danger: var(--accent-danger);
@@ -44,7 +70,8 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Sharpened radius scale: 6 / 10 / 14. */
+  /* Radius scale: 6 / 10 / 14, plus 18 for sheets and hero cards. Pills 100px. */
+  --radius-lg: 18px;
   --radius-card: 14px;
   --radius-control: 10px;
   --radius-tight: 6px;
@@ -76,32 +103,63 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Technical microtype: the HUD label register (mono, tracked, uppercase). */
+/* Technical microtype: the HUD label register (mono, tracked, uppercase).
+   The single biggest instrument signal — every card label, axis label,
+   timestamp, and eyebrow uses it. */
 .microlabel {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+  /* Color stays at the call site (text-muted default, text-gold for section
+     eyebrows + the coach card) — unlayered color here would beat Tailwind's
+     layered text-* utilities and break intentional overrides. */
 }
 
 /* Glass surface with feature-detected solid fallback. */
 .glass {
-  background: var(--bg-elevated);
+  background: var(--bg-elevated-solid);
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .glass {
     background: var(--surface-glass);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
-    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(26px) saturate(1.3);
+    backdrop-filter: blur(26px) saturate(1.3);
   }
+}
+
+/* One radial solar wash on the app shell only — never inside cards. */
+.solar-wash {
+  background-image: radial-gradient(
+    540px 400px at 50% 3%,
+    rgba(255, 140, 50, 0.18),
+    transparent 65%
+  );
+  background-repeat: no-repeat;
+}
+
+/* Molten hero numerals: gradient ink via background-clip. */
+.text-molten {
+  background: var(--grad-molten);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Press feedback on buttons/pills (reduced motion kills the transition). */
+.press-scale {
+  transition: transform 150ms ease-out;
+}
+.press-scale:active {
+  transform: scale(0.96);
 }
 
 /* Ultra-subtle instrument grid on the app shell only — felt, not seen. */
 .grid-texture {
   background-image:
-    linear-gradient(rgba(245, 241, 232, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 241, 232, 0.025) 1px, transparent 1px);
+    linear-gradient(rgba(255, 244, 228, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 244, 228, 0.02) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -110,8 +168,9 @@ body {
   clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
 }
 
-/* Corner-bracket focus/press state: four 8px L-marks. Additive — pairs with
-   (never replaces) the focus-visible ring where the ring reads better. */
+/* Corner-bracket focus/press state: four 9px L-marks at 1.5px weight (Volt
+   inheritance). Additive — pairs with (never replaces) the focus-visible
+   ring where the ring reads better. */
 .focus-brackets {
   position: relative;
 }
@@ -126,18 +185,18 @@ body {
 }
 .focus-brackets::before {
   background:
-    linear-gradient(var(--accent-gold), var(--accent-gold)) top left / 8px 1px,
-    linear-gradient(var(--accent-gold), var(--accent-gold)) top left / 1px 8px,
-    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom right / 8px 1px,
-    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom right / 1px 8px;
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top left / 9px 1.5px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top left / 1.5px 9px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom right / 9px 1.5px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom right / 1.5px 9px;
   background-repeat: no-repeat;
 }
 .focus-brackets::after {
   background:
-    linear-gradient(var(--accent-gold), var(--accent-gold)) top right / 8px 1px,
-    linear-gradient(var(--accent-gold), var(--accent-gold)) top right / 1px 8px,
-    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom left / 8px 1px,
-    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom left / 1px 8px;
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top right / 9px 1.5px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top right / 1.5px 9px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom left / 9px 1.5px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom left / 1.5px 9px;
   background-repeat: no-repeat;
 }
 .focus-brackets:focus-visible::before,
@@ -198,6 +257,12 @@ textarea {
   .animate-sweep-pulse {
     animation: none;
   }
+  .press-scale {
+    transition: none;
+  }
+  .press-scale:active {
+    transform: none;
+  }
 }
 
 /* In-progress score gauge: pulsing partial sweep (killed by reduced motion). */
@@ -217,11 +282,12 @@ textarea {
 /* Reduced transparency: glass goes solid, the shell grid disappears. */
 @media (prefers-reduced-transparency: reduce) {
   .glass {
-    background: var(--bg-elevated);
+    background: var(--bg-elevated-solid);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
-  .grid-texture {
+  .grid-texture,
+  .solar-wash {
     background-image: none;
   }
 }
