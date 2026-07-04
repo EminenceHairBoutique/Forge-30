@@ -191,9 +191,9 @@ export function BloodPressureSheet({
             <div
               className={`rounded-(--radius-control) border px-3 py-2 text-sm ${
                 guidance.severity === "emergency"
-                  ? "border-danger/60 bg-danger/10 text-ivory"
+                  ? "border-danger bg-safety text-ivory"
                   : guidance.severity === "warning"
-                    ? "border-warning/50 bg-warning/10 text-ivory"
+                    ? "border-danger/40 bg-safety text-ivory"
                     : "border-line bg-elevated text-muted"
               }`}
             >

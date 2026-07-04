@@ -32,7 +32,7 @@ const STATE_STYLE: Record<CalendarState, { label: string; className: string }> =
   partial: { label: "Partial", className: "border-gold/50 bg-gold/15 text-gold" },
   missed: { label: "Missed", className: "border-line bg-elevated text-muted" },
   recovery: { label: "Recovery", className: "border-[#4C86D8]/50 bg-[#4C86D8]/15 text-[#8FB7EA]" },
-  highStress: { label: "High stress", className: "border-warning/50 bg-warning/15 text-warning" },
+  highStress: { label: "High stress", className: "border-gold/40 bg-gold/10 text-gold" },
   highPain: { label: "High pain", className: "border-danger/50 bg-danger/15 text-danger" },
 };
 

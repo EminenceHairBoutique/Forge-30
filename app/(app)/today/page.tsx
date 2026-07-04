@@ -281,7 +281,7 @@ export default function TodayPage() {
           icon={SmilePlus}
           href="/mind"
           value={log.mood > 0 ? `${log.mood} / ${log.stress}` : "—"}
-          tone={log.stress >= 8 ? "warning" : "default"}
+          tone={log.stress >= 8 ? "gold" : "default"}
           sub={log.mood > 0 ? "mood / stress out of 10" : "Do the mind check-in"}
         />
         <StatCard

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BedDouble, CheckCircle2, Dumbbell, History, Play, Trophy } from "lucide-react";
+import { BedDouble, CheckCircle2, Dumbbell, History, Play, Trophy, TriangleAlert } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { useDay } from "@/lib/hooks/useDay";
 import { toISODate, addDays, uid } from "@/lib/utils";
@@ -370,8 +370,9 @@ export default function TrainingPage() {
 
       {/* Pain adjustment banner */}
       {adjustment.active && (
-        <Card className="border-warning/40 bg-warning/5 p-4">
-          <p className="microlabel text-warning">
+        <Card className="border-danger/40 bg-safety p-4">
+          <p className="microlabel flex items-center gap-1.5 text-danger">
+            <TriangleAlert className="size-3.5" />
             Pain-aware adjustment active
           </p>
           <ul className="mt-2 flex flex-col gap-1.5">

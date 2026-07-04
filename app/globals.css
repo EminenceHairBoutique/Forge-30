@@ -24,9 +24,6 @@
   --accent-gold-soft: #ffd98a; /* gradient top-stop, highlights */
   --accent-success: #2de1c2; /* teal completion — reads against the warm field */
   --accent-danger: #ff3b30; /* safety red; the ONLY safety color family (§2) */
-  /* RETIRING (§2): collides with ember. Kept alive only until the commit-4
-     usage sweep re-maps every caller; deleted there. Do not add new usages. */
-  --accent-warning: #ff8a3d;
   /* Hairline strokes: cards carry 1px hairlines; active states swap to the
      gold hairline instead of a fill change. */
   --stroke-hairline: rgba(255, 214, 160, 0.15);
@@ -63,7 +60,6 @@
   --color-ember: var(--accent-ember);
   --color-gold-soft: var(--accent-gold-soft);
   --color-success: var(--accent-success);
-  --color-warning: var(--accent-warning);
   --color-danger: var(--accent-danger);
   --color-line: var(--line);
 

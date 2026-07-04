@@ -59,7 +59,7 @@ export function ExerciseCard({
   };
 
   return (
-    <Card className={cn(flagOverhead && "border-warning/40")}>
+    <Card className={cn(flagOverhead && "border-danger/40")}>
       <CardHeader className="flex-row items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-bold text-ivory">
@@ -70,7 +70,7 @@ export function ExerciseCard({
             {def?.perSide && <Badge>per side</Badge>}
             {exercise.swappedFromId && <Badge variant="gold">swapped in</Badge>}
             {flagOverhead && (
-              <Badge variant="warning">
+              <Badge variant="caution">
                 <TriangleAlert className="size-3" /> overhead — avoid today
               </Badge>
             )}

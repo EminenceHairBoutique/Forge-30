@@ -122,7 +122,7 @@ export default function MoneyPage() {
             <StatCard
               label="Stress purchases"
               value={week.stressPurchaseCount}
-              tone={week.stressPurchaseCount > 0 ? "warning" : "default"}
+              tone={week.stressPurchaseCount > 0 ? "gold" : "default"}
               sub="this week"
             />
           </div>
@@ -176,7 +176,7 @@ export default function MoneyPage() {
                       {e.necessary ? "necessary" : "unnecessary"}
                     </Badge>
                     <Badge>{e.business ? "business" : "personal"}</Badge>
-                    {e.stressPurchase && <Badge variant="danger">stress</Badge>}
+                    {e.stressPurchase && <Badge variant="gold">stress</Badge>}
                   </div>
                   {e.note && <p className="mt-0.5 text-xs text-muted">{e.note}</p>}
                 </div>

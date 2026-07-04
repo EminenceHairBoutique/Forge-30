@@ -30,7 +30,7 @@ export function StatCard({
   icon?: LucideIcon;
   href?: string;
   progress?: { value: number; max: number };
-  tone?: "default" | "success" | "warning" | "danger" | "gold";
+  tone?: "default" | "success" | "danger" | "gold";
   /** Signed change vs yesterday; renders ▲ (success) / ▼ (neutral). */
   delta?: { value: number; unit?: string };
   className?: string;
@@ -38,7 +38,6 @@ export function StatCard({
   const toneText = {
     default: "text-ivory",
     success: "text-success",
-    warning: "text-warning",
     danger: "text-danger",
     gold: "text-gold",
   }[tone];

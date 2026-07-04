@@ -48,27 +48,42 @@ Every phase gates on: typecheck clean → tests pass → build passes, all three
    the PWA shell. Grow `REVIEW_SCHEMA` and `SYSTEM_PROMPT` together; keep model
    `claude-opus-4-8`, `thinking: adaptive`, `output_config.format` as-is.
 
-## Design system
+## Design system — "Solaris HUD"
 
-Tokens in `app/globals.css` (Tailwind v4 `@theme`): base `#0A0A0B` · surface `#141416` ·
-elevated `#1C1C1F` · ivory `#F5F1E8` · muted `#9B978C` · gold `#C9A961` · success `#3DFF8B` ·
-warning `#FF8A3D` · danger `#FF4D4D`. Primitives in `components/ui/` are shadcn-style and
+Tokens in `app/globals.css` (Tailwind v4 `@theme`): warm base `#0b0806` · warm-glass
+surface/elevated (rgba tints; solids `#161210`/`#1d1712`) · ivory `#fff4e4` · muted `#b3a18a` ·
+gold `#ffb13d` · ember `#ff6a3d` (gradient partner, hero/primary only) · gold-soft `#ffd98a` ·
+success (teal) `#2de1c2` · danger `#ff3b30` · safety surface `#16181a`. **`warning` is retired**
+— there is no warning token or class. Molten/bar/glass gradients and the glow/stroke/radius
+scale are defined once in `:root`. Primitives in `components/ui/` are shadcn-style and
 deliberately hand-rolled where iOS reliability matters (native `<select>`, not Radix) — follow
-that pattern for new form controls.
+that pattern for new form controls. Microlabels (`.microlabel`, Geist Mono 10px/.16em) are the
+label register everywhere. Emotional surfaces (Mind, Relationships, Journal) keep warm glass +
+microlabels but no corner brackets, delta chips, or glow — the instrument language lives where
+data lives.
 
-**Adherence-neutral color rule (hard):** warning/danger are reserved for genuine safety
-signals — BP crisis, injury red flags, crisis guidance, overspend past a user-set limit. Never
-for ordinary variance. Concrete "don't do this" examples (v1 bugs, fixed in v2 Phase 1):
-skipped-workout `danger` tone in `app/(app)/today/page.tsx`, and warning-orange styling on the
-helpful "+250 kcal" banner in `app/(app)/nutrition/page.tsx`. Neutral copy: "Not logged yet,"
-"Still open" — never "failed"/"cheat"/"ruined". Scores measure quality; streaks measure
-consistency; don't conflate them.
+**Safety-color rule (§2, hard):** ember is brand, so color alone never carries safety
+semantics. Safety states use the **red family only** (`--accent-danger`) at two intensities —
+caution (reduced weight: tinted border + icon + explicit text label; `Badge variant="caution"`)
+and critical (solid treatment). Every safety component pairs color with an icon and an explicit
+text label, and renders on the neutral cool-dark `--surface-safety` (`bg-safety`), never warm
+glass, never ember/gold inside. Genuine safety signals: BP stages/crisis, injury red flags,
+crisis guidance, overspend past a user-set limit.
+
+**Adherence-neutral color rule (hard):** danger is reserved for genuine safety signals — never
+for ordinary variance. Missed habits stay neutral; teal = completion; ember/gold = brand and
+progress, never judgment. Neutral copy: "Not logged yet," "Still open" — never
+"failed"/"cheat"/"ruined". Scores measure quality; streaks measure consistency; don't conflate
+them.
 
 Mobile constraints: ≥44pt touch targets · 16px minimum font on all inputs (iOS zoom) ·
 `inputmode` numeric/decimal on number fields · safe-area utilities `pt-safe`/`pb-safe`/
-`pb-safe-nav` · every log flow completes in <30 seconds. Chart marks use the validated
-dark-surface palette in `components/charts/TrendChart.tsx` (`#B08A28`/`#4C86D8`); brand gold is
-too gray for data marks; status colors never double as series colors.
+`pb-safe-nav` · every log flow completes in <30 seconds. Chart series A uses the molten
+gradient stroke with `#ffb13d` marks; series B stays `#4C86D8` blue (CVD-safe separation from
+the warm family) — see `components/charts/TrendChart.tsx`. Status colors never double as
+series colors. Glow budget: ember glow on at most the score ring, the one primary action, and
+the coach card per screen; teal glow only on completion/milestone moments. Blur budget: ≤3
+backdrop-filter layers per screen, with solid fallbacks.
 
 ## Accessibility
 
