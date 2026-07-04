@@ -130,6 +130,59 @@ export function buildPsycheReport(
     });
   }
 
+  // --- Phase NEXT (B-3): wave-2 synthesis --------------------------------------
+
+  const eq = latest.get("emotionalIntelligence");
+  if (eq) {
+    const strongest = [...eq.traits].sort((a, b) => b.score - a.score)[0];
+    const repair = trait(eq, "repair");
+    const parts = [strongest ? `Your strongest EQ muscle right now: ${strongest.label.toLowerCase()}.` : ""];
+    if (repair && repair.band !== "high") {
+      parts.push("Repair — going back toward people after friction, first — is the single skill with the highest relationship return, and yours has headroom.");
+      growthPlan.push("One repair rep this week: after any friction, send the calm two-line message within 24 hours instead of waiting it out.");
+    }
+    sections.push({ heading: "Emotional skills", body: parts.filter(Boolean).join(" ") });
+  }
+
+  const coping = latest.get("traumaCoping");
+  if (coping) {
+    const dominant = [...coping.traits].sort((a, b) => b.score - a.score)[0];
+    if (dominant && dominant.band === "high") {
+      sections.push({
+        heading: "Coping patterns",
+        body: `${dominant.summary} Patterns like this once made sense — that framing matters more than any score.`,
+      });
+      growthPlan.push(
+        "The regulation track plus one honest conversation about the coping profile — with someone you trust or a professional — is the two-part move."
+      );
+    }
+  }
+
+  const cognitive = latest.get("cognitiveSkills");
+  if (cognitive) {
+    const best = [...cognitive.traits].sort((a, b) => b.score - a.score)[0];
+    if (best) {
+      sections.push({
+        heading: "Cognitive strengths",
+        body: `${best.label} led your cognitive baseline (${best.score}/100). Not an IQ measure — a training baseline that moves with sleep and stress; the monthly retake trend is the real signal.`,
+      });
+    }
+  }
+
+  const clusterB = latest.get("clusterB");
+  if (clusterB) {
+    const elevated = clusterB.traits.filter((t) => t.band === "high");
+    if (elevated.length > 0) {
+      sections.push({
+        heading: "Growth edges",
+        body: `The trait screening flagged ${elevated.map((t) => t.label.toLowerCase()).join(" and ")} as worth exploring — an observation about patterns, never a label. Each links a concrete practice, and if these match real-life costs, a licensed evaluation is the strong move.`,
+      });
+      growthPlan.push(
+        "From the trait screening: pick the one linked practice attached to your highest elevation and run it for two weeks before re-judging anything."
+      );
+    }
+  }
+
   if (journalThemes.length > 0) {
     sections.push({
       heading: "What your journal keeps circling",

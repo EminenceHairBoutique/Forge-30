@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { PaywallCard } from "@/components/cards/PaywallCard";
 import { AssessmentRunner } from "@/components/assessments/AssessmentRunner";
+import { ClusterBResultExtras } from "@/components/assessments/ClusterBResultExtras";
+import { SupportResourcesCard } from "@/components/assessments/SupportResourcesCard";
 
 export default function AssessmentsPage() {
   const { adapter, revision } = useStorage();
@@ -178,6 +180,10 @@ export default function AssessmentsPage() {
         </div>
       </PaywallCard>
 
+      {/* Crisis routing + resources: outside the paywall, free at every tier,
+          permanently (B-3 rule — safety features are never gated). */}
+      <SupportResourcesCard />
+
       <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">
         {DISCLAIMERS.mentalHealth}
       </p>
@@ -227,6 +233,10 @@ export default function AssessmentsPage() {
                     {compareResults(detailPrev, detail).framing}
                   </p>
                 </div>
+              )}
+
+              {detail.assessmentId === "clusterB" && (
+                <ClusterBResultExtras result={detail} journalThemes={journalThemes} />
               )}
 
               {detail.validity.notes.length > 0 && (

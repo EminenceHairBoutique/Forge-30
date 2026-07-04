@@ -28,6 +28,12 @@ export interface LikertQuestion {
   trait: string;
   /** Reverse-coded: agreement means less of the trait. */
   reverse?: boolean;
+  /**
+   * Self-harm-adjacent item (B-3): an elevated answer immediately routes
+   * support resources inline — free at every tier, independent of the
+   * paywall and of finishing the assessment.
+   */
+  supportFlag?: boolean;
 }
 
 export interface AttentionQuestion {

@@ -9,6 +9,8 @@ import type { AssessmentId, AssessmentProgress, AssessmentResult } from "@/lib/t
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TimedTaskItem } from "./TimedTaskItem";
+import { SupportResourcesCard } from "./SupportResourcesCard";
+import { supportTriggered } from "@/lib/engine/assessments/clusterB";
 
 const LIKERT_LABELS = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"];
 
@@ -139,6 +141,10 @@ export function AssessmentRunner({
                 ? `${done} of ~${total} · progress saves automatically`
                 : `Pick your top ${total}, most important first (${done}/${total})`}
             </p>
+
+            {/* Self-harm-adjacent routing (B-3): fires mid-run on an elevated
+                flagged answer, stays visible, gated by nothing. */}
+            {supportTriggered(def, answers) && <SupportResourcesCard />}
 
             {def.introNote && done === 0 && (
               <p className="rounded-(--radius-control) border border-gold/30 bg-gold/5 px-3 py-2.5 text-xs leading-relaxed text-ivory">
