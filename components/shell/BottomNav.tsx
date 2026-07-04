@@ -101,7 +101,7 @@ export function BottomNav() {
     <>
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-base/90 backdrop-blur-lg pb-safe"
+        className="glass fixed inset-x-0 bottom-0 z-40 border-t border-line pb-safe"
       >
         <div className="mx-auto flex h-18 max-w-lg items-stretch">
           <Link

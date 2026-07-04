@@ -1,38 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Ring } from "./Ring";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import type { ForgeScoreResult, ScoreState } from "@/lib/engine/forgeScore";
-import { cn, prefersReducedMotion } from "@/lib/utils";
-
-/** Count-up + ring sweep on the final-score reveal (≤400ms, motion-safe). */
-function useCountUp(target: number, enabled: boolean): number {
-  const [value, setValue] = useState(enabled ? 0 : target);
-  useEffect(() => {
-    if (!enabled || prefersReducedMotion() || target === 0) {
-      setValue(target);
-      return;
-    }
-    const duration = 400;
-    const start = performance.now();
-    let frame: number;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - (1 - t) ** 3;
-      setValue(Math.round(target * eased));
-      if (t < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [target, enabled]);
-  return value;
-}
+import { useCountUp } from "@/lib/hooks/useCountUp";
+import { cn } from "@/lib/utils";
 
 /**
- * The hero Forge Score ring on Today. Tapping it opens the full score
- * breakdown (components earned + penalties applied). While the day is in
- * progress the ring reads "score so far" — a building number, not a verdict.
+ * The hero Forge Score gauge on Today (HUD treatment: 30 day-ticks, thin
+ * outer track, gold glow only at the final state — the one rationed hero
+ * glow). Tapping it opens the full score breakdown (components earned +
+ * penalties applied). While the day is in progress the gauge reads as a
+ * pulsing partial sweep — a building number, not a verdict.
  */
 export function ScoreRing({
   result,
@@ -44,7 +23,7 @@ export function ScoreRing({
   const { score, components, penalties } = result;
   const building = state === "inProgress";
   // The evening reveal: the finished day's score counts up as the ring sweeps.
-  const shown = useCountUp(score, !building);
+  const shown = useCountUp(score, !building, 400);
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -53,11 +32,22 @@ export function ScoreRing({
           className="flex flex-col items-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-gold/50 rounded-full"
           aria-label={`Forge Score ${score} out of 100${building ? " so far, day in progress" : ""} — tap for breakdown`}
         >
-          <Ring value={shown} max={100} size={176} stroke={12} label={`Forge Score ${score}/100`}>
+          <Ring
+            value={shown}
+            max={100}
+            size={176}
+            stroke={12}
+            ticks={30}
+            majorEvery={3}
+            glow={!building && score > 0}
+            pulse={building && score > 0}
+            label={`Forge Score ${score}/100`}
+          >
             <span className="display-num text-6xl leading-none text-ivory">{shown}</span>
-            <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {building ? "Score so far" : "Forge Score"}
+            <span className="microlabel mt-1 text-muted">
+              {building ? "Score building" : "Forge Score"}
             </span>
+            {building && <span className="microlabel mt-0.5 text-[9px] text-muted/70">Day in progress</span>}
           </Ring>
           <span className="text-xs text-muted">
             {building ? "day in progress · tap for breakdown" : "tap for breakdown"}

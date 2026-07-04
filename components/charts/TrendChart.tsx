@@ -1,9 +1,10 @@
 "use client";
 
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -26,6 +27,29 @@ export interface TrendPoint {
   label: string;
   a: number | null;
   b?: number | null;
+}
+
+/**
+ * Glow dot on the latest non-null point only (HUD signature); all other
+ * points stay dotless so the line reads clean.
+ */
+function LatestDot(props: {
+  cx?: number;
+  cy?: number;
+  index?: number;
+  data: TrendPoint[];
+  dataKey: "a" | "b";
+  fill: string;
+}) {
+  const { cx, cy, index, data, dataKey, fill } = props;
+  if (cx === undefined || cy === undefined || index === undefined) return null;
+  const lastIdx = data.reduce((acc, p, i) => (p[dataKey] != null ? i : acc), -1);
+  if (index !== lastIdx) return null;
+  return (
+    <g style={{ filter: `drop-shadow(0 0 6px ${fill})` }}>
+      <circle cx={cx} cy={cy} r={3.5} fill={fill} stroke="var(--bg-surface)" strokeWidth={1.5} />
+    </g>
+  );
 }
 
 export function TrendChart({
@@ -67,18 +91,29 @@ export function TrendChart({
         </div>
       )}
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
-          <CartesianGrid stroke="var(--line)" strokeDasharray="0" vertical={false} />
+        <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+          <defs>
+            {/* HUD treatment: gradient stroke + soft area fill for series A. */}
+            <linearGradient id="hudStrokeA" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={CHART_1} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={CHART_1} stopOpacity={1} />
+            </linearGradient>
+            <linearGradient id="hudFillA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={CHART_1} stopOpacity={0.08} />
+              <stop offset="100%" stopColor={CHART_1} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="var(--stroke-hairline)" strokeDasharray="0" vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
+            tick={{ fill: "var(--text-secondary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
             tickLine={false}
-            axisLine={{ stroke: "var(--line)" }}
+            axisLine={{ stroke: "var(--stroke-hairline)" }}
             interval="preserveStartEnd"
             minTickGap={24}
           />
           <YAxis
-            tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
+            tick={{ fill: "var(--text-secondary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
             tickLine={false}
             axisLine={false}
             width={46}
@@ -109,13 +144,23 @@ export function TrendChart({
               }}
             />
           )}
+          <Area
+            type="monotone"
+            dataKey="a"
+            fill="url(#hudFillA)"
+            stroke="none"
+            connectNulls
+            tooltipType="none"
+            legendType="none"
+            activeDot={false}
+          />
           <Line
             type="monotone"
             dataKey="a"
             name={seriesA}
-            stroke={CHART_1}
+            stroke="url(#hudStrokeA)"
             strokeWidth={2}
-            dot={false}
+            dot={<LatestDot data={data} dataKey="a" fill={CHART_1} />}
             activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--bg-surface)" }}
             connectNulls
           />
@@ -126,12 +171,12 @@ export function TrendChart({
               name={seriesB}
               stroke={CHART_2}
               strokeWidth={2}
-              dot={false}
+              dot={<LatestDot data={data} dataKey="b" fill={CHART_2} />}
               activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--bg-surface)" }}
               connectNulls
             />
           )}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

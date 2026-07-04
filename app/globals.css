@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Forge30 design tokens — "modern luxury fitness", dark mode only.
+   Forge30 design tokens — "Forge HUD": instrument-grade dark, hairline
+   precision, rationed glow. Dark mode only. One system, no fork.
 --------------------------------------------------------------------------- */
 
 :root {
@@ -14,7 +15,18 @@
   --accent-success: #3dff8b;
   --accent-warning: #ff8a3d;
   --accent-danger: #ff4d4d;
-  --line: #232327;
+  /* Hairline strokes: cards carry 1px hairlines; active states swap to the
+     gold hairline instead of a fill change. */
+  --stroke-hairline: rgba(245, 241, 232, 0.08);
+  --stroke-active: rgba(201, 169, 97, 0.35);
+  --line: var(--stroke-hairline);
+  /* Glass surface (nav, sheets, sticky headers) — budget: ≤3 blurred layers
+     per screen; solid fallback where backdrop-filter is unsupported. */
+  --surface-glass: rgba(20, 20, 22, 0.72);
+  /* Glow is rationed: hero score ring, milestone/PR moments, completed
+     states. Nothing else. */
+  --glow-gold: 0 0 24px rgba(201, 169, 97, 0.25);
+  --glow-success: 0 0 20px rgba(61, 255, 139, 0.22);
 }
 
 @theme inline {
@@ -32,8 +44,10 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  --radius-card: 16px;
-  --radius-control: 12px;
+  /* Sharpened radius scale: 6 / 10 / 14. */
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-tight: 6px;
 }
 
 html {
@@ -60,6 +74,77 @@ body {
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Technical microtype: the HUD label register (mono, tracked, uppercase). */
+.microlabel {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Glass surface with feature-detected solid fallback. */
+.glass {
+  background: var(--bg-elevated);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    background: var(--surface-glass);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    backdrop-filter: blur(20px) saturate(1.2);
+  }
+}
+
+/* Ultra-subtle instrument grid on the app shell only — felt, not seen. */
+.grid-texture {
+  background-image:
+    linear-gradient(rgba(245, 241, 232, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 241, 232, 0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Signature geometric accent: one 45°-clipped corner, hero cards only. */
+.notch-corner {
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+}
+
+/* Corner-bracket focus/press state: four 8px L-marks. Additive — pairs with
+   (never replaces) the focus-visible ring where the ring reads better. */
+.focus-brackets {
+  position: relative;
+}
+.focus-brackets::before,
+.focus-brackets::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.focus-brackets::before {
+  background:
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top left / 8px 1px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top left / 1px 8px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom right / 8px 1px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom right / 1px 8px;
+  background-repeat: no-repeat;
+}
+.focus-brackets::after {
+  background:
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top right / 8px 1px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) top right / 1px 8px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom left / 8px 1px,
+    linear-gradient(var(--accent-gold), var(--accent-gold)) bottom left / 1px 8px;
+  background-repeat: no-repeat;
+}
+.focus-brackets:focus-visible::before,
+.focus-brackets:focus-visible::after,
+.focus-brackets:active::before,
+.focus-brackets:active::after {
+  opacity: 1;
 }
 
 /* All text inputs ≥16px so iOS Safari never zooms on focus. */
@@ -109,8 +194,35 @@ textarea {
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
-  .animate-breathe {
+  .animate-breathe,
+  .animate-sweep-pulse {
     animation: none;
+  }
+}
+
+/* In-progress score gauge: pulsing partial sweep (killed by reduced motion). */
+@keyframes sweep-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.animate-sweep-pulse {
+  animation: sweep-pulse 2.4s ease-in-out infinite;
+}
+
+/* Reduced transparency: glass goes solid, the shell grid disappears. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--bg-elevated);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .grid-texture {
+    background-image: none;
   }
 }
 

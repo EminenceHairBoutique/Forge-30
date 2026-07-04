@@ -222,3 +222,21 @@ after token consolidation).
    numbered step + fixture test (Phase-1 contract). 6. **Device QA gap** — no physical iPhone
    in this environment; every phase summary carries the manual checklist (standalone launch,
    safe areas, offline, no input zoom, push permission UX when E9 lands).
+
+## Phase NEXT addendum (HUD · Deep assessments · Recording) — status map
+
+Per `FORGE30_PHASE_NEXT_HUD_ASSESSMENTS_RECORDING.md`, sequenced A → B → C:
+
+- **A — Forge HUD overhaul: SHIPPED.** Token evolution in `globals.css` (hairline strokes,
+  glass + solid fallback, rationed glow, 6/10/14 radii, `.microlabel`, shell grid texture,
+  `.notch-corner`, `.focus-brackets`), gauge ScoreRing (30 ticks, glow at final, pulsing
+  in-progress sweep), StatCard readouts (count-up + delta chips), chart gradients + latest-
+  point glow dot, glass nav/sheets, `TimelineRow`. AA contrast audit clean (worst pair
+  muted-on-elevated 5.83:1); reduced-motion and reduced-transparency guards verified.
+  Physical-device glass QA remains on the WAIT(device) checklist.
+- **B — assessment expansion: pending** (B-1 EQ + Trauma-Response → B-2 timed-task engine +
+  Cognitive Skills → B-3 Cluster B Trait Screening + Psyche Report synthesis).
+- **C — consensual recording: pending.** On land, `consensualRecording` flips to
+  development-only (`NODE_ENV === "development"`, the `devTierSwitcher` precedent) — complete
+  and demo-able in dev, off in every production build until counsel signs off per
+  `RECORDING_LEGAL_REVIEW.md`. `realtimeAnalysis` stays false.

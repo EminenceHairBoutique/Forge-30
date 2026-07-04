@@ -142,7 +142,7 @@ export function MoneyPlanningSection() {
   return (
     <>
       {/* Safe to spend */}
-      <Card className={cn(hasIncome && sts.remaining >= 0 && "border-gold/30")}>
+      <Card className={cn("notch-corner", hasIncome && sts.remaining >= 0 && "border-gold/30")}>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Safe to spend this month</CardTitle>
           <Button

@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/cards/StatCard";
 import { SpendLogSheet } from "@/components/forms/SpendLogSheet";
 import { SundayReviewSheet } from "@/components/forms/SundayReviewSheet";
+import { TimelineRow } from "@/components/ui/TimelineRow";
 import { MoneyPlanningSection } from "@/components/money/MoneyPlanningSection";
 
 export default function MoneyPage() {
@@ -159,8 +160,8 @@ export default function MoneyPage() {
               </div>
             )}
             {todayEntries.map((e) => (
+              <TimelineRow key={e.id} time={e.loggedAt.slice(11, 16)}>
               <div
-                key={e.id}
                 className="flex min-h-11 items-center gap-2 rounded-(--radius-control) bg-elevated px-3 py-2"
               >
                 <div className="min-w-0 flex-1">
@@ -188,6 +189,7 @@ export default function MoneyPage() {
                   <Trash2 className="size-4" />
                 </button>
               </div>
+              </TimelineRow>
             ))}
           </CardContent>
         </Card>

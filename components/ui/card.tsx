@@ -20,7 +20,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("text-xs font-semibold uppercase tracking-widest text-muted", className)}
+      className={cn("microlabel text-muted", className)}
       {...props}
     />
   );

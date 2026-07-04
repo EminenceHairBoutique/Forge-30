@@ -8,7 +8,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile layout centers in a ~480px column. Pages that render a
           [data-wide] root (Progress, Money) expand to a two-column desktop
           layout at lg:. */}
-      <div className="mx-auto w-full max-w-lg px-4 pt-safe px-safe pb-safe-nav has-[[data-wide]]:lg:max-w-4xl">
+      <div className="grid-texture mx-auto w-full max-w-lg px-4 pt-safe px-safe pb-safe-nav has-[[data-wide]]:lg:max-w-4xl">
         {children}
       </div>
       <BottomNav />
