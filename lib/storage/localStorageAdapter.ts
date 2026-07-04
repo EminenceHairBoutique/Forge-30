@@ -16,9 +16,13 @@ import type {
   IncidentEntry,
   JournalNote,
   MealEntry,
+  OutreachEntry,
+  ReconnectPerson,
   SavedMeal,
   RelationshipCheckIn,
   SkillTask,
+  SocialReflection,
+  SocialSettings,
   SpendingEntry,
   StreakState,
   SundayReview,
@@ -63,6 +67,10 @@ const KEYS = {
   customWorkoutPlan: `${PREFIX}:customWorkoutPlan`,
   notificationLog: `${PREFIX}:notificationLog`,
   relationshipCheckIns: `${PREFIX}:relationshipCheckIns`,
+  outreach: `${PREFIX}:outreach`,
+  reconnectList: `${PREFIX}:reconnectList`,
+  socialReflections: `${PREFIX}:socialReflections`,
+  socialSettings: `${PREFIX}:socialSettings`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -545,6 +553,50 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async deleteIncident(id: string): Promise<void> {
     await this.large.delete("incidents", id);
+  }
+
+  // -- Social connection (E12) -----------------------------------------------------
+  async listOutreach(from: ISODate, to: ISODate): Promise<OutreachEntry[]> {
+    return read<OutreachEntry[]>(KEYS.outreach, [])
+      .filter((o) => inRange(o.date, from, to))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async saveOutreach(entry: OutreachEntry): Promise<void> {
+    const all = read<OutreachEntry[]>(KEYS.outreach, []);
+    all.push(entry);
+    write(KEYS.outreach, all);
+  }
+
+  async listReconnect(): Promise<ReconnectPerson[]> {
+    return read<ReconnectPerson[]>(KEYS.reconnectList, []);
+  }
+
+  async saveReconnect(list: ReconnectPerson[]): Promise<void> {
+    write(KEYS.reconnectList, list);
+  }
+
+  async listSocialReflections(): Promise<SocialReflection[]> {
+    return read<SocialReflection[]>(KEYS.socialReflections, []).sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt)
+    );
+  }
+
+  async saveSocialReflection(r: SocialReflection): Promise<void> {
+    const all = read<SocialReflection[]>(KEYS.socialReflections, []);
+    all.push(r);
+    write(KEYS.socialReflections, all);
+  }
+
+  async getSocialSettings(): Promise<SocialSettings> {
+    return read<SocialSettings>(KEYS.socialSettings, {
+      friendshipGoal: "",
+      weeklyOutreachTarget: 3,
+    });
+  }
+
+  async saveSocialSettings(s: SocialSettings): Promise<void> {
+    write(KEYS.socialSettings, s);
   }
 
   // -- Assessments (E10) -----------------------------------------------------------

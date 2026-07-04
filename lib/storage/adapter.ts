@@ -16,9 +16,13 @@ import type {
   IncidentEntry,
   JournalNote,
   MealEntry,
+  OutreachEntry,
+  ReconnectPerson,
   SavedMeal,
   RelationshipCheckIn,
   SkillTask,
+  SocialReflection,
+  SocialSettings,
   SpendingEntry,
   StreakState,
   SundayReview,
@@ -143,6 +147,16 @@ export interface StorageAdapter {
   listIncidents(): Promise<IncidentEntry[]>;
   saveIncident(entry: IncidentEntry): Promise<void>;
   deleteIncident(id: string): Promise<void>;
+
+  // Social connection (E12)
+  listOutreach(from: ISODate, to: ISODate): Promise<OutreachEntry[]>;
+  saveOutreach(entry: OutreachEntry): Promise<void>;
+  listReconnect(): Promise<ReconnectPerson[]>;
+  saveReconnect(list: ReconnectPerson[]): Promise<void>;
+  listSocialReflections(): Promise<SocialReflection[]>;
+  saveSocialReflection(r: SocialReflection): Promise<void>;
+  getSocialSettings(): Promise<SocialSettings>;
+  saveSocialSettings(s: SocialSettings): Promise<void>;
 
   // Assessments (E10 — large store; results and in-flight progress)
   listAssessmentResults(): Promise<AssessmentResult[]>;

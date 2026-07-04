@@ -47,7 +47,7 @@ const LOG_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: 
 
 const MORE_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: boolean }[] = [
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/social", label: "Social", icon: Users, soon: true },
+  { href: "/social", label: "Social", icon: Users },
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
 ];
 

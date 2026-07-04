@@ -194,6 +194,8 @@ export interface UserProfile {
   medications?: string;
   trackBloodPressure?: boolean;
   trackFitnessMarkers?: boolean;
+  /** Skill tracks shown on the Skills tab (E12); absent = the seeded three. */
+  activeSkillTracks?: string[];
   domains?: DomainToggles;
   mvd?: MvdDefinition;
   notifications?: NotificationPrefs;
@@ -343,6 +345,48 @@ export interface HealthMarkerEntry {
   mileTimeSec: number | null;
   bodyFatPct: number | null;
   createdAt: ISODateTime;
+}
+
+// --- Social connection (E12) ----------------------------------------------------
+
+export type OutreachChannel = "text" | "call" | "inPerson" | "other";
+
+/** One logged reach-out — the unit of social consistency. */
+export interface OutreachEntry {
+  id: string;
+  date: ISODate;
+  person: string;
+  channel: OutreachChannel;
+  note: string;
+  createdAt: ISODateTime;
+}
+
+/** Someone worth reconnecting with, and when contact last happened. */
+export interface ReconnectPerson {
+  id: string;
+  name: string;
+  note: string;
+  lastContact: ISODate | null;
+}
+
+/** Post-event reflection — two minutes after seeing people. */
+export interface SocialReflection {
+  id: string;
+  date: ISODate;
+  event: string;
+  /** 1–10 how it felt overall. */
+  feltGood: number;
+  /** Energized vs. drained is information, not a verdict on the people. */
+  drained: boolean;
+  remember: string;
+  createdAt: ISODateTime;
+}
+
+/** Social tab settings (weekly outreach goal drives the weekly streak). */
+export interface SocialSettings {
+  friendshipGoal: string;
+  /** Reach-outs per week that count the week (weekly streak mode, E3). */
+  weeklyOutreachTarget: number;
 }
 
 // --- Relationships (E11) --------------------------------------------------------
@@ -782,7 +826,17 @@ export interface SundayReview {
 // Skills
 // ---------------------------------------------------------------------------
 
-export type SkillTrackId = "finance" | "regulation" | "movement";
+export type SkillTrackId =
+  | "finance"
+  | "regulation"
+  | "movement"
+  | "nutritionBasics"
+  | "communication"
+  | "sleepOptimization"
+  | "careerBusiness"
+  | "socialConfidence"
+  | "discipline"
+  | "metaLearning";
 
 export interface SkillTask {
   id: string;

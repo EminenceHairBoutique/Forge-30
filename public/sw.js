@@ -10,7 +10,7 @@
  *    content-hashed and immutable.
  */
 
-const VERSION = "forge30-v6";
+const VERSION = "forge30-v7";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
@@ -27,6 +27,7 @@ const SHELL_ROUTES = [
   "/health",
   "/assessments",
   "/relationships",
+  "/social",
   "/settings",
   "/manifest.json",
 ];
