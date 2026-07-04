@@ -30,6 +30,7 @@ import { workoutForDate } from "@/lib/engine/workoutBuilder";
 import type { AIReview, CustomWorkoutPlan, TomorrowPlan, WorkoutStatus } from "@/lib/types";
 import { ScoreRing } from "@/components/cards/ScoreRing";
 import { StatCard } from "@/components/cards/StatCard";
+import { PatternsCard } from "@/components/cards/PatternsCard";
 import { QuickActions } from "@/components/shell/QuickActions";
 import { DailyCheckSheet } from "@/components/forms/DailyCheckSheet";
 import { MorningPlanCard } from "@/components/today/MorningPlanCard";
@@ -186,6 +187,9 @@ export default function TodayPage() {
           </div>
         </Card>
       </Link>
+
+      {/* LifeGraph patterns (E14) — renders only past the sample-size guard */}
+      <PatternsCard />
 
       <div className="grid grid-cols-2 gap-3">
         <StatCard

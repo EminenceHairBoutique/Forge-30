@@ -205,6 +205,12 @@ export class LocalStorageAdapter implements StorageAdapter {
     write(KEYS.tomorrowPlans, all);
   }
 
+  async listTomorrowPlans(from: ISODate, to: ISODate): Promise<TomorrowPlan[]> {
+    return Object.values(read<Record<ISODate, TomorrowPlan>>(KEYS.tomorrowPlans, {}))
+      .filter((p) => inRange(p.date, from, to))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   // -- Streaks -------------------------------------------------------------------
   async getStreak(id: string): Promise<StreakState | null> {
     return read<Record<string, StreakState>>(KEYS.streaks, {})[id] ?? null;

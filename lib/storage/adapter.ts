@@ -66,6 +66,7 @@ export interface StorageAdapter {
   // Daily rituals (E2)
   getTomorrowPlan(date: ISODate): Promise<TomorrowPlan | null>;
   saveTomorrowPlan(plan: TomorrowPlan): Promise<void>;
+  listTomorrowPlans(from: ISODate, to: ISODate): Promise<TomorrowPlan[]>;
 
   // Streaks (E3) — keyed by streak id ("daily", a skill trackId, …)
   getStreak(id: string): Promise<StreakState | null>;

@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TrendChart, type TrendPoint } from "@/components/charts/TrendChart";
+import { PatternsCard } from "@/components/cards/PatternsCard";
 import { BodyMetricSheet } from "@/components/forms/BodyMetricSheet";
 
 const STATE_STYLE: Record<CalendarState, { label: string; className: string }> = {
@@ -361,6 +362,9 @@ export default function ProgressPage() {
           </Card>
         )}
       </div>
+
+      {/* LifeGraph patterns in the weekly report (E14) */}
+      <PatternsCard title="Patterns in your data" limit={3} />
 
       {/* Trends */}
       <Card>

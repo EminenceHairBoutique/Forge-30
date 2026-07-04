@@ -23,6 +23,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PatternsCard } from "@/components/cards/PatternsCard";
 
 const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] = [
   { key: "scoreExplanation", label: "Today's score", icon: Gauge },
@@ -175,6 +176,14 @@ export default function CoachPage() {
           </>
         )}
       </Button>
+
+      {/* Pattern review (E14) — deterministic LifeGraph observations the
+          coach's pattern-review mode (E15) will discuss. */}
+      <PatternsCard
+        title="Pattern review"
+        limit={3}
+        footnote="Deterministic co-occurrence from your own logs — the coach never sees more than you do here."
+      />
 
       <p className="px-2 text-center text-xs leading-relaxed text-muted">
         Coaching feedback is habit support, not medical, mental-health, legal, or financial
