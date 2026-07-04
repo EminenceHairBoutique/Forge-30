@@ -48,7 +48,7 @@ const LOG_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: 
 const MORE_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: boolean }[] = [
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/social", label: "Social", icon: Users, soon: true },
-  { href: "/assessments", label: "Assessments", icon: ClipboardList, soon: true },
+  { href: "/assessments", label: "Assessments", icon: ClipboardList },
 ];
 
 const LOG_PATHS = LOG_DESTINATIONS.filter((d) => !d.soon).map((d) => d.href);

@@ -1,5 +1,8 @@
 import type {
   AIReview,
+  AssessmentId,
+  AssessmentProgress,
+  AssessmentResult,
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
@@ -501,6 +504,28 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async deleteBloodwork(id: string): Promise<void> {
     await this.large.delete("bloodwork", id);
+  }
+
+  // -- Assessments (E10) -----------------------------------------------------------
+  async listAssessmentResults(): Promise<AssessmentResult[]> {
+    const all = await this.large.list<AssessmentResult>("assessmentResults");
+    return Object.values(all).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async saveAssessmentResult(result: AssessmentResult): Promise<void> {
+    await this.large.put("assessmentResults", result.id, result);
+  }
+
+  async getAssessmentProgress(id: AssessmentId): Promise<AssessmentProgress | null> {
+    return (await this.large.get<AssessmentProgress>("assessmentProgress", id)) ?? null;
+  }
+
+  async saveAssessmentProgress(progress: AssessmentProgress): Promise<void> {
+    await this.large.put("assessmentProgress", progress.assessmentId, progress);
+  }
+
+  async clearAssessmentProgress(id: AssessmentId): Promise<void> {
+    await this.large.delete("assessmentProgress", id);
   }
 
   // -- Body metrics ------------------------------------------------------------------------

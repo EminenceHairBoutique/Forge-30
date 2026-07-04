@@ -343,6 +343,68 @@ export interface HealthMarkerEntry {
   createdAt: ISODateTime;
 }
 
+// --- Assessments (E10) ---------------------------------------------------------
+
+export type AssessmentId =
+  | "bigFive"
+  | "values"
+  | "conflictStyle"
+  | "communicationStyle"
+  | "attachmentStyle";
+
+export interface AssessmentTraitScore {
+  key: string;
+  label: string;
+  /** 0–100 within this assessment's own scale — descriptive, never normative. */
+  score: number;
+  band: "low" | "balanced" | "high";
+  /** Educational one-liner for this person's band. */
+  summary: string;
+}
+
+/**
+ * The validity system (E10): disclosed data-quality signals, never an
+ * accusation. Confidence is about how much weight to give the result — low
+ * confidence means "take this lightly", not "you answered wrong".
+ */
+export interface AssessmentValidity {
+  attentionFailed: number;
+  attentionTotal: number;
+  /** 0–1: disagreement across mirrored (reverse-coded) pairs. */
+  inconsistency: number;
+  /** 0–1: fraction of agree-side answers (acquiescence). */
+  acquiescence: number;
+  /** 0–1: fraction of maximally positive answers (idealization). */
+  idealization: number;
+  /** Median response under ~1.2s/question. */
+  speedFlag: boolean;
+  /** 0–100 disclosed weight-to-give-this. */
+  confidence: number;
+  confidenceLevel: "low" | "medium" | "high";
+  /** Neutral, disclosed notes explaining the confidence score. */
+  notes: string[];
+}
+
+export interface AssessmentResult {
+  id: string;
+  assessmentId: AssessmentId;
+  date: ISODate;
+  traits: AssessmentTraitScore[];
+  /** Rank-kind assessments: item keys in the user's priority order. */
+  ranking?: string[];
+  validity: AssessmentValidity;
+  createdAt: ISODateTime;
+}
+
+/** Saved mid-assessment state — resume exactly where they left off. */
+export interface AssessmentProgress {
+  assessmentId: AssessmentId;
+  answers: Record<string, number>;
+  ranking?: string[];
+  timingsMs: number[];
+  startedAt: ISODateTime;
+}
+
 // --- Journal system (E6) ------------------------------------------------------
 
 export type JournalKind = "freewrite" | "thoughtRecord" | "voice";

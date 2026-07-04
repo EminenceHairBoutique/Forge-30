@@ -1,5 +1,8 @@
 import type {
   AIReview,
+  AssessmentId,
+  AssessmentProgress,
+  AssessmentResult,
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
@@ -127,6 +130,13 @@ export interface StorageAdapter {
   listBloodwork(): Promise<BloodworkReport[]>;
   saveBloodwork(report: BloodworkReport): Promise<void>;
   deleteBloodwork(id: string): Promise<void>;
+
+  // Assessments (E10 — large store; results and in-flight progress)
+  listAssessmentResults(): Promise<AssessmentResult[]>;
+  saveAssessmentResult(result: AssessmentResult): Promise<void>;
+  getAssessmentProgress(id: AssessmentId): Promise<AssessmentProgress | null>;
+  saveAssessmentProgress(progress: AssessmentProgress): Promise<void>;
+  clearAssessmentProgress(id: AssessmentId): Promise<void>;
 
   // Body metrics
   getBodyMetric(date: ISODate): Promise<BodyMetric | null>;
