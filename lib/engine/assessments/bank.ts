@@ -1,4 +1,5 @@
 import type { AssessmentDef } from "./defs";
+import { EMOTIONAL_INTELLIGENCE, TRAUMA_COPING } from "./bankWave2";
 
 /**
  * Wave 1 question banks (E10): Big Five, values ranking, conflict style,
@@ -301,6 +302,8 @@ export const ASSESSMENT_BANK: AssessmentDef[] = [
   CONFLICT,
   COMMUNICATION,
   ATTACHMENT,
+  EMOTIONAL_INTELLIGENCE,
+  TRAUMA_COPING,
 ];
 
 export function getAssessmentDef(id: string): AssessmentDef | undefined {

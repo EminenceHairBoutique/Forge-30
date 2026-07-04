@@ -460,7 +460,12 @@ export type AssessmentId =
   | "values"
   | "conflictStyle"
   | "communicationStyle"
-  | "attachmentStyle";
+  | "attachmentStyle"
+  // Phase NEXT wave 2 (B workstream)
+  | "emotionalIntelligence"
+  | "traumaCoping"
+  | "cognitiveSkills"
+  | "clusterB";
 
 export interface AssessmentTraitScore {
   key: string;
