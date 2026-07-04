@@ -470,6 +470,31 @@ export type MuscleGroup =
   | "core"
   | "fullBody";
 
+/** Movement pattern taxonomy for the workout builder (E8-T). */
+export type MovementPattern =
+  | "push"
+  | "pull"
+  | "squat"
+  | "hinge"
+  | "carry"
+  | "core"
+  | "cardio"
+  | "mobility";
+
+/**
+ * Injury-caution tags: an exercise carrying a tag is excluded/swapped when an
+ * injury profile maps to that tag (see cautionTagsForInjuries).
+ */
+export type CautionTag =
+  | "overhead"
+  | "spinal-load"
+  | "shoulder"
+  | "elbow"
+  | "knee"
+  | "hip"
+  | "wrist"
+  | "high-impact";
+
 export interface ExerciseDef {
   id: string;
   name: string;
@@ -481,6 +506,15 @@ export interface ExerciseDef {
   overheadPressing?: boolean;
   /** Suggested pain-safe swap exercise ids. */
   swaps?: string[];
+  // --- Library tags (E8-T) — optional so seeded v1 entries stay valid.
+  pattern?: MovementPattern;
+  /** Minimum equipment tier required (matches EquipmentAccess ordering). */
+  equipment?: EquipmentAccess;
+  /** 1 = anyone, 2 = some experience, 3 = advanced technique. */
+  difficulty?: 1 | 2 | 3;
+  unilateral?: boolean;
+  category?: "strength" | "cardio" | "mobility" | "prehab";
+  cautions?: CautionTag[];
 }
 
 export interface ExerciseSet {
@@ -488,6 +522,8 @@ export interface ExerciseSet {
   weight: number;
   reps: number;
   rpe: number;
+  /** Reps in reserve — RPE's inverse, optional alongside it (E8-T). */
+  rir?: number;
   /** 0–10 pain during this set. */
   painScore: number;
   note: string;
@@ -531,6 +567,18 @@ export interface PersonalRecord {
   weight: number;
   reps: number;
   date: ISODate;
+}
+
+/**
+ * A user-built weekly plan from the workout builder (E8-T). When present it
+ * replaces the seeded rotation everywhere a day's workout is shown.
+ */
+export interface CustomWorkoutPlan {
+  id: string;
+  name: string;
+  /** 7 entries, index 0 = Monday (same shape as the seeded plan). */
+  days: WorkoutDayPlan[];
+  createdAt: ISODateTime;
 }
 
 // ---------------------------------------------------------------------------

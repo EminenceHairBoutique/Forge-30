@@ -3,6 +3,7 @@ import type {
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
+  CustomWorkoutPlan,
   DailyLog,
   HealthMarkerEntry,
   ISODate,
@@ -70,6 +71,9 @@ export interface StorageAdapter {
   deleteSavedMeal(id: string): Promise<void>;
 
   // Workouts
+  /** User-built weekly plan (E8-T); null = use the seeded rotation. */
+  getCustomWorkoutPlan(): Promise<CustomWorkoutPlan | null>;
+  saveCustomWorkoutPlan(plan: CustomWorkoutPlan | null): Promise<void>;
   getWorkout(date: ISODate): Promise<WorkoutEntry | null>;
   saveWorkout(w: WorkoutEntry): Promise<void>;
   listWorkouts(from: ISODate, to: ISODate): Promise<WorkoutEntry[]>;

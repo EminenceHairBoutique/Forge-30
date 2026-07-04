@@ -3,6 +3,7 @@ import type {
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
+  CustomWorkoutPlan,
   DailyLog,
   HealthMarkerEntry,
   ISODate,
@@ -53,6 +54,7 @@ const KEYS = {
   journalConsent: `${PREFIX}:journalConsent`,
   bloodPressure: `${PREFIX}:bloodPressure`,
   healthMarkers: `${PREFIX}:healthMarkers`,
+  customWorkoutPlan: `${PREFIX}:customWorkoutPlan`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -304,6 +306,19 @@ export class LocalStorageAdapter implements StorageAdapter {
     return Object.values(read<Record<ISODate, WorkoutEntry>>(KEYS.workouts, {})).sort((a, b) =>
       a.date.localeCompare(b.date)
     );
+  }
+
+  // -- Custom workout plan (E8-T) --------------------------------------------------
+  async getCustomWorkoutPlan(): Promise<CustomWorkoutPlan | null> {
+    return read<CustomWorkoutPlan | null>(KEYS.customWorkoutPlan, null);
+  }
+
+  async saveCustomWorkoutPlan(plan: CustomWorkoutPlan | null): Promise<void> {
+    if (plan === null) {
+      if (canUseStorage()) window.localStorage.removeItem(KEYS.customWorkoutPlan);
+      return;
+    }
+    write(KEYS.customWorkoutPlan, plan);
   }
 
   // -- Journal ---------------------------------------------------------------------

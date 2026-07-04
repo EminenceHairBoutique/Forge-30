@@ -26,7 +26,8 @@ import { StreakCelebrationCard } from "@/components/today/StreakCelebrationCard"
 import { StreakComebackCard } from "@/components/today/StreakComebackCard";
 import { toISODate, daysBetween, clamp, formatMoney, fromISODate } from "@/lib/utils";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
-import type { AIReview, TomorrowPlan, WorkoutStatus } from "@/lib/types";
+import { workoutForDate } from "@/lib/engine/workoutBuilder";
+import type { AIReview, CustomWorkoutPlan, TomorrowPlan, WorkoutStatus } from "@/lib/types";
 import { ScoreRing } from "@/components/cards/ScoreRing";
 import { StatCard } from "@/components/cards/StatCard";
 import { QuickActions } from "@/components/shell/QuickActions";
@@ -54,15 +55,21 @@ export default function TodayPage() {
   const { streak, celebrate } = useDailyStreak();
   const [review, setReview] = useState<AIReview | null>(null);
   const [todayIntent, setTodayIntent] = useState<TomorrowPlan | null>(null);
+  const [customPlan, setCustomPlan] = useState<CustomWorkoutPlan | null>(null);
   const [hardDayOpen, setHardDayOpen] = useState(false);
   const [planTomorrowOpen, setPlanTomorrowOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([adapter.getAIReview(today), adapter.getTomorrowPlan(today)]).then(([r, t]) => {
+    Promise.all([
+      adapter.getAIReview(today),
+      adapter.getTomorrowPlan(today),
+      adapter.getCustomWorkoutPlan(),
+    ]).then(([r, t, c]) => {
       if (cancelled) return;
       setReview(r);
       setTodayIntent(t);
+      setCustomPlan(c);
     });
     return () => {
       cancelled = true;
@@ -116,6 +123,7 @@ export default function TodayPage() {
           date={today}
           mvd={mvd}
           plan={todayIntent}
+          workout={workoutForDate(customPlan, today)}
           onDismiss={() => updateLog({ morningPlanSeen: true })}
           onHardDay={() => setHardDayOpen(true)}
         />

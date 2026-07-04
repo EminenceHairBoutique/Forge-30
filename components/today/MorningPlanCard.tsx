@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getDailyPlan } from "@/lib/engine/plan";
 import type { MvdStatus } from "@/lib/engine/dayPhase";
 import { formatMoney } from "@/lib/utils";
-import type { TomorrowPlan } from "@/lib/types";
+import type { TomorrowPlan, WorkoutDayPlan } from "@/lib/types";
 
 /**
  * Morning Plan — the 15-second first-open view: today's plan, one focus,
@@ -16,6 +16,7 @@ export function MorningPlanCard({
   date,
   mvd,
   plan,
+  workout,
   onDismiss,
   onHardDay,
 }: {
@@ -24,6 +25,8 @@ export function MorningPlanCard({
   mvd: MvdStatus;
   /** Last night's intention for today, if one was set. */
   plan: TomorrowPlan | null;
+  /** Custom-plan override for today's workout (E8-T); seeded plan otherwise. */
+  workout?: WorkoutDayPlan;
   onDismiss: () => void;
   onHardDay: () => void;
 }) {
@@ -47,7 +50,9 @@ export function MorningPlanCard({
       <div className="flex flex-col gap-1.5 text-sm text-ivory">
         <p className="flex items-center gap-2">
           <Dumbbell className="size-4 shrink-0 text-muted" />
-          {daily.workout.isRest ? "Rest day — long walk, light mobility." : daily.workout.label}
+          {(workout ?? daily.workout).isRest
+            ? "Rest day — long walk, light mobility."
+            : (workout ?? daily.workout).label}
         </p>
         <p className="flex items-center gap-2">
           <UtensilsCrossed className="size-4 shrink-0 text-muted" />

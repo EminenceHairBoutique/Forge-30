@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useStorage } from "@/lib/storage/provider";
 import { getDailyPlan } from "@/lib/engine/plan";
+import { workoutForDate } from "@/lib/engine/workoutBuilder";
 import { addDays, toISODate } from "@/lib/utils";
-import type { TomorrowPlan } from "@/lib/types";
+import type { CustomWorkoutPlan, TomorrowPlan } from "@/lib/types";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,12 @@ export function PlanTomorrowSheet({
   const [meals, setMeals] = useState<Set<string>>(new Set(mealNames));
   const [spend, setSpend] = useState("");
   const [saved, setSaved] = useState(false);
+  const [customPlan, setCustomPlan] = useState<CustomWorkoutPlan | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setSaved(false);
+    void adapter.getCustomWorkoutPlan().then(setCustomPlan);
     adapter.getTomorrowPlan(tomorrow).then((existing) => {
       if (existing) {
         setFocus(existing.focus);
@@ -77,7 +80,9 @@ export function PlanTomorrowSheet({
           <div className="flex flex-col gap-1">
             <Label>Tomorrow's training</Label>
             <p className="rounded-(--radius-control) bg-elevated px-3 py-2 text-sm text-ivory">
-              {plan.workout.isRest ? "Rest day — recovery is the plan." : plan.workout.label}
+              {workoutForDate(customPlan, tomorrow).isRest
+                ? "Rest day — recovery is the plan."
+                : workoutForDate(customPlan, tomorrow).label}
             </p>
           </div>
 

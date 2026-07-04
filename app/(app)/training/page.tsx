@@ -3,14 +3,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { BedDouble, CheckCircle2, Dumbbell, History, Play, Trophy } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
+import { useDay } from "@/lib/hooks/useDay";
 import { toISODate, addDays, uid } from "@/lib/utils";
-import { getWorkoutPlanForDate, WARMUP_CHECKLIST, allExercises } from "@/lib/data/workoutPlan";
+import { WARMUP_CHECKLIST, MVW_SESSION, allExercises } from "@/lib/data/workoutPlan";
 import {
+  calculateReadinessScore,
   computePersonalRecords,
+  generateInjuryModification,
   getPainAwareWorkoutAdjustment,
+  suggestDeload,
   weeklyVolumeByMuscle,
 } from "@/lib/engine/trainingRules";
-import type { ExerciseDef, ExerciseSet, LoggedExercise, WorkoutEntry } from "@/lib/types";
+import { workoutForDate } from "@/lib/engine/workoutBuilder";
+import type {
+  CustomWorkoutPlan,
+  ExerciseDef,
+  ExerciseSet,
+  LoggedExercise,
+  WorkoutEntry,
+} from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +29,9 @@ import { CheckItem } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ExerciseCard } from "@/components/training/ExerciseCard";
+import { ReadinessCard } from "@/components/training/ReadinessCard";
+import { BuilderSheet } from "@/components/training/BuilderSheet";
+import { InjuryIntakeSheet } from "@/components/training/InjuryIntakeSheet";
 import { RestTimer } from "@/components/training/RestTimer";
 import { PainStopModal } from "@/components/training/PainStopModal";
 import { SwapSheet } from "@/components/training/SwapSheet";
@@ -26,8 +40,12 @@ import { MuscleHeatMap } from "@/components/training/HeatMap";
 export default function TrainingPage() {
   const { adapter, profile, touch, revision } = useStorage();
   const today = toISODate();
-  const plan = getWorkoutPlanForDate(today);
+  const { snapshot } = useDay(today);
+  const [customPlan, setCustomPlan] = useState<CustomWorkoutPlan | null>(null);
+  const plan = workoutForDate(customPlan, today);
   const defs = useMemo(() => new Map(allExercises().map((e) => [e.id, e])), []);
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [injuryOpen, setInjuryOpen] = useState(false);
 
   const [workout, setWorkout] = useState<WorkoutEntry | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -50,12 +68,16 @@ export default function TrainingPage() {
     };
   }, [adapter, today]);
 
-  // History, PRs, weekly volume.
+  // History, PRs, weekly volume, custom plan.
   useEffect(() => {
     let cancelled = false;
-    adapter.listAllWorkouts().then((all) => {
-      if (!cancelled) setHistory(all.reverse());
-    });
+    Promise.all([adapter.listAllWorkouts(), adapter.getCustomWorkoutPlan()]).then(
+      ([all, custom]) => {
+        if (cancelled) return;
+        setHistory(all.reverse());
+        setCustomPlan(custom);
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -87,6 +109,31 @@ export default function TrainingPage() {
     },
   });
 
+  // Readiness from today's log (E8-T) — only once something is logged.
+  const log = snapshot?.log;
+  const readiness =
+    log && (log.sleepHours > 0 || log.mood > 0)
+      ? calculateReadinessScore({
+          sleepHours: log.sleepHours,
+          stress: log.stress,
+          mood: log.mood,
+          painScore: log.painScore,
+        })
+      : null;
+  const deload = useMemo(() => suggestDeload(history, today), [history, today]);
+
+  // General injury engine (E8-T): user-added injuries; the v1 pain-flag
+  // engine above keeps covering the seeded thoracic/rib/scapular case.
+  const injuryMod = useMemo(
+    () =>
+      generateInjuryModification({
+        injuries: profile?.injuries ?? [],
+        sessionPainScore: sessionPain,
+        plannedExercises: plan.exercises,
+      }),
+    [profile?.injuries, sessionPain, plan]
+  );
+
   const save = async (w: WorkoutEntry) => {
     setWorkout(w);
     await adapter.saveWorkout(w);
@@ -112,6 +159,26 @@ export default function TrainingPage() {
       })),
     };
     await save(w);
+  };
+
+  const logMvw = async () => {
+    await save({
+      id: uid(),
+      date: today,
+      splitLabel: MVW_SESSION.label,
+      status: "complete",
+      warmupDone: true,
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      sessionPainScore: 0,
+      note: "Minimum Viable Workout — ten easy minutes, full credit.",
+      exercises: MVW_SESSION.exercises.map((ex) => ({
+        exerciseId: ex.id,
+        name: ex.name,
+        muscleGroup: ex.muscleGroup,
+        sets: [{ exerciseId: ex.id, weight: 0, reps: 1, rpe: 5, painScore: 0, note: "" }],
+      })),
+    });
   };
 
   const markRest = async () => {
@@ -208,7 +275,13 @@ export default function TrainingPage() {
     <div className="flex flex-col gap-4 pb-4">
       <PageHeader
         title="Training"
-        subtitle={plan.isRest ? "Sunday — Rest" : plan.label}
+        subtitle={
+          plan.isRest
+            ? "Rest day"
+            : customPlan
+              ? `${plan.label} · your plan`
+              : plan.label
+        }
         action={
           <Sheet>
             <SheetTrigger asChild>
@@ -250,6 +323,50 @@ export default function TrainingPage() {
           </Sheet>
         }
       />
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="secondary" size="sm" onClick={() => setBuilderOpen(true)}>
+          Build my plan
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => setInjuryOpen(true)}>
+          Injuries & limits
+        </Button>
+      </div>
+
+      <ReadinessCard
+        readiness={readiness}
+        deload={deload}
+        onLogMvw={logMvw}
+        mvwLogged={workout?.splitLabel === MVW_SESSION.label}
+      />
+
+      {injuryMod.active && (
+        <Card className="border-gold/30">
+          <CardHeader>
+            <CardTitle>Built around your injuries</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {injuryMod.messages.map((msg) => (
+              <p key={msg} className="text-sm leading-relaxed text-ivory">
+                {msg}
+              </p>
+            ))}
+            {injuryMod.swaps.length > 0 && (
+              <ul className="flex flex-col gap-1.5 border-t border-line pt-2">
+                {injuryMod.swaps.map((swap) => (
+                  <li key={swap.avoid.id} className="text-sm text-muted">
+                    <span className="font-semibold text-ivory">
+                      {swap.avoid.name}
+                      {swap.replaceWith ? ` → ${swap.replaceWith.name}` : " → skip today"}
+                    </span>{" "}
+                    — {swap.why}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pain adjustment banner */}
       {adjustment.active && (
@@ -424,6 +541,8 @@ export default function TrainingPage() {
           if (swapTarget) applySwap(swapTarget, replacement);
         }}
       />
+      <BuilderSheet open={builderOpen} onOpenChange={setBuilderOpen} hasCustomPlan={!!customPlan} />
+      <InjuryIntakeSheet open={injuryOpen} onOpenChange={setInjuryOpen} />
     </div>
   );
 }
