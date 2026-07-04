@@ -229,3 +229,68 @@ describe("journal themes (E6 — consent-gated upstream)", () => {
     expect(r.mentalAdjustment).toContain("breathing reset");
   });
 });
+
+describe("E15 — health adjustment (BP rules)", () => {
+  it("BP crisis produces the urgent warning and outranks everything", () => {
+    const r = generateMockAIFeedback({ ...goodDay, bpCrisis: true, elevatedBpCount: 4 });
+    expect(r.healthAdjustment).toContain("180/120");
+    expect(r.healthAdjustment.toLowerCase()).toContain("emergency care");
+    // Urgent, but still not a diagnosis.
+    expect(r.healthAdjustment.toLowerCase()).not.toMatch(/you have hypertension|diagnosed/);
+  });
+
+  it("crisis copy is never gated — it shows even on a hard day", () => {
+    const r = generateMockAIFeedback({ ...goodDay, hardDay: true, bpCrisis: true });
+    expect(r.healthAdjustment).toContain("180/120");
+  });
+
+  it("repeated elevated readings → context tracking + clinician, no diagnosis", () => {
+    const r = generateMockAIFeedback({ ...goodDay, elevatedBpCount: 3 });
+    expect(r.healthAdjustment).toContain("130/80");
+    expect(r.healthAdjustment.toLowerCase()).toContain("clinician");
+    expect(r.healthAdjustment.toLowerCase()).toMatch(/caffeine|stress|sleep/);
+    expect(r.healthAdjustment.toLowerCase()).not.toMatch(/you have|hypertension diagnosis/);
+  });
+
+  it("no signals → neutral health part; single reading stays calm", () => {
+    const quiet = generateMockAIFeedback(goodDay);
+    expect(quiet.healthAdjustment.toLowerCase()).toContain("no health flags");
+    const one = generateMockAIFeedback({ ...goodDay, elevatedBpCount: 1 });
+    expect(one.healthAdjustment.toLowerCase()).toContain("context");
+    expect(one.healthAdjustment.toLowerCase()).not.toContain("clinician now");
+  });
+});
+
+describe("E15 — relationships & social adjustment", () => {
+  it("unrepaired conflict → one calm repair attempt with sample language", () => {
+    const r = generateMockAIFeedback({ ...goodDay, conflictUnrepaired: true });
+    expect(r.relationshipSocialAdjustment.toLowerCase()).toContain("repair");
+    expect(r.relationshipSocialAdjustment).toContain('"'); // sample line quoted
+    expect(r.relationshipSocialAdjustment.toLowerCase()).not.toMatch(/their fault|toxic|narcissist/);
+  });
+
+  it("isolation flagged → one low-pressure reach-out, observation not verdict", () => {
+    const r = generateMockAIFeedback({ ...goodDay, isolationFlagged: true, daysSinceOutreach: 12 });
+    expect(r.relationshipSocialAdjustment).toContain("12 days");
+    expect(r.relationshipSocialAdjustment.toLowerCase()).toContain("low-pressure");
+    expect(r.relationshipSocialAdjustment.toLowerCase()).not.toContain("you are isolated");
+  });
+
+  it("conflict outranks isolation when both fire", () => {
+    const r = generateMockAIFeedback({
+      ...goodDay,
+      conflictUnrepaired: true,
+      isolationFlagged: true,
+      daysSinceOutreach: 15,
+    });
+    expect(r.relationshipSocialAdjustment.toLowerCase()).toContain("repair");
+  });
+
+  it("both new fields are always present, including hard days", () => {
+    for (const input of [goodDay, { ...goodDay, hardDay: true }]) {
+      const r = generateMockAIFeedback(input);
+      expect(r.healthAdjustment.length).toBeGreaterThan(0);
+      expect(r.relationshipSocialAdjustment.length).toBeGreaterThan(0);
+    }
+  });
+});

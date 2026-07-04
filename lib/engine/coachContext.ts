@@ -7,6 +7,7 @@ import { syncDailyLog } from "./dailySync";
 import { resolveScoreState } from "./forgeScore";
 import { missedRecentDays } from "./streaks";
 import { notesForConsumer, themesForCoach } from "./journalRules";
+import { isolationSignal } from "./socialRules";
 import type { CoachInput } from "./mockCoach";
 
 /**
@@ -34,12 +35,37 @@ export async function buildCoachInput(
   profile: UserProfile
 ): Promise<CoachInput> {
   const snap = await syncDailyLog(adapter, date, profile);
-  const [workout, metrics, skillsRecent, journalConsent] = await Promise.all([
-    adapter.getWorkout(date),
-    adapter.listBodyMetrics(addDays(date, -6), date),
-    adapter.listSkillTasks(addDays(date, -2), addDays(date, -1)),
-    adapter.getJournalConsent(),
-  ]);
+  const [workout, metrics, skillsRecent, journalConsent, bpWeek, debriefs, outreach, weekLogs] =
+    await Promise.all([
+      adapter.getWorkout(date),
+      adapter.listBodyMetrics(addDays(date, -6), date),
+      adapter.listSkillTasks(addDays(date, -2), addDays(date, -1)),
+      adapter.getJournalConsent(),
+      adapter.listBloodPressure(addDays(date, -6), date),
+      adapter.listConflictDebriefs(),
+      adapter.listOutreach(addDays(date, -30), date),
+      adapter.listDailyLogs(addDays(date, -6), date),
+    ]);
+
+  // Health signals (E15): counts only — categorization language stays in the
+  // engines; the coach only ever sees "how many" and "was any in crisis range".
+  const elevatedBpCount = bpWeek.filter((r) => r.systolic >= 130 || r.diastolic >= 80).length;
+  const bpCrisis = bpWeek.some((r) => r.systolic > 180 || r.diastolic > 120);
+
+  // A this-week debrief with neither a repair attempt nor a calm message drafted.
+  const latestDebrief = debriefs[0] ?? null;
+  const conflictUnrepaired =
+    latestDebrief !== null &&
+    latestDebrief.date >= addDays(date, -6) &&
+    latestDebrief.repairAttempt.trim() === "" &&
+    latestDebrief.nextCalmMessage.trim() === "";
+
+  const moods = weekLogs.map((l) => l.mood).filter((m) => m > 0);
+  const isolation = isolationSignal({
+    outreach,
+    today: date,
+    recentMoodAvg: moods.length ? moods.reduce((a, b) => a + b, 0) / moods.length : null,
+  });
 
   // Journal themes reach the coach ONLY through the consent gate (E6):
   // consent.coach on, private entries excluded, themes only — never text.
@@ -88,5 +114,10 @@ export async function buildCoachInput(
     scoreState: resolveScoreState(new Date().getHours(), profile.dayBoundaryHour),
     hardDay: log.hardDay ?? false,
     journalThemes,
+    elevatedBpCount,
+    bpCrisis,
+    conflictUnrepaired,
+    isolationFlagged: isolation.flagged,
+    daysSinceOutreach: isolation.daysSinceOutreach,
   };
 }

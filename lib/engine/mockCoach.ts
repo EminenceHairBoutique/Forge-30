@@ -47,6 +47,17 @@ export interface CoachInput {
    * Referenced gently as themes, never quoted, never diagnosed.
    */
   journalThemes: string[];
+  // --- E15 signals (optional/additive so older callers keep compiling) ------
+  /** BP readings in the last 7 days at/above 130 systolic or 80 diastolic. */
+  elevatedBpCount?: number;
+  /** Any last-7-days reading above 180/120 — crisis copy, never gated. */
+  bpCrisis?: boolean;
+  /** A conflict debrief this week has no repair attempt or calm message yet. */
+  conflictUnrepaired?: boolean;
+  /** Social isolation signal flagged (long quiet stretch; see socialRules). */
+  isolationFlagged?: boolean;
+  /** Days since the last logged reach-out; null = none logged yet. */
+  daysSinceOutreach?: number | null;
 }
 
 export interface CoachReview {
@@ -58,6 +69,45 @@ export interface CoachReview {
   moneyAdjustment: string;
   mentalAdjustment: string;
   tomorrowPriority: string;
+  /** Health read (E15): BP context/crisis — appended, never replaces the 8. */
+  healthAdjustment: string;
+  /** Relationships & social read (E15): repair + connection nudges. */
+  relationshipSocialAdjustment: string;
+}
+
+/**
+ * Health part (E15). Crisis copy is a genuine safety signal: it wins over
+ * everything, is never softened, and shows even on hard days. Everything
+ * below crisis stays context-tracking + "discuss with your clinician" —
+ * never a diagnosis.
+ */
+function healthAdjustmentFor(input: CoachInput): string {
+  if (input.bpCrisis) {
+    return "A blood-pressure reading this week was above 180/120 — crisis range. If it came with chest pain, shortness of breath, numbness, vision changes, or trouble speaking, that needs emergency care immediately. Otherwise re-measure after 5 quiet minutes, and if it's still that high, contact a clinician now — today, not at the next check-up.";
+  }
+  const elevated = input.elevatedBpCount ?? 0;
+  if (elevated >= 3) {
+    return `${elevated} readings this week came in at or above 130/80. That's a pattern worth taking seriously the calm way: keep measuring at the same time each day, note caffeine, stress, and sleep next to each reading, and bring the log to your clinician. Tracking is your job; interpreting it is theirs.`;
+  }
+  if (elevated > 0) {
+    return `${elevated === 1 ? "One reading" : `${elevated} readings`} this week ran at or above 130/80 — context matters (caffeine, stress, a rushed measurement), so keep logging at the same time daily and let the trend, not one number, do the talking.`;
+  }
+  return "No health flags in the log this week. Keep the basics boring: sleep, water, movement, and the occasional BP reading so the baseline stays current.";
+}
+
+/**
+ * Relationships & social part (E15). Unrepaired conflict outranks isolation;
+ * both stay observation + one small move — no verdicts on anyone.
+ */
+function relationshipSocialAdjustmentFor(input: CoachInput): string {
+  if (input.conflictUnrepaired) {
+    return "There's a conflict debrief from this week without a repair attempt yet. When you're at a 4/10 or calmer, one calm line is enough: \"I didn't like how that went, and I don't think you did either — can we take another run at it?\" Repair is a move, not a mood.";
+  }
+  if (input.isolationFlagged) {
+    const days = input.daysSinceOutreach;
+    return `${typeof days === "number" ? `It's been ${days} days since a logged reach-out` : "It's been a while since a logged reach-out"} — quiet weeks compound quietly. One low-pressure move counts fully: a two-line text to someone on your reconnect list, no agenda.`;
+  }
+  return "Nothing flagged on the relationship or social front. Connection is maintained in small units — one reach-out this week keeps it that way.";
 }
 
 export function generateMockAIFeedback(input: CoachInput): CoachReview {
@@ -210,6 +260,8 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
     moneyAdjustment,
     mentalAdjustment,
     tomorrowPriority,
+    healthAdjustment: healthAdjustmentFor(input),
+    relationshipSocialAdjustment: relationshipSocialAdjustmentFor(input),
   };
 }
 
@@ -244,5 +296,11 @@ function generateHardDayReview(input: CoachInput): CoachReview {
     tomorrowPriority: mvdDone
       ? "Tomorrow's #1: nothing carried over. Start it as a normal day and see how it feels."
       : `Rest of today's #1: ${open || "the Minimum Viable Day"} — then you're done, guilt-free.`,
+    // Crisis copy is never gated — a hard day doesn't soften a 180/120 reading.
+    healthAdjustment: input.bpCrisis
+      ? healthAdjustmentFor(input)
+      : "No health homework today. Rest is the health move.",
+    relationshipSocialAdjustment:
+      "No relationship homework today either. If one person feels safe to be around, being around them counts.",
   };
 }

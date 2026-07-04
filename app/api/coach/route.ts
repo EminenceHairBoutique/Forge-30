@@ -29,9 +29,13 @@ The input may include journalThemes: recurring theme words from the user's journ
 
 The input includes scoreState. When scoreState is "inProgress" the day is not over: frame part 1 as a mid-day check-in ("X/100 so far, still building"), treat unlogged items as "still open" rather than slipped, and point part 8 at the rest of today. Verdict language ("rough day", "today was a…") is only ever appropriate when scoreState is "final".
 
-You must respond with JSON matching the provided schema: eight short parts (1–3 sentences each) — score explanation, what went well, what slipped, one physical adjustment, one nutrition adjustment, one money adjustment, one mental/emotional adjustment, and tomorrow's single #1 priority.
+You must respond with JSON matching the provided schema: ten short parts (1–3 sentences each) — score explanation, what went well, what slipped, one physical adjustment, one nutrition adjustment, one money adjustment, one mental/emotional adjustment, tomorrow's single #1 priority, one health read, and one relationships-and-social read.
 
-Rules of thumb the app also applies (follow them when the data matches): protein short >30g → recommend a specific protein add-on like the whey shake; calories short >400 → a calorie-dense shake; 7-day weight flat → add 250 kcal/day; pain >6/10 → reduce loads 15–25% and avoid heavy overhead pressing; stress >7/10 → 60-second breathing reset before charged conversations; unnecessary spending over the daily limit → set a lower next-day cap; skills missed two days running → drop to the 10-minute minimum task.`;
+Health read (healthAdjustment): the input may include elevatedBpCount (last-7-days readings at/above 130/80) and bpCrisis (any reading above 180/120). Crisis is a genuine safety signal and overrides every tone rule including hard-day framing: state plainly that a crisis-range reading with symptoms (chest pain, shortness of breath, numbness, vision changes, trouble speaking) needs emergency care immediately, and otherwise needs a clinician today. Repeated elevated readings → keep measuring at a consistent time, note caffeine/stress/sleep context, bring the log to a clinician. Never name a diagnosis, never interpret a single reading, never reassure a crisis away.
+
+Relationships-and-social read (relationshipSocialAdjustment): the input may include conflictUnrepaired (a conflict debrief this week with no repair attempt yet), isolationFlagged, and daysSinceOutreach. Unrepaired conflict → suggest one calm repair attempt when regulated, with sample language. Isolation → one low-pressure reach-out, framed as an observation, never "you are isolated". Never pass verdicts on the user's partner or friends, never diagnose a relationship, and if the data suggests someone may be unsafe, point at professional support rather than tactics.
+
+Rules of thumb the app also applies (follow them when the data matches): protein short >30g → recommend a specific protein add-on like the whey shake; calories short >400 → a calorie-dense shake; 7-day weight flat → add 250 kcal/day; pain >6/10 → reduce loads 15–25% and avoid heavy overhead pressing; stress >7/10 → 60-second breathing reset before charged conversations; unnecessary spending over the daily limit → set a lower next-day cap; skills missed two days running → drop to the 10-minute minimum task; repeated elevated BP → context tracking + clinician conversation; BP crisis → urgent warning; conflict without repair → one calm repair attempt; long social quiet stretch → one low-pressure outreach.`;
 
 const REVIEW_SCHEMA = {
   type: "object" as const,
@@ -44,6 +48,8 @@ const REVIEW_SCHEMA = {
     moneyAdjustment: { type: "string" as const },
     mentalAdjustment: { type: "string" as const },
     tomorrowPriority: { type: "string" as const },
+    healthAdjustment: { type: "string" as const },
+    relationshipSocialAdjustment: { type: "string" as const },
   },
   required: [
     "scoreExplanation",
@@ -54,6 +60,8 @@ const REVIEW_SCHEMA = {
     "moneyAdjustment",
     "mentalAdjustment",
     "tomorrowPriority",
+    "healthAdjustment",
+    "relationshipSocialAdjustment",
   ],
   additionalProperties: false,
 };

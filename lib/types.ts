@@ -938,7 +938,7 @@ export interface BodyMetric {
 // AI Coach
 // ---------------------------------------------------------------------------
 
-/** The exact 8-part output shape produced by both the mock and live engines. */
+/** The coach review shape produced by both the mock and live engines. */
 export interface AIReview {
   id: string;
   date: ISODate;
@@ -956,6 +956,9 @@ export interface AIReview {
   moneyAdjustment: string;
   mentalAdjustment: string;
   tomorrowPriority: string;
+  /** E15 additions — optional so pre-E15 persisted reviews stay valid. */
+  healthAdjustment?: string;
+  relationshipSocialAdjustment?: string;
   createdAt: ISODateTime;
 }
 

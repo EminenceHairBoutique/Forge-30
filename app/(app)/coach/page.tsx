@@ -12,6 +12,8 @@ import {
   Brain,
   Target,
   RefreshCw,
+  HeartPulse,
+  Users,
 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { toISODate, uid } from "@/lib/utils";
@@ -23,7 +25,8 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PatternsCard } from "@/components/cards/PatternsCard";
+import { CoachModePanel } from "@/components/coach/CoachModePanel";
+import { COACH_MODES, type CoachModeId } from "@/lib/engine/coachModes";
 
 const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] = [
   { key: "scoreExplanation", label: "Today's score", icon: Gauge },
@@ -33,6 +36,9 @@ const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] 
   { key: "nutritionAdjustment", label: "Nutrition adjustment", icon: UtensilsCrossed },
   { key: "moneyAdjustment", label: "Money adjustment", icon: Wallet },
   { key: "mentalAdjustment", label: "Mental adjustment", icon: Brain },
+  // E15 additions — hidden on pre-E15 persisted reviews (fields absent).
+  { key: "healthAdjustment", label: "Health", icon: HeartPulse },
+  { key: "relationshipSocialAdjustment", label: "Relationships & social", icon: Users },
   // Content supplies the timeframe ("Tomorrow's #1" / "Rest of today's #1").
   { key: "tomorrowPriority", label: "#1 priority", icon: Target },
 ];
@@ -43,6 +49,7 @@ export default function CoachPage() {
   const [review, setReview] = useState<AIReview | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [mode, setMode] = useState<CoachModeId>("dailyReview");
 
   useEffect(() => {
     let cancelled = false;
@@ -126,64 +133,85 @@ export default function CoachPage() {
         }
       />
 
-      {!review && loaded && (
-        <Card className="flex flex-col items-center gap-4 p-8 text-center">
-          <Sparkles className="size-10 text-gold" />
-          <p className="text-sm text-muted">
-            Log your day, then get the review: what worked, what slipped, and the one thing that
-            matters most tomorrow.
-          </p>
-        </Card>
-      )}
+      {/* Mode picker (E15) — every mode works deterministically, zero key. */}
+      <div
+        role="tablist"
+        aria-label="Coach mode"
+        className="flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]"
+      >
+        {COACH_MODES.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            role="tab"
+            aria-selected={mode === m.id}
+            title={m.description}
+            onClick={() => setMode(m.id)}
+            className={`min-h-11 shrink-0 rounded-full border px-3.5 text-sm font-semibold transition-colors ${
+              mode === m.id
+                ? "border-gold/60 bg-gold/10 text-gold"
+                : "border-line bg-surface text-muted"
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
 
-      {review && (
-        <div className="flex flex-col gap-3">
-          {SECTIONS.map(({ key, label, icon: Icon }) => (
-            <Card
-              key={key}
-              className={
-                key === "tomorrowPriority" ? "border-gold/40 bg-gold/5 p-4" : "p-4"
-              }
-            >
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted">
-                <Icon className="size-3.5 text-gold" /> {label}
+      {mode !== "dailyReview" && <CoachModePanel mode={mode} />}
+
+      {mode === "dailyReview" && (
+        <>
+          {!review && loaded && (
+            <Card className="flex flex-col items-center gap-4 p-8 text-center">
+              <Sparkles className="size-10 text-gold" />
+              <p className="text-sm text-muted">
+                Log your day, then get the review: what worked, what slipped, and the one thing
+                that matters most tomorrow.
               </p>
-              <p className="mt-1.5 text-sm leading-relaxed text-ivory">{review[key]}</p>
             </Card>
-          ))}
-          {review.journalInformed && (
-            <p className="text-center text-xs text-muted">{JOURNAL_ATTRIBUTION}</p>
           )}
-          <p className="text-center text-xs text-muted">
-            Generated {new Date(review.createdAt).toLocaleTimeString()} ·{" "}
-            {review.source === "live" ? "Anthropic API" : "deterministic mock engine"}
-          </p>
-        </div>
+
+          {review && (
+            <div className="flex flex-col gap-3">
+              {SECTIONS.filter(({ key }) => review[key]).map(({ key, label, icon: Icon }) => (
+                <Card
+                  key={key}
+                  className={key === "tomorrowPriority" ? "border-gold/40 bg-gold/5 p-4" : "p-4"}
+                >
+                  <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted">
+                    <Icon className="size-3.5 text-gold" /> {label}
+                  </p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ivory">{review[key]}</p>
+                </Card>
+              ))}
+              {review.journalInformed && (
+                <p className="text-center text-xs text-muted">{JOURNAL_ATTRIBUTION}</p>
+              )}
+              <p className="text-center text-xs text-muted">
+                Generated {new Date(review.createdAt).toLocaleTimeString()} ·{" "}
+                {review.source === "live" ? "Anthropic API" : "deterministic mock engine"}
+              </p>
+            </div>
+          )}
+
+          <Button size="lg" onClick={generate} disabled={loading || !loaded}>
+            {loading ? (
+              <>
+                <RefreshCw className="size-5 animate-spin" /> Reading your day…
+              </>
+            ) : review ? (
+              <>
+                <RefreshCw className="size-5" /> Regenerate review
+              </>
+            ) : (
+              <>
+                <Sparkles className="size-5" /> Get today's review
+              </>
+            )}
+          </Button>
+        </>
       )}
-
-      <Button size="lg" onClick={generate} disabled={loading || !loaded}>
-        {loading ? (
-          <>
-            <RefreshCw className="size-5 animate-spin" /> Reading your day…
-          </>
-        ) : review ? (
-          <>
-            <RefreshCw className="size-5" /> Regenerate review
-          </>
-        ) : (
-          <>
-            <Sparkles className="size-5" /> Get today's review
-          </>
-        )}
-      </Button>
-
-      {/* Pattern review (E14) — deterministic LifeGraph observations the
-          coach's pattern-review mode (E15) will discuss. */}
-      <PatternsCard
-        title="Pattern review"
-        limit={3}
-        footnote="Deterministic co-occurrence from your own logs — the coach never sees more than you do here."
-      />
 
       <p className="px-2 text-center text-xs leading-relaxed text-muted">
         Coaching feedback is habit support, not medical, mental-health, legal, or financial
