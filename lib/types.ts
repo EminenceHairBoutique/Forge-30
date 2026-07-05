@@ -203,6 +203,9 @@ export interface UserProfile {
   mvd?: MvdDefinition;
   notifications?: NotificationPrefs;
   injuries?: InjuryProfile[];
+  /** Meal-plan template (v3 Phase 4 demotion): absent/"none" = no seeded
+   *  plan; "forge30" re-enables the 7-day rotation + grocery list. */
+  mealPlanTemplate?: "none" | "forge30";
   onboardingComplete: boolean;
 }
 
@@ -611,6 +614,16 @@ export interface MealEntry extends MacroSet {
   slot: MealSlot;
   name: string;
   loggedAt: ISODateTime;
+}
+
+/** A food picked from search/barcode, cached locally for instant offline repeats (v3 Phase 4). */
+export interface CachedFood {
+  id: string;
+  name: string;
+  brand: string;
+  /** Macros per 100 g (the log flow scales portions). */
+  per100g: { calories: number; protein: number; carbs: number; fats: number };
+  lastUsedAt: ISODateTime;
 }
 
 export interface QuickAddFood extends MacroSet {

@@ -255,6 +255,28 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Meal plan templates</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm text-muted">
+            Optional: a seeded 7-day rotation with a grocery list. Off by default — photo,
+            search, and quick logging are the main path.
+          </p>
+          <Select
+            aria-label="Meal plan template"
+            value={draft.mealPlanTemplate ?? "none"}
+            onChange={(e) =>
+              setDraft({ ...draft, mealPlanTemplate: e.target.value as "none" | "forge30" })
+            }
+          >
+            <option value="none">None — log freely</option>
+            <option value="forge30">Forge30 7-day rotation</option>
+          </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Pain flags — the training engine adapts around these</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col">

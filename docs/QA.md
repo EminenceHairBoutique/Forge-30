@@ -42,3 +42,14 @@ strength of this file alone.
 - [ ] Web build: the healthkit chunk exists as a lazy asset but is never fetched on the
       web — confirm via DevTools Network that no healthkit chunk loads on any page (the
       dynamic import sits behind the Capacitor bridge check).
+
+## Phase 4 — nutrition (WAIT: AI key + device)
+- [ ] With ANTHROPIC_API_KEY set: photo → confirmed meal in under 15 seconds on a real
+      iPhone (spec acceptance); low-confidence photo shows the plain "search may be more
+      accurate" banner.
+- [ ] Kill the network → previously-used foods still appear instantly in Search (recents
+      cache); a failed vision call lands on "Try another photo / Search instead" — no dead end.
+- [ ] Capacitor build: barcode scan (plugin pinned per lib/barcode.ts bridge) → OFF lookup →
+      prefilled custom form. Web: no barcode button.
+- [ ] Adaptive target suggestion appears ONLY inside the Sunday review, caps at ±150 kcal,
+      and changes the profile target only on explicit accept.

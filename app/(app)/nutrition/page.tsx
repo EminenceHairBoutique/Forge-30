@@ -8,7 +8,6 @@ import {
   CalendarDays,
   ShoppingCart,
   Camera,
-  Mic,
   TrendingUp,
 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
@@ -79,6 +78,8 @@ export default function NutritionPage() {
     }
   }, []);
 
+  // v3 Phase 4 (DECISIONS.md §3): the seeded plan is an opt-in template now.
+  const templateActive = profile?.mealPlanTemplate === "forge30";
   const plan = getMealPlanForDate(today);
   const totals = useMemo(() => calculateMacroTotals(meals), [meals]);
   const log = snapshot?.log;
@@ -140,27 +141,13 @@ export default function NutritionPage() {
     <div className="flex flex-col gap-4 pb-4">
       <PageHeader
         title="Nutrition"
-        subtitle={`${plan.label} rotation`}
+        subtitle={templateActive ? `${plan.label} rotation` : "Photo, search, or ten-second manual log"}
         action={
           <Button size="sm" onClick={() => openSheet("addon")}>
             <Plus className="size-4" /> Add meal
           </Button>
         }
       />
-
-      {/* Helpful suggestion, not a problem — gold, never warning-orange
-          (warning stays reserved for genuine safety signals). Fallback path:
-          once the expenditure engine is calibrated, its weekly check-in
-          supersedes this rule-of-thumb banner. */}
-      {recommendation?.addCaloriesBanner && expenditure?.status !== "estimated" && (
-        <Card className="flex items-center gap-3 border-gold/30 bg-gold/5 p-3">
-          <TrendingUp className="size-5 shrink-0 text-gold" />
-          <p className="text-sm text-ivory">
-            Your 7-day weight trend is flat. <strong>Add 250 calories per day</strong> — the rice +
-            olive oil booster is the easiest way in.
-          </p>
-        </Card>
-      )}
 
       <MacroRings
         totals={totals}
@@ -240,7 +227,7 @@ export default function NutritionPage() {
 
       {/* Meal slots */}
       {(["meal1", "meal2", "addon"] as MealSlot[]).map((slot) => {
-        const planned = plan.meals.find((m) => m.slot === slot);
+        const planned = templateActive ? plan.meals.find((m) => m.slot === slot) : undefined;
         const logged = meals.filter((m) => m.slot === slot);
         const subtotal = calculateMacroTotals(logged);
         const plannedAlreadyLogged = planned && logged.some((m) => m.name === planned.name);
@@ -337,7 +324,8 @@ export default function NutritionPage() {
         </div>
       </div>
 
-      {/* Meal prep checklist */}
+      {/* Meal prep checklist (plan-tied) */}
+      {templateActive && (
       <Card>
         <CardHeader>
           <CardTitle>Meal prep checklist</CardTitle>
@@ -354,8 +342,11 @@ export default function NutritionPage() {
           ))}
         </CardContent>
       </Card>
+      )}
 
-      {/* Weekly rotation + grocery list */}
+      {/* Weekly rotation + grocery list — only with an active template
+          (Settings → Meal plan templates). */}
+      {templateActive && (
       <div className="grid grid-cols-2 gap-3">
         <Sheet>
           <SheetTrigger asChild>
@@ -414,18 +405,12 @@ export default function NutritionPage() {
           </SheetContent>
         </Sheet>
       </div>
+      )}
 
-      {/* Coming soon */}
-      <div className={cn("grid grid-cols-2 gap-3")}>
-        <Button variant="outline" disabled className="w-full">
-          <Camera className="size-4" /> Photo log
-          <Badge className="ml-1">soon</Badge>
-        </Button>
-        <Button variant="outline" disabled className="w-full">
-          <Mic className="size-4" /> Voice log
-          <Badge className="ml-1">soon</Badge>
-        </Button>
-      </div>
+      {/* Photo logging shipped (v3 Phase 4) — it's the first tab in Add meal. */}
+      <Button variant="secondary" className="w-full" onClick={() => openSheet("addon")}>
+        <Camera className="size-4 text-gold" /> Log a meal from a photo
+      </Button>
 
       <AddMealSheet open={sheetOpen} onOpenChange={setSheetOpen} defaultSlot={sheetSlot} />
     </div>

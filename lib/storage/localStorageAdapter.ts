@@ -6,6 +6,7 @@ import type {
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
+  CachedFood,
   ConflictDebrief,
   CustomWorkoutPlan,
   DailyLog,
@@ -83,6 +84,7 @@ const KEYS = {
   savingsGoals: `${PREFIX}:savingsGoals`,
   moneySettings: `${PREFIX}:moneySettings`,
   pendingPurchases: `${PREFIX}:pendingPurchases`,
+  foodCache: `${PREFIX}:foodCache`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -794,6 +796,25 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async saveSocialSettings(s: SocialSettings): Promise<void> {
     write(KEYS.socialSettings, s);
+  }
+
+  // -- Food cache + meal photos (v3 Phase 4) -----------------------------------------
+  async listFoodCache(): Promise<CachedFood[]> {
+    return read<CachedFood[]>(KEYS.foodCache, []);
+  }
+
+  async saveFoodCacheItem(item: CachedFood): Promise<void> {
+    const list = read<CachedFood[]>(KEYS.foodCache, []).filter((f) => f.id !== item.id);
+    // Most-recent first, capped so repeats stay instant without growing forever.
+    write(KEYS.foodCache, [item, ...list].slice(0, 50));
+  }
+
+  async saveMealPhoto(mealId: string, dataUrl: string): Promise<void> {
+    await this.large.put("mealPhotos", mealId, dataUrl);
+  }
+
+  async getMealPhoto(mealId: string): Promise<string | null> {
+    return (await this.large.get<string>("mealPhotos", mealId)) ?? null;
   }
 
   // -- Assessments (E10) -----------------------------------------------------------

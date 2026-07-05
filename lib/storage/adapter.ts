@@ -6,6 +6,7 @@ import type {
   BloodPressureEntry,
   BloodworkReport,
   BodyMetric,
+  CachedFood,
   ConflictDebrief,
   CustomWorkoutPlan,
   DailyLog,
@@ -179,6 +180,12 @@ export interface StorageAdapter {
   saveSocialReflection(r: SocialReflection): Promise<void>;
   getSocialSettings(): Promise<SocialSettings>;
   saveSocialSettings(s: SocialSettings): Promise<void>;
+
+  // Food cache + meal photos (v3 Phase 4)
+  listFoodCache(): Promise<CachedFood[]>;
+  saveFoodCacheItem(item: CachedFood): Promise<void>;
+  saveMealPhoto(mealId: string, dataUrl: string): Promise<void>;
+  getMealPhoto(mealId: string): Promise<string | null>;
 
   // Assessments (E10 — large store; results and in-flight progress)
   listAssessmentResults(): Promise<AssessmentResult[]>;

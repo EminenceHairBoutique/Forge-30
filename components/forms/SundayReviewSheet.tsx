@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useStorage } from "@/lib/storage/provider";
-import { toISODate, uid } from "@/lib/utils";
+import { addDays, toISODate, uid } from "@/lib/utils";
+import { estimateExpenditure, goalRateFromWeightGoal } from "@/lib/engine/expenditure";
+import { sundayTargetSuggestion, type TargetSuggestion } from "@/lib/engine/adaptiveTargets";
 import type { SundayReview } from "@/lib/types";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -42,13 +44,39 @@ export function SundayReviewSheet({
     tomorrowLimit: profile?.dailySpendingLimit ?? 50,
   });
 
+  // Adaptive calorie-target suggestion (v3 Phase 4): computed here and ONLY
+  // here — a suggestion the user accepts or ignores, never a silent change.
+  const [suggestion, setSuggestion] = useState<TargetSuggestion | null>(null);
+  const [suggestionDone, setSuggestionDone] = useState<"accepted" | "declined" | null>(null);
+
   useEffect(() => {
     if (!open) return;
     adapter.getSundayReview(today).then((r) => {
       if (r) setDraft(r);
       else if (profile) setDraft((d) => ({ ...d, tomorrowLimit: profile.dailySpendingLimit }));
     });
+    if (!profile) return;
+    setSuggestionDone(null);
+    void Promise.all([
+      adapter.listDailyLogs(addDays(today, -34), today),
+      adapter.listBodyMetrics(addDays(today, -34), today),
+    ]).then(([logs, metrics]) => {
+      const estimate = estimateExpenditure({ logs, metrics, today });
+      setSuggestion(
+        sundayTargetSuggestion({
+          estimate,
+          currentCalorieTarget: profile.calorieTarget,
+          goalRateLbPerWeek: goalRateFromWeightGoal(profile.weightGoal),
+        })
+      );
+    });
   }, [open, adapter, today, profile]);
+
+  const acceptTarget = async () => {
+    if (!profile || !suggestion) return;
+    await saveProfile({ ...profile, calorieTarget: suggestion.suggested });
+    setSuggestionDone("accepted");
+  };
 
   const setNum = (key: keyof SundayReview, v: string) =>
     setDraft({ ...draft, [key]: Math.max(0, Number(v) || 0) });
@@ -67,6 +95,32 @@ export function SundayReviewSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent title="Sunday budget review">
         <div className="flex flex-col gap-3">
+          {suggestion && suggestionDone !== "declined" && (
+            <div className="rounded-(--radius-control) border border-gold/30 bg-gold/5 px-3 py-2.5">
+              <p className="microlabel text-gold">Calorie target suggestion</p>
+              {suggestionDone === "accepted" ? (
+                <p className="mt-1 text-sm text-success">
+                  Updated to {suggestion.suggested.toLocaleString()} kcal. Protein anchor stays
+                  ~{suggestion.proteinAnchorG}g.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm leading-relaxed text-ivory">
+                    {suggestion.why} Suggested: {suggestion.suggested.toLocaleString()} kcal
+                    ({suggestion.delta > 0 ? "+" : ""}{suggestion.delta}/day). Your call.
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => void acceptTarget()}>
+                      Use {suggestion.suggested.toLocaleString()}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSuggestionDone("declined")}>
+                      Keep current
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             {MONEY_FIELDS.map(({ key, label }) => (
               <div key={key} className="flex flex-col gap-1.5">
