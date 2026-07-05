@@ -510,7 +510,8 @@ export interface AssessmentResult {
   /** Rank-kind assessments: item keys in the user's priority order. */
   ranking?: string[];
   validity: AssessmentValidity;
-  createdAt: ISODateTime;
+  createdAt: ISODateTime;  /** Sync stamp (v3 Phase 1) — set by the adapter on save, never by components. */
+  updatedAt?: ISODateTime;
 }
 
 /** Saved mid-assessment state — resume exactly where they left off. */
@@ -559,7 +560,8 @@ export interface JournalNote {
   /** Record id in the large store's journalAudio collection (data URL). */
   audioId?: string;
   durationSec?: number;
-  createdAt: ISODateTime;
+  createdAt: ISODateTime;  /** Sync stamp (v3 Phase 1) — set by the adapter on save, never by components. */
+  updatedAt?: ISODateTime;
 }
 
 /**

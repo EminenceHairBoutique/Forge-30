@@ -28,6 +28,7 @@ import type {
 } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BackupCard } from "@/components/settings/BackupCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,6 +154,8 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-4 pb-4">
       <PageHeader title="Settings" subtitle="Targets, pain flags, and data." />
+
+      <BackupCard />
 
       <Card>
         <CardHeader>

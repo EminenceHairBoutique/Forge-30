@@ -89,8 +89,39 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
+/**
+ * Write-observation hook (v3 Phase 1): the SyncedAdapter registers one
+ * observer and hears every persisted mutation from the two choke points —
+ * the localStorage `write()` below (whole-collection blobs, rowId null) and
+ * the decorated large store (per-record rows). Collections added later are
+ * covered automatically; nothing per-feature to wire.
+ */
+export type WriteObserver = (
+  collection: string,
+  rowId: string | null,
+  value: unknown,
+  op: "upsert" | "delete"
+) => void;
+
+let writeObserver: WriteObserver | null = null;
+
+export function setWriteObserver(observer: WriteObserver | null): void {
+  writeObserver = observer;
+}
+
+const COLLECTION_BY_KEY: Record<string, string> = {};
+
+function notifyWrite(key: string, value: unknown): void {
+  if (!writeObserver) return;
+  if (Object.keys(COLLECTION_BY_KEY).length === 0) {
+    for (const [name, k] of Object.entries(KEYS)) COLLECTION_BY_KEY[k] = name;
+  }
+  const collection = COLLECTION_BY_KEY[key];
+  if (collection) writeObserver(collection, null, value, "upsert");
+}
+
 /** Reads every existing collection into a snapshot keyed by collection name. */
-function snapshotCollections(): CollectionSnapshot {
+export function snapshotCollections(): CollectionSnapshot {
   const snapshot: CollectionSnapshot = {};
   if (!canUseStorage()) return snapshot;
   for (const [name, key] of Object.entries(KEYS)) {
@@ -109,6 +140,16 @@ function writeCollections(collections: CollectionSnapshot): void {
   for (const [name, key] of Object.entries(KEYS)) {
     if (name in collections) write(key, collections[name]);
   }
+}
+
+/**
+ * Raw collection-blob write by collection name — the sync engine's merge
+ * path. Same write() choke point as everything else (observer suppression is
+ * the SyncedAdapter's job while merging).
+ */
+export function writeCollectionBlob(collection: string, value: unknown): void {
+  const key = (KEYS as Record<string, string>)[collection];
+  if (key) write(key, value);
 }
 
 let migrationChecked = false;
@@ -162,6 +203,7 @@ function write(key: string, value: unknown): void {
   ensureMigrated();
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
+    notifyWrite(key, value);
   } catch {
     // Quota exceeded or private-mode failure: data stays in memory for the session.
   }
@@ -176,6 +218,27 @@ function inRange(date: ISODate, from: ISODate, to: ISODate): boolean {
  * localStorage, keyed by record collection. Collections keyed by date use a
  * `Record<ISODate, T>` map; append-style collections use arrays.
  */
+/** Large-store decorator: reports per-record puts/deletes to the observer.
+ * Explicit delegation (not spread) — the stores are class instances, so
+ * their methods live on the prototype. */
+function observeLargeStore(store: ReturnType<typeof createLargeStore>): ReturnType<typeof createLargeStore> {
+  return {
+    get: (collection, id) => store.get(collection, id),
+    list: (collection) => store.list(collection),
+    clear: (collection) => store.clear(collection),
+    exportAll: () => store.exportAll(),
+    importAll: (data) => store.importAll(data),
+    async put(collection, id, value) {
+      await store.put(collection, id, value);
+      writeObserver?.(collection, id, value, "upsert");
+    },
+    async delete(collection, id) {
+      await store.delete(collection, id);
+      writeObserver?.(collection, id, null, "delete");
+    },
+  };
+}
+
 export class LocalStorageAdapter implements StorageAdapter {
   // -- Profile ---------------------------------------------------------------
   async getProfile(): Promise<UserProfile | null> {
@@ -236,7 +299,7 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   // -- Data lifecycle ----------------------------------------------------------
   /** Large-record backend (IndexedDB, localStorage fallback) — see largeStore.ts. */
-  private large = createLargeStore();
+  protected large = observeLargeStore(createLargeStore());
   private largeCleaned = false;
 
   /**
@@ -418,7 +481,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async saveJournalNote(note: JournalNote): Promise<void> {
-    await this.large.put("journalNotes", note.id, note);
+    await this.large.put("journalNotes", note.id, { ...note, updatedAt: new Date().toISOString() });
   }
 
   async deleteJournalNote(id: string): Promise<void> {
@@ -741,7 +804,10 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async saveAssessmentResult(result: AssessmentResult): Promise<void> {
-    await this.large.put("assessmentResults", result.id, result);
+    await this.large.put("assessmentResults", result.id, {
+      ...result,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   async getAssessmentProgress(id: AssessmentId): Promise<AssessmentProgress | null> {

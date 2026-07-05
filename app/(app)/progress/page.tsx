@@ -26,6 +26,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TrendChart, type TrendPoint } from "@/components/charts/TrendChart";
 import { PatternsCard } from "@/components/cards/PatternsCard";
 import { BodyMetricSheet } from "@/components/forms/BodyMetricSheet";
+import { BackupCard } from "@/components/settings/BackupCard";
 
 const STATE_STYLE: Record<CalendarState, { label: string; className: string }> = {
   complete: { label: "Complete", className: "border-success/50 bg-success/15 text-success" },
@@ -510,6 +511,7 @@ export default function ProgressPage() {
       </Sheet>
 
       <BodyMetricSheet open={bodyOpen} onOpenChange={setBodyOpen} />
+      <BackupCard compact />
     </div>
   );
 }
