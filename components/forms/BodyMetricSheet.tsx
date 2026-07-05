@@ -8,7 +8,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScaleSlider } from "@/components/ui/slider";
+import { ScaleSlider } from "@/components/ui/scale-slider";
 
 function emptyMetric(date: string): BodyMetric {
   return {

@@ -9,6 +9,7 @@ import type { InjuryProfile } from "@/lib/types";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScaleSlider } from "@/components/ui/scale-slider";
 import { Label } from "@/components/ui/label";
 import { CheckItem } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -178,33 +179,23 @@ export function InjuryIntakeSheet({
                 onChange={(e) => setDraft({ ...draft, diagnosis: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="in-symp">What does it feel like?</Label>
-                <Input
-                  id="in-symp"
-                  placeholder="ache, sharp, stiff…"
-                  value={draft.symptoms}
-                  onChange={(e) => setDraft({ ...draft, symptoms: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="in-pain">Typical pain (0–10)</Label>
-                <Input
-                  id="in-pain"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  max="10"
-                  value={draft.painScore}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      painScore: Math.min(10, Math.max(0, Math.round(Number(e.target.value) || 0))),
-                    })
-                  }
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="in-symp">What does it feel like?</Label>
+              <Input
+                id="in-symp"
+                placeholder="ache, sharp, stiff…"
+                value={draft.symptoms}
+                onChange={(e) => setDraft({ ...draft, symptoms: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Typical pain (0–10)</Label>
+              <ScaleSlider
+                label="Typical pain"
+                min={0}
+                value={draft.painScore}
+                onChange={(v) => setDraft({ ...draft, painScore: v })}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="in-agg">What makes it worse? (comma-separated)</Label>

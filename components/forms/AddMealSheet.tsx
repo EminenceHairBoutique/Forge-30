@@ -1,5 +1,6 @@
 "use client";
 
+import { flagEnabled } from "@/lib/flags";
 import { useEffect, useRef, useState } from "react";
 import { Barcode, Camera, Search as SearchIcon, Trash2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
@@ -62,7 +63,8 @@ export function AddMealSheet({
   defaultSlot?: MealSlot;
 }) {
   const { adapter, touch } = useStorage();
-  const [tab, setTab] = useState<Tab>("photo");
+  // Photo leads only when its flag is on (§2.9: flag-off = hidden).
+  const [tab, setTab] = useState<Tab>(flagEnabled("photoMeal") ? "photo" : "search");
   const [slot, setSlot] = useState<MealSlot>(defaultSlot);
   const [saved, setSaved] = useState<SavedMeal[]>([]);
 
@@ -279,7 +281,7 @@ export function AddMealSheet({
             value={tab}
             onChange={setTab}
             options={[
-              { value: "photo", label: "Photo" },
+              ...(flagEnabled("photoMeal") ? [{ value: "photo" as const, label: "Photo" }] : []),
               { value: "search", label: "Search" },
               { value: "custom", label: "Custom" },
               { value: "quick", label: "Quick" },

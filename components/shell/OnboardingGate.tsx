@@ -636,6 +636,11 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
               {last ? "Start Day 1" : "Next"}
             </Button>
           </div>
+          {last && (
+            <p className="text-center text-xs text-muted">
+              Your score builds as you log — 0 isn’t a grade.
+            </p>
+          )}
           {!last && (
             <Button variant="ghost" disabled={saving} onClick={() => setStep(step + 1)}>
               Skip this step

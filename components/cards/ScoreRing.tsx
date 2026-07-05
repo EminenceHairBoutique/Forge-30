@@ -60,7 +60,7 @@ export function ScoreRing({
             <span className="microlabel mt-1 text-muted">
               {building ? "Score building" : "Forge Score"}
             </span>
-            {building && <span className="microlabel mt-0.5 text-[9px] text-muted/70">Day in progress</span>}
+            {building && <span className="microlabel mt-0.5 text-[9px] text-muted">Day in progress</span>}
           </Ring>
           <span className="text-xs text-muted">
             {building ? "day in progress · tap for breakdown" : "tap for breakdown"}

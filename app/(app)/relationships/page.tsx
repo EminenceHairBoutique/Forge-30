@@ -45,7 +45,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ScaleSlider } from "@/components/ui/slider";
+import { ScaleSlider } from "@/components/ui/scale-slider";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { PaywallCard } from "@/components/cards/PaywallCard";
 import { AssessmentRunner } from "@/components/assessments/AssessmentRunner";

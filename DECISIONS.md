@@ -122,3 +122,12 @@ Three adaptations, logged per its global-acceptance rule:
 - **Baseline.** The prompt cites `e142800` · 367 tests; the actual baseline is `1ad949b`
   (the Rev 3.1 review-fix commit, two HIGH rail fixes included) · **369 tests**. The
   only-grows floor for v3.3 is 369.
+
+## 12. RENAME: "Trauma-Response & Coping Profile" → "Stress Response Patterns" (v3.3 C7)
+
+Display name only; the stored assessment id stays `traumaCoping`, so previously saved
+results render under the new name with zero migration. **Rationale (Claude audit C7):**
+"trauma" in a product surface reads clinical and gatekeeps the people most likely to
+benefit; "Stress Response Patterns" describes the same content — learned protective
+patterns, named without judgment — in the register the rest of the app uses. Content,
+items, scoring, and the not-a-diagnosis/PTSD safety framing are unchanged.

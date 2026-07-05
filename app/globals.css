@@ -333,3 +333,56 @@ textarea {
 .animate-breathe {
   animation: breathe 8s ease-in-out infinite;
 }
+
+/* --- Scale slider (v3.3 C1): native range input, HUD-styled ------------- */
+.scale-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.scale-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-gold) 70%, transparent), var(--accent-gold))
+      0 / var(--fill, 0%) 100% no-repeat,
+    var(--bg-elevated-solid);
+  border: 1px solid var(--line);
+}
+.scale-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-elevated-solid);
+  border: 1px solid var(--line);
+}
+.scale-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent-gold);
+}
+.scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -12px;
+  border-radius: 999px;
+  background: var(--accent-gold);
+  border: 3px solid #0b0806;
+  box-shadow: 0 0 0 1px var(--accent-gold);
+}
+.scale-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--accent-gold);
+  border: 3px solid #0b0806;
+  box-shadow: 0 0 0 1px var(--accent-gold);
+}
+.scale-slider:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 4px;
+  border-radius: 999px;
+}

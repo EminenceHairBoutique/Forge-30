@@ -100,3 +100,28 @@ WAIT(operator):
   the enforced policy (documented in next.config.ts).
 - Verify the update toast on an installed PWA across one deploy.
 - Account deletion end-to-end against a real Supabase project (needs auth.admin).
+
+## v3.3 Phase 2 — UX polish (2026-07-05)
+
+Shipped: full-width drag ScaleSlider (native range input, big readout, 1/5/10 ticks,
+aria-valuetext, "not set" state) replacing tap-number rows on Mind, Relationships, Social,
+BodyMetric, and the injury intake pain scale; Money empty state one-liner (philosophy is
+footer-only); coach mode tabs gained a right-edge fade + active-tab scrollIntoView; Progress
+reordered report → patterns → trends → calendar, with the calendar collapsed to a ≤96px
+heat-strip (expands to the tappable grid + legend); "Trauma-Response & Coping Profile"
+renamed "Stress Response Patterns" (display-only; DECISIONS §12); dimmed text lifted to
+≥4.5:1 (placeholders, timeline stamps, ring sublabel); recharts now loads behind a lazy
+client import with dimension-matched skeletons (/progress first-load 325 kB → 216 kB);
+Day-1 "0 isn't a grade" line on onboarding's last step + under the gauge until the first
+logged item; §2.9 flag rule documented in lib/flags.ts (flag-off = hidden; the Health
+bloodwork/wearables "soon" chips are the one sanctioned marketing treatment) and
+photoMeal now truthfully `true` with the AddMeal photo tab gated on it.
+
+iPhone-width screenshots (Mind, Money, Today, Progress) captured in session scratchpad
+during the Playwright pass; regenerate any time with verify-v33-phase2.mjs.
+
+WAIT(device) — VoiceOver spot-check list:
+- ScaleSlider: swipe up/down adjusts value; "Not set" then "N of 10" announced.
+- ScoreRing: role=img label announces score + "tap for breakdown".
+- Progress heat-strip: "Expand the 30-day calendar" then per-day labels in the grid.
+- Coach tabs: selected state announced; horizontal scroll reachable.

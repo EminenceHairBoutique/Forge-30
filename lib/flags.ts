@@ -8,6 +8,12 @@
  * Dispositions and blockers per flag live in V2_FABLE_EXPANSION_PLAN.md
  * §Flag registry — flags marked (legal) never flip without counsel review.
  */
+/**
+ * Surface rule (v3.3 §2.9): a flag-off feature is HIDDEN — no bespoke
+ * disabled buttons. The one exception: marketing an imminent Pro feature
+ * with the standard "soon" chip (the Health bloodwork/wearables chips are
+ * the pattern).
+ */
 export const FLAGS = {
   /** Voice-journal transcription (needs an AI-key decision). */
   transcription: false,
@@ -15,8 +21,9 @@ export const FLAGS = {
   bloodworkUpload: false,
   /** HealthKit / wearable integrations (needs backend). */
   wearables: false,
-  /** Photo meal logging (needs live AI). */
-  photoMeal: false,
+  /** Photo meal logging — shipped in v3 Phase 4 (route + AddMeal tab,
+   *  graceful 503 → search without a key). Off would hide the photo tab. */
+  photoMeal: true,
   /** Barcode food lookup (needs a data source decision). */
   barcode: false,
   /** Screenshot OCR for thread analysis (bundle-size + legal review). */

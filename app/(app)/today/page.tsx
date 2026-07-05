@@ -1,5 +1,6 @@
 "use client";
 
+import { hasActivity } from "@/lib/engine/weeklySummary";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -166,6 +167,12 @@ export default function TodayPage() {
       <div className="flex flex-col items-center gap-2 py-2">
         {streak && <StreakFlame streak={streak} />}
         <ScoreRing result={scoreResult} state={scoreState} />
+        {/* Day-1 expectation line (v3.3 C9): gone after the first logged item. */}
+        {dayNumber === 1 && !hasActivity(log) && (
+          <p className="text-center text-xs text-muted">
+            Your score builds as you log — 0 isn’t a grade.
+          </p>
+        )}
         {!log.hardDay && scoreState === "inProgress" && (
           <Button variant="ghost" size="sm" onClick={() => setHardDayOpen(true)}>
             <LifeBuoy className="size-4" /> Having a hard day?
