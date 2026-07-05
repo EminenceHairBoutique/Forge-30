@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Lock, Mic, Square, Trash2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { flagEnabled } from "@/lib/flags";
+import { apiUrl, authHeaders } from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
 import { toISODate, uid, vibrate } from "@/lib/utils";
 import type { JournalNote } from "@/lib/types";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -45,6 +47,12 @@ export function VoiceNoteSheet({
   const [caption, setCaption] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Flag-gated transcription (v3.3 Phase 4): the transcript is a REVIEW
+  // artifact — editable text the user approves into the caption, never an
+  // automatic write.
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,6 +118,32 @@ export function VoiceNoteSheet({
     setDataUrl(null);
     setSeconds(0);
     setCaption("");
+    setTranscript(null);
+    setTranscribeError(null);
+  };
+
+  const transcribe = async () => {
+    if (!dataUrl) return;
+    setTranscribing(true);
+    setTranscribeError(null);
+    try {
+      const res = await fetch(apiUrl("/api/journal/transcribe"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ audio: dataUrl.split(",")[1] ?? "" }),
+      });
+      const data = (await res.json()) as { transcript?: string; error?: string };
+      if (!res.ok || !data.transcript) {
+        throw new Error(data.error ?? "Transcription isn't available right now.");
+      }
+      setTranscript(data.transcript);
+    } catch (err) {
+      setTranscribeError(
+        err instanceof Error ? err.message : "Transcription isn't available right now."
+      );
+    } finally {
+      setTranscribing(false);
+    }
   };
 
   const save = async () => {
@@ -201,6 +235,38 @@ export function VoiceNoteSheet({
                       aria-label="Private entry"
                     />
                   </div>
+                  {flagEnabled("transcription") && (
+                    <div className="flex flex-col gap-2">
+                      {transcript === null ? (
+                        <Button
+                          variant="secondary"
+                          disabled={transcribing}
+                          onClick={() => void transcribe()}
+                        >
+                          {transcribing ? "Transcribing…" : "Transcribe (review before saving)"}
+                        </Button>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="vn-transcript">
+                            Transcript — edit freely, then use it as the caption
+                          </Label>
+                          <Textarea
+                            id="vn-transcript"
+                            value={transcript}
+                            onChange={(e) => setTranscript(e.target.value)}
+                          />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setCaption(transcript)}
+                          >
+                            Use as caption
+                          </Button>
+                        </div>
+                      )}
+                      {transcribeError && <p className="text-xs text-muted">{transcribeError}</p>}
+                    </div>
+                  )}
                   {!flagEnabled("transcription") && (
                     <p className="text-xs text-muted">
                       Audio stays on this device. Transcription arrives in a later update.

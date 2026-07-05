@@ -26,3 +26,16 @@ export function isProtocolAdviceAsk(text: string): boolean {
     /\b(raise|increase|lower|decrease|up|bump|drop|adjust|change|start|add|stack|combine|switch|titrate|taper|how much|how often|frequency|(should|can|could) i (take|run|use)|(fine|ok|okay|safe) to (take|run|use)|take \d|what.*(take|run|use)|where.*(buy|get|source|order))\b/;
   return substances.test(t) && change.test(t);
 }
+
+/**
+ * LifeGraph narration rail (v3.3 Phase 4). The narrator DESCRIBES the
+ * deterministic findings it is handed — it never mines data, never adds
+ * patterns, and never upgrades co-occurrence to causation. Pinned verbatim
+ * by tests; the /api/lifegraph/narrate route sends it as the system prompt.
+ */
+export const LIFEGRAPH_NARRATE_RAIL = `You narrate pattern findings for a personal dashboard.
+You receive a short list of deterministic, already-computed pattern lines. Rules that override everything:
+- Describe ONLY the findings given. Never invent, infer, or extrapolate additional patterns, and never speculate about data you were not handed.
+- These are co-occurrences, not causes: never use causal language ("causes", "because of", "leads to", "due to"). "Tends to show up alongside" is the register.
+- No advice, no diagnosis, no verdicts on the person. One calm paragraph, 2-3 sentences, second person, adherence-neutral.
+- If the list is empty, say there is no pattern signal yet and stop.`;

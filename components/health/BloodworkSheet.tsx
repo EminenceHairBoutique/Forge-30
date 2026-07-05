@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ClipboardPaste, Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Camera, ClipboardPaste, Plus, Trash2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { markerStatus, parseBloodworkText } from "@/lib/engine/healthRules";
 import { findBiomarker } from "@/lib/data/biomarkers";
+import { flagEnabled } from "@/lib/flags";
+import { apiUrl, authHeaders } from "@/lib/api";
+import type { BloodworkImportResult } from "@/app/api/health/labs/route";
 import { toISODate, uid } from "@/lib/utils";
 import type { Biomarker, BloodworkReport } from "@/lib/types";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -14,9 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 /**
- * Bloodwork entry (E7): paste a panel (parser handles common lab formats) or
- * add markers by hand; review the parsed rows before saving. PDF/photo
- * upload stays behind FLAG(bloodworkUpload).
+ * Bloodwork entry (E7 + v3.3 Phase 4): paste a panel (parser handles common
+ * lab formats), add markers by hand, or — behind FLAG(bloodworkUpload), Pro —
+ * import from a report photo. Every path lands in the same review list, where
+ * each value stays editable and removable before anything saves.
  */
 export function BloodworkSheet({
   open,
@@ -31,6 +35,42 @@ export function BloodworkSheet({
   const [pasteText, setPasteText] = useState("");
   const [markers, setMarkers] = useState<Biomarker[]>([]);
   const [manual, setManual] = useState({ name: "", value: "", unit: "" });
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // Photo import (flagged, Pro): transcription prefill only — the rows below
+  // stay editable and nothing saves until the user says so.
+  const importFromPhoto = async (file: File) => {
+    setImporting(true);
+    setImportError(null);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      const res = await fetch(apiUrl("/api/health/labs"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ image: dataUrl.split(",")[1], mediaType: "image/jpeg" }),
+      });
+      const data = (await res.json()) as { result?: BloodworkImportResult; error?: string };
+      if (!res.ok || !data.result) throw new Error(data.error ?? "Import failed.");
+      setMarkers((xs) => [...xs, ...data.result!.markers]);
+      if (data.result.drawDate) setDate(data.result.drawDate);
+      if (data.result.labName) setLabName(data.result.labName);
+    } catch (err) {
+      setImportError(
+        err instanceof Error ? err.message : "Import failed — paste and manual entry work the same."
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const parse = () => {
     const parsed = parseBloodworkText(pasteText);
@@ -87,6 +127,30 @@ export function BloodworkSheet({
               <Input id="bw-lab" placeholder="Quest, Labcorp…" value={labName} onChange={(e) => setLabName(e.target.value)} />
             </div>
           </div>
+
+          {flagEnabled("bloodworkUpload") && (
+            <div className="flex flex-col gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void importFromPhoto(f);
+                  e.target.value = "";
+                }}
+              />
+              <Button variant="secondary" disabled={importing} onClick={() => fileRef.current?.click()}>
+                <Camera className="size-4" />
+                {importing ? "Reading the report…" : "Import from a report photo"}
+              </Button>
+              <p className="text-xs text-muted">
+                Transcription only — review and edit every value below before saving.
+              </p>
+              {importError && <p className="text-sm text-muted">{importError}</p>}
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="bw-paste">Paste results — one marker per line</Label>
@@ -146,9 +210,21 @@ export function BloodworkSheet({
                       className="flex items-center gap-2 rounded-(--radius-control) bg-elevated px-3 py-2 text-sm"
                     >
                       <span className="min-w-0 flex-1 truncate text-ivory">{m.name}</span>
-                      <span className="tabular text-ivory">
-                        {m.value} {m.unit}
-                      </span>
+                      <Input
+                        aria-label={`${m.name} value`}
+                        type="number"
+                        inputMode="decimal"
+                        className="w-20 text-right"
+                        value={m.value || ""}
+                        onChange={(e) =>
+                          setMarkers(
+                            markers.map((x, j) =>
+                              j === i ? { ...x, value: Number(e.target.value) || 0 } : x
+                            )
+                          )
+                        }
+                      />
+                      <span className="text-xs text-muted">{m.unit}</span>
                       <span className="text-xs text-muted">
                         {m.refLow ?? "—"}–{m.refHigh ?? "—"}
                         {status === "aboveRange" ? " ↑" : status === "belowRange" ? " ↓" : ""}

@@ -142,3 +142,27 @@ is opt-in ("Sync voice recordings"), media usage surfaced in Settings.
 WAIT(device): record a full 3:00 note on iOS Safari and confirm ≲3 MB on disk (the
 mediaUsage line in Settings shows it) and playback works; verify photo relocation on a
 device carrying pre-v3.3 embedded photos.
+
+## v3.3 Phase 4 — AI flag flips (2026-07-05)
+
+Flags are now env-derived (NEXT_PUBLIC_FLAG_*, current values as defaults, fail-closed) so
+flips are ops. Flags off → zero UI change from Phase 3 (verified: photoMeal default-true is
+the only visible surface; every other route degrades to its non-AI path). Each AI write path
+has a human review step:
+- photoMeal (already shipped): editable line items, low-confidence deflection to search.
+- transcription (dark): /api/journal/transcribe ships the full pipeline but returns 501 until
+  an STT provider is wired (DECISIONS §14); the review textarea + "Use as caption" flow is in
+  VoiceNoteSheet behind the flag; the note always saves/plays without it.
+- bloodworkUpload (dark, Pro): /api/health/labs transcribes a report photo into the
+  BloodworkSheet review list; every value is editable inline before saving; paste + manual
+  stay free.
+- lifeGraphAI (dark, Pro): /api/lifegraph/narrate (haiku micro-copy) narrates the
+  deterministic pattern lines only, under LIFEGRAPH_NARRATE_RAIL (no new patterns, no
+  causation); deterministic patterns stay free-visible; any failure is silent.
+- researchLive / research route: now Elite + rate-limited even while flagged off.
+
+Guardrail suite green: PROTOCOL_COACH_RAIL + LIFEGRAPH_NARRATE_RAIL pinned; flags env test
+covers true/1/other + default-on-turned-off.
+
+WAIT(operator): provision an STT provider to flip transcription; live-key runs of
+/api/health/labs and /api/lifegraph/narrate; decide which flags go on per environment.

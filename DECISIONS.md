@@ -140,3 +140,14 @@ backup/restore has shipped since v1. Regressing a shipped data-portability contr
 the standing guardrail rule, so **all exports stay free at every tier**: the versioned JSON
 envelope (with the new include-media toggle) and all five per-collection CSVs. The Elite
 anchor list loses nothing users already owned.
+
+## 14. Transcription route ships fail-closed (v3.3 Phase 4)
+
+`/api/journal/transcribe` ships the full pipeline (Pro gate, rate limit, validation, and the
+client's review-before-save flow behind FLAG(transcription)) but returns 501 until a
+speech-to-text provider is wired. **Rationale:** the Anthropic Messages API this app uses
+takes no audio input, so there is no honest transcription path with the current model set;
+shipping the plumbing now means flipping the flag + provisioning a provider is the only
+remaining step, and the voice note always saves and plays back regardless. The transcript,
+when one exists, is always returned as editable text the user approves into the caption —
+never an automatic write.
