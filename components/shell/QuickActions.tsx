@@ -18,13 +18,13 @@ const ACTIONS = [
  */
 export function QuickActions() {
   return (
-    <div className="no-scrollbar sticky bottom-20 z-30 -mx-4 overflow-x-auto bg-gradient-to-t from-base via-base/95 to-transparent px-4 pt-5 pb-2">
-      <div className="flex w-max gap-2">
+    <div className="no-scrollbar sticky bottom-24 z-30 -mx-4 overflow-x-auto bg-gradient-to-t from-base via-base/95 to-transparent px-4 pt-5 pb-2">
+      <div className="flex w-max gap-2.5">
         {ACTIONS.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            className="press-scale flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ivory [background:var(--grad-glass),var(--bg-elevated-solid)] [box-shadow:inset_0_1px_0_rgba(255,244,228,0.14)] active:border-gold/50 lg:hover:border-gold/60"
+            className="hull-cut-sm press-scale flex min-h-11 items-center gap-2 border border-(--stroke-active) px-4 text-sm font-semibold text-ivory [background:var(--grad-glass),var(--bg-elevated-solid)] [box-shadow:inset_0_1px_0_rgba(255,255,255,0.1)] active:border-gold lg:hover:border-gold"
           >
             <Icon className="size-4 text-gold" />
             {label}
