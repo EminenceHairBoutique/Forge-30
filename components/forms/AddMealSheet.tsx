@@ -1,6 +1,7 @@
 "use client";
 
 import { flagEnabled } from "@/lib/flags";
+import { PaywallSheet } from "@/components/cards/PaywallSheet";
 import { quickAddFirst } from "@/lib/engine/programs";
 import { useEffect, useRef, useState } from "react";
 import { Barcode, Camera, Search as SearchIcon, Trash2 } from "lucide-react";
@@ -83,6 +84,8 @@ export function AddMealSheet({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [photoState, setPhotoState] = useState<"idle" | "analyzing" | "review" | "error">("idle");
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoQuotaHit, setPhotoQuotaHit] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([]);
   const [assumptions, setAssumptions] = useState<string[]>([]);
   const [overallConfidence, setOverallConfidence] = useState(1);
@@ -179,6 +182,7 @@ export function AddMealSheet({
   const analyzePhoto = async (file: File) => {
     setPhotoState("analyzing");
     setPhotoError(null);
+    setPhotoQuotaHit(false);
     try {
       const [full, thumbUrl] = await Promise.all([
         downscale(file, PHOTO_MAX_PX, 0.8),
@@ -191,7 +195,12 @@ export function AddMealSheet({
         body: JSON.stringify({ image: full.split(",")[1], mediaType: "image/jpeg" }),
       });
       const data = (await res.json()) as { analysis?: PhotoAnalysis; error?: string; message?: string };
-      if (!res.ok || !data.analysis) throw new Error(data.message ?? data.error ?? "Analysis failed.");
+      if (!res.ok || !data.analysis) {
+        // A quota/burst refusal (402/429) offers the upgrade path; every other
+        // failure just points back to search.
+        setPhotoQuotaHit(res.status === 402 || res.status === 429);
+        throw new Error(data.message ?? data.error ?? "Analysis failed.");
+      }
       setPhotoItems(
         data.analysis.items.map((i) => ({
           name: i.name,
@@ -333,9 +342,15 @@ export function AddMealSheet({
                 <div className="flex flex-col gap-2">
                   <p className="text-sm text-muted">{photoError}</p>
                   <div className="flex gap-2">
-                    <Button variant="secondary" className="flex-1" onClick={() => fileRef.current?.click()}>
-                      Try another photo
-                    </Button>
+                    {photoQuotaHit ? (
+                      <Button className="flex-1" onClick={() => setPaywallOpen(true)}>
+                        See plans
+                      </Button>
+                    ) : (
+                      <Button variant="secondary" className="flex-1" onClick={() => fileRef.current?.click()}>
+                        Try another photo
+                      </Button>
+                    )}
                     <Button variant="secondary" className="flex-1" onClick={() => setTab("search")}>
                       Search instead
                     </Button>
@@ -563,6 +578,11 @@ export function AddMealSheet({
           )}
         </div>
       </SheetContent>
+      <PaywallSheet
+        open={paywallOpen}
+        onOpenChange={setPaywallOpen}
+        highlight="You've used this month's photo analyses — search and manual logging stay free."
+      />
     </Sheet>
   );
 }

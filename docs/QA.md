@@ -166,3 +166,16 @@ covers true/1/other + default-on-turned-off.
 
 WAIT(operator): provision an STT provider to flip transcription; live-key runs of
 /api/health/labs and /api/lifegraph/narrate; decide which flags go on per environment.
+
+## v3.3 Phase 5 — monetization surface (2026-07-05)
+
+Shipped: PaywallSheet (contextual, feature table, monthly/annual toggle, verbatim trust
+line), Stripe customer-portal route, Settings "Manage billing" + "Refresh" for paid users
+and "See plans" for free, quota-hit "See plans" CTA in AddMealSheet, 7-day trial via
+Checkout trial_period_days, annual price envs. Purchase UI stays fully absent on unconfigured
+builds. Pricing invariants (safety/habit rows free at every tier; prices mirror TIER_PRICING;
+verbatim trust line) pinned by lib/data/pricing.test.ts.
+
+WAIT(operator): Stripe test-mode checkout → webhook → tier flip round trip; trial grants once;
+portal opens for a subscribed user; downgrade leaves all data readable; paywall renders for
+all three tiers via the dev tier switcher.
