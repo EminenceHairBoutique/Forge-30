@@ -1,5 +1,7 @@
 # FORGE30 v3 — STATE-OF-THE-ART UPGRADE MASTER PROMPT
 
+**Revision 3.1** — adds Phase 6 (Protocols: hormone & peptide therapy tracking) and the full Phase 7 subscription design.
+
 **Executor:** Claude Code running Claude Fable 5 (`claude-fable-5`)
 **Mode:** Brownfield upgrade of the existing Forge-30 repo (`github.com/EminenceHairBoutique/Forge-30`, branch `main`) — NOT a greenfield rebuild
 **Predecessor docs:** `v2_spec.md` lives in the repo root. This document supersedes it where they conflict. Where v3 is silent, v2 still applies (design system, adherence-neutral principles, safety requirements, Health/Relationships tab specs).
@@ -42,6 +44,8 @@ Record these in a new `DECISIONS.md` at repo root during Phase 0:
 - **CUT: Cluster B trait screening and IQ testing.** Do not build clinical-adjacent screeners or intelligence tests. Rationale: liability, validity problems, and no retention value. **Replacement:** a transparent, plainly-disclaimed *Coaching Style & Values* onboarding assessment (10–15 questions, non-clinical, results framed as preferences that tune coach tone and priorities — never as diagnoses or scores of the person).
 - **DEMOTE: the seeded 7-day meal plan.** After Phase 4 ships real food logging, the seeded plan becomes an optional template selectable in Settings, not the centerpiece of the Nutrition tab.
 - **CHANGE: the rigid 8-part daily review.** Coach output becomes adaptive (Phase 5). The 8-part structure remains the *maximum* schema, but the coach returns only the sections that earned their place that day.
+- **ADD: one opt-in "Protocols" tab (Phase 6) instead of separate Peptide/TRT/HGH tabs.** Same mechanics, one surface, hidden entirely unless the user enables it. The compliance rails in §6.0 are part of this decision and are not negotiable.
+- **SEPARATION: Forge30 and Noir Peptides never touch.** No links, no promotions, no shared branding, no product mentions, no shared marketing. Record in `DECISIONS.md` with rationale: a therapy-tracking app cross-promoting a research-use-only peptide retailer creates FDA intended-use evidence against the retailer and drug-facilitation exposure for the app. This rule survives every future phase.
 
 ## A4. Model usage (server-side, via `@anthropic-ai/sdk`)
 
@@ -181,9 +185,66 @@ Rules, all user-configurable in Settings, all off-able, all respecting quiet hou
 
 ---
 
-## PHASE 6 (OPTIONAL, NEVER BLOCKING) — SUBSCRIPTION TIERS
-- Only after 1–5 are merged. Per v2: Supabase auth precedes Stripe; PWA-distributed Stripe Checkout preserves the no-App-Store-cut advantage (note: the Capacitor/App Store build, if ever submitted, must use Apple's IAP for digital goods — document this constraint in `docs/MONETIZATION.md`, do not solve it now).
-- Free: full logging + mock coach + streaks. Pro: live AI coach, photo nutrition, LifeGraph, weekly report. Entitlement check server-side on the AI routes.
+## PHASE 6 — PROTOCOLS: HORMONE & PEPTIDE THERAPY TRACKING (opt-in)
+
+**Positioning:** a single tab covering physician-prescribed TRT, HGH, peptide, and GLP-1 therapy plus ancillaries. Category research (PinPoint TRT, MyTRT, My TRT App, TRT Monitor, Shotsy, Regimen, Titer, InjectionLog — June/July 2026) shows the entire space shares one architecture: compounds → schedules → dose log → site rotation → labs → symptoms → reports. Forge30 ships that full parity set, then wins on the one thing none of them have: the rest of the user's life is already in the same engine.
+
+### 6.0 Compliance rails (read first, apply everywhere, never weaken)
+
+1. **Prescribed-therapy framing.** Setup asks the user to confirm their protocol is prescribed and supervised by a licensed provider. All copy is patient-record language ("your prescribed dose"), never optimization-bro language ("your cycle," "your stack").
+2. **The app never recommends, calculates, or adjusts doses.** No dose calculators, no reconstitution/dilution calculators, no titration suggestions, no cycle planners, no stack builders, no compound suggestions. The only unit math allowed: displaying the mL/IU equivalent of the user's *entered* dose at the concentration printed on their *entered* pharmacy label (record-keeping, not guidance).
+3. **Coach blocklist.** The coach system prompt gains a hard rail: never suggest doses, frequencies, compounds, timing changes, titration, sourcing, or "what to run." Any protocol-change question gets one response shape: acknowledge, point to the data summary, direct to the prescriber ("That's a prescriber conversation — your doctor report is ready to bring."). Add red-team fixtures to the test suite: prompts like "should I raise my dose?" must produce deflection, verified in CI against the mock engine and schema.
+4. **Education stays general.** In-app content may explain what a lab marker is, why site rotation matters, and standard monitoring cadence norms — sourced, generic, never personalized into advice.
+5. **Discretion by default.** Protocol push notifications never name compounds on the lock screen ("Scheduled item due"). The tab supports biometric lock (WebAuthn on web, Face ID via Capacitor). A "local-only mode" toggle keeps Protocols data out of cloud sync entirely for privacy-sensitive users (adapter routes those collections to local/IndexedDB only).
+6. **Hidden unless enabled.** Users who don't enable Protocols in onboarding or Settings never see it — no tab, no cards, no upsells for it.
+7. **Noir separation** per §A3. Also: nothing in Forge30 links to any vendor of any compound, ever.
+8. **App Store note:** these rails are also what makes the Capacitor build reviewable — medication trackers are permitted; dosing-advice and drug-facilitation apps are not.
+
+### 6.1 Data model + storage
+- New types in `lib/types.ts`: `Compound` (name, category `trt|hgh|peptide|glp1|ancillary`, form `injection|gel|patch|pellet|oral`, labelConcentration + unit, vialVolume, prescriberNote), `ProtocolSchedule` (daily / EOD / E3.5D / weekly / alternating / custom days; pause with auto-resume date), `DoseEvent` (compoundId, dose, route, site, timestamp, note), `LabPanel` (date, source, markers: name/value/unit/refLow/refHigh), plus protocol side-effect tags on the existing daily check-in (acne, water retention, night sweats, GI, injection-site reaction, severity 1–5) that render only when Protocols is enabled.
+- New `StorageAdapter` methods implemented in all adapters; Supabase migration `supabase/migrations/0002_protocols.sql` with the same RLS pattern; respects local-only mode.
+
+### 6.2 Parity feature set (match the category leaders)
+- **Multi-compound protocols** with independent schedules and one-tap dose logging (<5s from open to logged); reminders ride the Phase 2 notification engine (quiet hours, daily cap, discreet copy).
+- **Injection site body map:** 11 anatomical sites (delts, glutes, ventrogluteal, quads, pecs, abdomen), rest-level color coding, next-site suggestion from rotation history, per-site log.
+- **Vial inventory:** remaining volume auto-decrements per dose; low-supply alert when ~N doses remain; expiry-date reminders.
+- **Lab tracking:** 30+ marker catalog (Total T, Free T, SHBG, sensitive E2, hematocrit, hemoglobin, PSA, IGF-1, lipid panel, ALT/AST, fasting glucose, HbA1c, TSH, and custom), editable reference ranges, per-marker trend charts with range bands and in/borderline/out chips. Range display is informational; out-of-range chips say "discuss with your provider," never interpret.
+- **AI lab import:** photo/PDF of a lab report → Claude vision (`claude-sonnet-4-6`, structured output) extracts markers → user reviews and edits every value before save. Reuses the Phase 4 vision pipeline. (My TRT App charges for this; Forge30 Pro includes it.)
+- **Estimated-level curve:** published-half-life visualization of the user's logged protocol (the PinPoint/Shotsy feature), labeled prominently as an estimate from published pharmacokinetics, not a measurement; educational only.
+- **Doctor report:** one-tap PDF export — protocol history, adherence %, site rotation map, labs table with trends, symptom summary. Make it beautiful; it is the single most provider-friendly artifact in the category and the safety story in one file.
+
+### 6.3 The leapfrog (what no competitor has)
+- **Whole-life correlation:** dose events and lab trends become LifeGraph signals. Patterns stay descriptive and behavioral ("Sleep quality dipped in the 48h after dose day — 9 events. Possible pattern — worth showing your prescriber."), never interpretive or medical. Same honesty thresholds as §5.1, plus prescriber framing on every protocol pattern.
+- **A coach with full context:** adherence, training, sleep, mood, and nutrition in one brain — behavioral observations only ("training adherence runs higher in weeks with no missed scheduled items"), rails per §6.0.3.
+- **Offline-first multi-device sync** (Phase 1) — PinPoint is single-device local, Shotsy is iCloud-only, web apps have no notifications. Forge30 has all three covered.
+- **UI:** Protocols is an instrument surface — Solaris base, Volt gauge ticks, mono microlabels, quiet palette. No molten celebration effects here; it's a medical record, and the design should say so.
+
+### 6.4 Acceptance
+- Tab and all its surfaces invisible unless enabled; enabling/disabling is idempotent and non-destructive.
+- Red-team coach fixtures pass (no dosing output under any tested prompt).
+- Dose log round-trip <5s on a real iPhone; body-map rotation suggestion covered by unit tests; inventory math tested.
+- Doctor report renders correctly with 90 days of seeded fixture data.
+- Local-only mode verifiably keeps protocol collections out of Supabase (integration test).
+
+---
+
+## PHASE 7 — SUBSCRIPTION TIERS (after 1–6 are merged)
+
+**Pricing philosophy:** the free tier is the funnel *and* the moat — everything that accumulates data or builds the daily habit stays free (logging, streaks, notifications, sync, HealthKit), because a user with 60 days of synced life data cannot leave. The paywall sits on marginal-cost AI and on insight depth. Category anchors as of mid-2026: Shotsy ~$9.99/mo, Regimen $4.99/mo, WHOOP ~$30/mo — Pro at $9.99 is mid-market with 10× the scope.
+
+### Free — "Forge"
+Full logging in every domain · streaks + freezes · push notifications · cloud sync + multi-device · HealthKit passive data · food search + recents · 3 photo-meal analyses/mo (taste of Pro) · mock coach daily review · deterministic weekly summary · Protocols: 1 compound, manual labs, body map, reminders, doctor report (report stays free — safety features are never paywalled).
+
+### Pro — $9.99/mo or $79.99/yr (7-day trial at onboarding, triggered after the first coach review renders)
+Live AI coach with 30-day memory · unlimited photo nutrition (fair-use 150/mo) · adaptive calorie targets · LifeGraph pattern engine · AI weekly deep report · Protocols: unlimited compounds, AI lab import, estimated-level curves, protocol patterns in LifeGraph.
+
+### Elite — $19.99/mo or $149.99/yr
+Everything in Pro · coach runs `claude-opus-4-8` (`COACH_MODEL` override per-entitlement) with a longer memory window and a monthly "State of You" report · unlimited photo analyses · full data export (CSV/JSON) · early access flags. Keep Elite thin at launch — it exists to anchor Pro's price and to serve the optimizer segment that happily pays WHOOP-level prices.
+
+### Mechanics
+- Supabase `subscriptions` table written by Stripe webhooks (`app/api/stripe/webhook`, signature-verified); entitlement checks server-side on every AI route (never client-side flags).
+- PWA distribution uses Stripe Checkout (no App Store cut). The Capacitor/App Store build, if ever submitted, must use Apple IAP for digital goods and must hide external purchase links — document in `docs/MONETIZATION.md`, do not solve now.
+- Downgrade is non-destructive: data is never deleted or locked, features just stop generating new AI output. State this in the paywall copy — it builds trust and it's true.
 
 ---
 
@@ -208,10 +269,13 @@ SUPABASE_SERVICE_ROLE_KEY=    # server-only
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=            # server-only
 CRON_SECRET=                  # server-only
+STRIPE_SECRET_KEY=            # server-only (Phase 7)
+STRIPE_WEBHOOK_SECRET=        # server-only (Phase 7)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 ```
 
 ## PHASE ORDER RECAP
 
-`0 Audit → 1 Sync → 2 Notifications+Streaks → 3 Capacitor+HealthKit → 4 Nutrition → 5 LifeGraph+Coach → (6 Subscriptions)`
+`0 Audit → 1 Sync → 2 Notifications+Streaks → 3 Capacitor+HealthKit → 4 Nutrition → 5 LifeGraph+Coach → 6 Protocols → 7 Subscriptions`
 
-Each phase ships independently. Stop after any phase and the app is strictly better than before it.
+Each phase ships independently. Stop after any phase and the app is strictly better than before it. Phase 7 comes last on purpose: every sellable feature must exist before the paywall does.

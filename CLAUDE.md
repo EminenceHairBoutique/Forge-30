@@ -23,6 +23,14 @@ branch; `DECISIONS.md` records binding scope decisions (do not re-litigate them)
   `ANTHROPIC_API_KEY`) is never imported by client code.
 - Adherence-neutral extends to notification copy: state, never shame; hard cap 2/day; zero on
   fully-logged days; quiet hours respected; every type can be disabled.
+- **Protocols rails (Rev 3.1 §6.0, hard):** the opt-in Protocols tab is a patient record for
+  prescribed therapy — the app never recommends, calculates, or adjusts doses (no dose/
+  reconstitution calculators, no titration, no cycle/stack tooling, no compound suggestions;
+  the only unit math is displaying the entered dose at the entered label concentration). The
+  coach carries a dosing blocklist with red-team fixtures in CI. Discreet notification copy,
+  biometric lock, local-only sync mode; invisible unless enabled. **Forge30 and Noir Peptides
+  never touch** — no links, mentions, branding, or promotion, in either direction, ever
+  (DECISIONS.md §10).
 
 ## Stack & commands
 

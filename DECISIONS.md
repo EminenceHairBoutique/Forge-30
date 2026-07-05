@@ -81,3 +81,29 @@ match v3 exactly (1 earned per 7 days, auto-applied, max 2 banked). Since v3 def
 where its own text is a summary, the v2 semantics stand; switching to an hour-granular noon
 deadline would add clock state the engine deliberately doesn't keep. Revisit only if the
 operator asks for the stricter deadline.
+
+## 9. ADD: one opt-in "Protocols" tab (V3_SPEC Rev 3.1 §A3, executes in v3 Phase 6)
+
+One surface for physician-prescribed TRT, HGH, peptide, and GLP-1 therapy tracking instead of
+separate tabs. **The §6.0 compliance rails are part of this decision and are not
+negotiable:** prescribed-therapy framing (patient-record language, never
+optimization language); the app never recommends, calculates, or adjusts doses — no dose or
+reconstitution calculators, no titration, no cycle planners, no stack builders, no compound
+suggestions (the only unit math allowed is displaying the mL/IU equivalent of the user's
+*entered* dose at their *entered* label concentration); a hard coach blocklist with red-team
+fixtures in CI; education stays general and sourced, never personalized into advice;
+discretion by default (lock-screen copy never names compounds, biometric lock, local-only
+sync mode); hidden entirely unless enabled. Execution notes land here as Phase 6 ships.
+
+**Storage note:** protocol collections ride the generic sync_blobs/sync_rows tables from
+0001_core.sql — no new SQL tables are required; local-only mode excludes them from sync at
+the adapter layer.
+
+## 10. SEPARATION: Forge30 and Noir Peptides never touch (V3_SPEC Rev 3.1 §A3, permanent)
+
+No links, no promotions, no shared branding, no product mentions, no shared marketing —
+in either direction, ever. **Rationale (from the spec):** a therapy-tracking app
+cross-promoting a research-use-only peptide retailer creates FDA intended-use evidence
+against the retailer and drug-facilitation exposure for the app. Additionally (§6.0.7):
+nothing in Forge30 links to any vendor of any compound. This rule survives every future
+phase and is grep-gated in the Phase 6 review.

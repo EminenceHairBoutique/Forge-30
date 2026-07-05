@@ -68,8 +68,26 @@ backends or devices are tracked in `docs/QA.md` as WAIT(operator/device).
 | Review renderer | accepts old 8-part and new adaptive shapes |
 | Sunday weekly report | distinct screenshot-worthy card (Solaris tokens, glow budget respected) |
 
-## Phase 6 — Subscriptions (WAIT)
+## Phase 6 — Protocols (Rev 3.1: opt-in prescribed-therapy tracking)
 
-Not started until 1–5 are merged and the operator provides Stripe keys. Constraints in
-`docs/MONETIZATION.md`. Free: full logging + mock coach + streaks. Pro: live coach, photo
-nutrition, LifeGraph, weekly report — enforcement server-side on the AI routes.
+| Touch | What |
+|---|---|
+| `lib/types.ts` | Compound, ProtocolSchedule, DoseEvent, LabPanel, ProtocolSettings, DailyLog.protocolSymptoms (all additive) |
+| `lib/data/protocolReference.ts` (new) | 11 injection sites, 30+ lab-marker catalog w/ editable ranges, published half-life table (source-noted, estimates-only banner) |
+| `lib/engine/protocols.ts` + test (new) | schedule expansion, site rotation (LRU rest scoring), vial inventory (entered-dose unit display only), adherence %, estimated-level decay curve, lab status chips |
+| `lib/engine/coachGuardrails.ts` + test (new) | PROTOCOL_COACH_RAIL (§6.0.3 blocklist), protocolDeflection, red-team fixtures in CI |
+| storage | adapter CRUD (doses/labs in large store), PROTOCOL_COLLECTIONS sync-exclusion registry (local-only mode); no new SQL — rides the generic sync tables |
+| `app/(app)/protocols/` + `components/protocols/` (new) | instrument surface: one-tap dose log, body map, inventory, labs trends + range bands, level curve, doctor report (print pattern, free), WebAuthn lock |
+| Settings + nav + sw.js | opt-in enable with prescribed-and-supervised confirmation; MORE_DESTINATIONS entry only when enabled; SHELL_ROUTES + VERSION |
+| LifeGraph + coach | dose-day/symptom behavioral signals w/ prescriber framing; behavioral-only coach context fields |
+
+## Phase 7 — Subscriptions (after 6)
+
+| Touch | What |
+|---|---|
+| `supabase/migrations/0004_subscriptions.sql` (new) | subscriptions + ai_usage (service-role only) |
+| `app/api/stripe/webhook` + `checkout` (new) | signature-verified events → tier rows; Checkout session w/ 7-day trial; 404 unconfigured |
+| `lib/server/entitlements.ts` (new) | resolveTier(request) w/ graceful fallbacks (unconfigured ⇒ current keyless behavior) |
+| AI routes | coach Pro+ (Elite → COACH_MODEL_ELITE ?? claude-opus-4-8), photo quotas (Free 3/mo, Pro 150/mo via ai_usage), lab import Pro+ |
+| `lib/engine/subscription.ts` + test (new) | row→tier mapping w/ period-end grace, month quota math |
+| client | Free/Pro/Elite feature map (UX only), Settings subscription card (env-gated checkout), non-destructive downgrade copy, /api/entitlements |
