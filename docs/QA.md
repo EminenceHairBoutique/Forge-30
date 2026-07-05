@@ -53,3 +53,11 @@ strength of this file alone.
       prefilled custom form. Web: no barcode button.
 - [ ] Adaptive target suggestion appears ONLY inside the Sunday review, caps at ±150 kcal,
       and changes the profile target only on explicit accept.
+
+## Phase 5 — Coach 2.0 (WAIT: AI key)
+- [ ] With ANTHROPIC_API_KEY (+ optional COACH_MODEL): live review returns 3–6 adaptive
+      sections; scoreExplanation opens by closing yesterday's loop; Sunday returns weeklyArc.
+- [ ] Old stored 8-part reviews still render (legacy field map) next to new adaptive ones.
+- [ ] Pattern shown on the Patterns card does not re-surface within 7 days; the coach can
+      still reference it (context ≠ surfacing).
+- [ ] Coaching Style retake visibly shifts the live coach's register (directness/structure).

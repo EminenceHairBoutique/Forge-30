@@ -57,7 +57,19 @@ export interface CoachInput {
   /** Social isolation signal flagged (long quiet stretch; see socialRules). */
   isolationFlagged?: boolean;
   /** Days since the last logged reach-out; null = none logged yet. */
-  daysSinceOutreach?: number | null;
+  daysSinceOutreach?: number | null;  // --- Coach 2.0 memory (v3 Phase 5) — all optional/additive ---------------
+  /** Trailing-30-day compressed summary (~1KB, computed locally). */
+  summary30d?: Summary30d;
+  /** Last 7 reviews' #1 priorities with the following day's outcome data. */
+  followThrough?: FollowThroughEntry[];
+  streakCurrent?: number;
+  streakFreezes?: number;
+  /** Current LifeGraph pattern lines (max 2, plain English). */
+  patterns?: string[];
+  /** Coaching Style & Values preferences — tone dials, never scores. */
+  coachStyle?: CoachStylePrefs | null;
+  /** Sunday: the review becomes the weekly arc. */
+  isSunday?: boolean;
 }
 
 export interface CoachReview {
@@ -74,6 +86,123 @@ export interface CoachReview {
   /** Relationships & social read (E15): repair + connection nudges. */
   relationshipSocialAdjustment: string;
 }
+
+// ---------------------------------------------------------------------------
+// Coach 2.0 (v3 Phase 5): memory types + the adaptive review shape.
+// ---------------------------------------------------------------------------
+
+export interface Summary30d {
+  daysLogged: number;
+  avgScore: number | null;
+  workoutDays: number;
+  proteinHitRate: number | null;
+  avgSleep: number | null;
+  avgStress: number | null;
+  journalDays: number;
+  skillMinutes: number;
+  overspendDays: number;
+}
+
+export interface FollowThroughEntry {
+  date: string;
+  priority: string;
+  /** The next day's data — the coach states the outcome, adherence-neutral. */
+  nextDayLogged: boolean;
+  nextDayScore: number | null;
+}
+
+export interface CoachStylePrefs {
+  directness: "low" | "balanced" | "high";
+  structure: "low" | "balanced" | "high";
+  push: "low" | "balanced" | "high";
+  dataOrientation: "low" | "balanced" | "high";
+}
+
+/** Every legal adaptive section key: the classic eight + the two new reads. */
+export const ADAPTIVE_SECTION_KEYS = [
+  "scoreExplanation",
+  "wentWell",
+  "slipped",
+  "physicalAdjustment",
+  "nutritionAdjustment",
+  "moneyAdjustment",
+  "mentalAdjustment",
+  "healthAdjustment",
+  "relationshipSocialAdjustment",
+  "patternInsight",
+  "weeklyArc",
+] as const;
+
+export type AdaptiveSectionKey = (typeof ADAPTIVE_SECTION_KEYS)[number];
+
+export interface AdaptiveReview {
+  sections: { key: AdaptiveSectionKey; text: string }[];
+  tomorrowPriority: string;
+}
+
+export const MIN_ADAPTIVE_SECTIONS = 3;
+export const MAX_ADAPTIVE_SECTIONS = 6;
+
+/**
+ * Deterministic adaptive selection over a full legacy review: only the
+ * sections that earned their place today, 3–6 of them, in a stable order.
+ * The mock path and the live-fallback path both use this, so old and new
+ * engines emit the same shape.
+ */
+export function adaptiveFromLegacy(review: CoachReview, input: CoachInput): AdaptiveReview {
+  const sections: { key: AdaptiveSectionKey; text: string }[] = [];
+  const push = (key: AdaptiveSectionKey, text: string | undefined, earned: boolean) => {
+    if (earned && text && text.trim() !== "" && sections.length < MAX_ADAPTIVE_SECTIONS) {
+      sections.push({ key, text });
+    }
+  };
+
+  // The score read always earns its place; it opens with follow-through when
+  // yesterday's priority is known (the live prompt does the same).
+  push("scoreExplanation", review.scoreExplanation, true);
+  // Weekly arc owns Sunday; pattern insight rides any day a pattern exists.
+  push("weeklyArc", weeklyArcText(input), input.isSunday === true && !!input.summary30d);
+  push("patternInsight", input.patterns?.[0], (input.patterns?.length ?? 0) > 0);
+  push("wentWell", review.wentWell, input.forgeScore > 0 || input.hardDay);
+  push("slipped", review.slipped, input.scoreState === "final" && !input.hardDay);
+
+  // One or two domain adjustments, picked by the day's largest gaps.
+  const gaps: Array<{ key: AdaptiveSectionKey; text: string; weight: number }> = [
+    { key: "healthAdjustment", text: review.healthAdjustment, weight: input.bpCrisis ? 100 : (input.elevatedBpCount ?? 0) > 1 ? 40 : 0 },
+    { key: "nutritionAdjustment", text: review.nutritionAdjustment, weight: Math.max(0, input.proteinTarget - input.protein) / 10 + Math.max(0, input.calorieTarget - input.calories) / 200 },
+    { key: "physicalAdjustment", text: review.physicalAdjustment, weight: input.sessionPainScore > 4 ? 30 : input.workoutStatus === "none" ? 8 : 2 },
+    { key: "moneyAdjustment", text: review.moneyAdjustment, weight: input.unnecessarySpend > input.dailySpendingLimit ? 25 : 1 },
+    { key: "mentalAdjustment", text: review.mentalAdjustment, weight: input.stress >= 7 ? 20 : input.mood > 0 && input.mood <= 3 ? 15 : 1 },
+    { key: "relationshipSocialAdjustment", text: review.relationshipSocialAdjustment, weight: input.conflictUnrepaired ? 22 : input.isolationFlagged ? 12 : 0 },
+  ];
+  for (const g of gaps.sort((a, b) => b.weight - a.weight)) {
+    if (sections.length >= MAX_ADAPTIVE_SECTIONS) break;
+    push(g.key, g.text, g.weight >= 5);
+  }
+  // Floor: never fewer than three sections — fill with the strongest leftovers.
+  for (const g of gaps.sort((a, b) => b.weight - a.weight)) {
+    if (sections.length >= MIN_ADAPTIVE_SECTIONS) break;
+    if (!sections.some((x) => x.key === g.key)) push(g.key, g.text, true);
+  }
+
+  return { sections, tomorrowPriority: review.tomorrowPriority };
+}
+
+/** Deterministic Sunday weekly-arc line from the 30-day summary (mock path). */
+export function weeklyArcText(input: CoachInput): string {
+  const s = input.summary30d;
+  if (!s) return "";
+  const scoreTxt = s.avgScore !== null ? `average score ${s.avgScore}` : "score still building";
+  const strongest = input.patterns?.[0];
+  return (
+    `The week in one arc: ${s.daysLogged} days logged, ${s.workoutDays} training days, ` +
+    `${scoreTxt}, protein hit ${s.proteinHitRate !== null ? Math.round(s.proteinHitRate * 100) + "%" : "—"} of days. ` +
+    (strongest ? `Strongest pattern: ${strongest} ` : "") +
+    `One thing to drop: whatever cost the most with the least return this week. ` +
+    `One thing to double down on: the single habit that held every hard day.`
+  );
+}
+
 
 /**
  * Health part (E15). Crisis copy is a genuine safety signal: it wins over

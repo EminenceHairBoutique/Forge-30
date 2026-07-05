@@ -318,3 +318,39 @@ function daysBefore(today: ISODate, date: ISODate): number {
     (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${date}T00:00:00Z`)) / 86400000
   );
 }
+
+// ---------------------------------------------------------------------------
+// Surfacing discipline (v3 Phase 5): no pattern shows twice in one week.
+// The card marks what it showed; the filter hides anything shown in the
+// trailing cooldown. Pure — the adapter stores the log.
+// ---------------------------------------------------------------------------
+
+export const PATTERN_REPEAT_COOLDOWN_DAYS = 7;
+
+/** patternId → the date it last surfaced on a user-facing card. */
+export type PatternSurfaceLog = Record<string, ISODate>;
+
+export function filterRecentlySurfaced(
+  patterns: DetectedPattern[],
+  log: PatternSurfaceLog,
+  today: ISODate
+): DetectedPattern[] {
+  return patterns.filter((p) => {
+    const last = log[p.id];
+    // A pattern surfaced *today* is currently on screen — still visible;
+    // the cooldown hides it starting tomorrow through day 6.
+    if (last === undefined || last === today) return true;
+    return daysBefore(today, last) >= PATTERN_REPEAT_COOLDOWN_DAYS;
+  });
+}
+
+/** The updated log after showing `patterns` today. Idempotent per day. */
+export function markSurfaced(
+  log: PatternSurfaceLog,
+  patterns: DetectedPattern[],
+  today: ISODate
+): PatternSurfaceLog {
+  const next = { ...log };
+  for (const p of patterns) next[p.id] = today;
+  return next;
+}

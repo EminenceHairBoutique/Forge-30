@@ -278,3 +278,27 @@ describe("buildDays flag extraction", () => {
     expect(gated[0]!.flags.lonelyDay).toBeUndefined();
   });
 });
+
+// --- No-repeat surfacing (v3 Phase 5) ---------------------------------------------
+
+import { filterRecentlySurfaced, markSurfaced } from "./lifeGraph";
+
+describe("pattern no-repeat rule", () => {
+  const pattern = (id: string) =>
+    ({ id, window: 30, qualifyingDays: 10, hits: 8, share: 0.8, line: "x", journalInformed: false }) as const;
+
+  it("hides a pattern surfaced within the 7-day cooldown and re-allows it after", () => {
+    const log = { a: "2026-07-01" };
+    expect(filterRecentlySurfaced([pattern("a")], log, "2026-07-05")).toHaveLength(0);
+    expect(filterRecentlySurfaced([pattern("a")], log, "2026-07-08")).toHaveLength(1);
+    expect(filterRecentlySurfaced([pattern("b")], log, "2026-07-05")).toHaveLength(1);
+    // Surfaced today = still on screen, not suppressed by its own mark.
+    expect(filterRecentlySurfaced([pattern("a")], { a: "2026-07-05" }, "2026-07-05")).toHaveLength(1);
+  });
+
+  it("markSurfaced stamps today per pattern and is idempotent", () => {
+    const log = markSurfaced({}, [pattern("a"), pattern("b")], "2026-07-05");
+    expect(log).toEqual({ a: "2026-07-05", b: "2026-07-05" });
+    expect(markSurfaced(log, [pattern("a")], "2026-07-05")).toEqual(log);
+  });
+});

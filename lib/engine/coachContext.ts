@@ -8,7 +8,13 @@ import { resolveScoreState } from "./forgeScore";
 import { missedRecentDays } from "./streaks";
 import { notesForConsumer, themesForCoach } from "./journalRules";
 import { isolationSignal } from "./socialRules";
-import type { CoachInput } from "./mockCoach";
+import type {
+  CoachInput,
+  CoachStylePrefs,
+  FollowThroughEntry,
+  Summary30d,
+} from "./mockCoach";
+import type { AIReview, AssessmentResult, DailyLog } from "@/lib/types";
 
 /**
  * 7-day weight movement for the coach: the EWMA-smoothed change when the
@@ -25,6 +31,70 @@ function smoothedWeekTrend(metrics: Parameters<typeof calculateWeightTrend>[0]):
 }
 
 /**
+ * Trailing-30-day compressed summary (v3 Phase 5) — small enough to ride in
+ * every coach call (~1KB), computed locally from what's actually logged.
+ * Pure and tested.
+ */
+export function compress30d(logs: DailyLog[], proteinTarget: number, spendLimit: number): Summary30d {
+  const scored = logs.filter((l) => l.forgeScore > 0);
+  const sleeps = logs.map((l) => l.sleepHours).filter((v) => v > 0);
+  const stresses = logs.map((l) => l.stress).filter((v) => v > 0);
+  const withMeals = logs.filter((l) => l.calories > 0);
+  const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
+  return {
+    daysLogged: logs.filter((l) => l.calories > 0 || l.mood > 0 || l.workoutStatus !== "notStarted").length,
+    avgScore: scored.length ? Math.round(scored.reduce((a, l) => a + l.forgeScore, 0) / scored.length) : null,
+    workoutDays: logs.filter((l) => l.workoutStatus === "complete").length,
+    proteinHitRate: withMeals.length
+      ? Math.round((withMeals.filter((l) => l.protein >= proteinTarget * 0.9).length / withMeals.length) * 100) / 100
+      : null,
+    avgSleep: avg(sleeps),
+    avgStress: avg(stresses),
+    journalDays: logs.filter((l) => l.journalDone).length,
+    skillMinutes: logs.reduce((a, l) => a + l.skillMinutes, 0),
+    // Days the spending check was skipped entirely — visibility, not judgment.
+    overspendDays: spendLimit >= 0 ? logs.filter((l) => !l.spendingChecked).length : 0,
+  };
+}
+
+/**
+ * The follow-through loop (v3 Phase 5): the last 7 reviews' #1 priorities
+ * paired with the FOLLOWING day's outcome data. The coach states what the
+ * data shows — adherence-neutral, no verdicts beyond the numbers. Pure.
+ */
+export function buildFollowThrough(reviews: AIReview[], logs: DailyLog[]): FollowThroughEntry[] {
+  const byDate = new Map(logs.map((l) => [l.date, l]));
+  return [...reviews]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 7)
+    .map((r) => {
+      const next = byDate.get(addDays(r.date, 1));
+      return {
+        date: r.date,
+        priority: r.tomorrowPriority,
+        nextDayLogged: !!next && (next.calories > 0 || next.mood > 0 || next.workoutStatus !== "notStarted"),
+        nextDayScore: next && next.forgeScore > 0 ? next.forgeScore : null,
+      };
+    });
+}
+
+/** Coaching Style result → tone dials for the prompt (preferences, never scores). */
+export function coachStyleFromResults(results: AssessmentResult[]): CoachStylePrefs | null {
+  const latest = [...results]
+    .filter((r) => r.assessmentId === "coachingStyle")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  if (!latest) return null;
+  const band = (key: string): "low" | "balanced" | "high" =>
+    latest.traits.find((t) => t.key === key)?.band ?? "balanced";
+  return {
+    directness: band("directness"),
+    structure: band("structure"),
+    push: band("push"),
+    dataOrientation: band("dataOrientation"),
+  };
+}
+
+/**
  * Builds the structured summary of today + trailing 7-day trends that feeds
  * both the mock engine and the live /api/coach route. Runs on the client,
  * because all data lives in the client-side StorageAdapter.
@@ -35,7 +105,7 @@ export async function buildCoachInput(
   profile: UserProfile
 ): Promise<CoachInput> {
   const snap = await syncDailyLog(adapter, date, profile);
-  const [workout, metrics, skillsRecent, journalConsent, bpWeek, debriefs, outreach, weekLogs] =
+  const [workout, metrics, skillsRecent, journalConsent, bpWeek, debriefs, outreach, weekLogs, monthLogs, recentReviews, dailyStreak, assessmentResults] =
     await Promise.all([
       adapter.getWorkout(date),
       adapter.listBodyMetrics(addDays(date, -6), date),
@@ -45,6 +115,10 @@ export async function buildCoachInput(
       adapter.listConflictDebriefs(),
       adapter.listOutreach(addDays(date, -30), date),
       adapter.listDailyLogs(addDays(date, -6), date),
+      adapter.listDailyLogs(addDays(date, -29), date),
+      adapter.listAIReviews(addDays(date, -8), addDays(date, -1)),
+      adapter.getStreak("daily"),
+      adapter.listAssessmentResults(),
     ]);
 
   // Health signals (E15): counts only — categorization language stays in the
@@ -119,5 +193,12 @@ export async function buildCoachInput(
     conflictUnrepaired,
     isolationFlagged: isolation.flagged,
     daysSinceOutreach: isolation.daysSinceOutreach,
+    // Coach 2.0 memory (v3 Phase 5)
+    summary30d: compress30d(monthLogs, profile.proteinTarget, profile.dailySpendingLimit),
+    followThrough: buildFollowThrough(recentReviews, monthLogs),
+    streakCurrent: dailyStreak?.current ?? 0,
+    streakFreezes: dailyStreak?.freezes ?? 0,
+    coachStyle: coachStyleFromResults(assessmentResults),
+    isSunday: new Date(`${date}T12:00:00`).getDay() === 0,
   };
 }

@@ -85,6 +85,7 @@ const KEYS = {
   moneySettings: `${PREFIX}:moneySettings`,
   pendingPurchases: `${PREFIX}:pendingPurchases`,
   foodCache: `${PREFIX}:foodCache`,
+  patternLog: `${PREFIX}:patternLog`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -796,6 +797,15 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async saveSocialSettings(s: SocialSettings): Promise<void> {
     write(KEYS.socialSettings, s);
+  }
+
+  // -- LifeGraph surfacing log (v3 Phase 5) -------------------------------------------
+  async getPatternLog(): Promise<Record<string, ISODate>> {
+    return read<Record<string, ISODate>>(KEYS.patternLog, {});
+  }
+
+  async savePatternLog(log: Record<string, ISODate>): Promise<void> {
+    write(KEYS.patternLog, log);
   }
 
   // -- Food cache + meal photos (v3 Phase 4) -----------------------------------------

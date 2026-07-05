@@ -26,8 +26,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CoachModePanel } from "@/components/coach/CoachModePanel";
+import {
+  adaptiveFromLegacy,
+  type AdaptiveReview,
+  type AdaptiveSectionKey,
+} from "@/lib/engine/mockCoach";
 import { COACH_MODES, type CoachModeId } from "@/lib/engine/coachModes";
 import { apiUrl } from "@/lib/api";
+import { loadPatterns } from "@/lib/hooks/usePatterns";
 
 const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] = [
   { key: "scoreExplanation", label: "Today's score", icon: Gauge },
@@ -43,6 +49,21 @@ const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] 
   // Content supplies the timeframe ("Tomorrow's #1" / "Rest of today's #1").
   { key: "tomorrowPriority", label: "#1 priority", icon: Target },
 ];
+
+// v3 Phase 5: labels/icons for adaptive sections (the legacy map + two new).
+const ADAPTIVE_META: Record<AdaptiveSectionKey, { label: string; icon: typeof Gauge }> = {
+  scoreExplanation: { label: "Today's score", icon: Gauge },
+  wentWell: { label: "What went well", icon: ThumbsUp },
+  slipped: { label: "What slipped", icon: TrendingDown },
+  physicalAdjustment: { label: "Physical adjustment", icon: Dumbbell },
+  nutritionAdjustment: { label: "Nutrition adjustment", icon: UtensilsCrossed },
+  moneyAdjustment: { label: "Money adjustment", icon: Wallet },
+  mentalAdjustment: { label: "Mental adjustment", icon: Brain },
+  healthAdjustment: { label: "Health", icon: HeartPulse },
+  relationshipSocialAdjustment: { label: "Relationships & social", icon: Users },
+  patternInsight: { label: "Pattern insight", icon: Sparkles },
+  weeklyArc: { label: "The week, in one card", icon: Target },
+};
 
 export default function CoachPage() {
   const { adapter, profile, touch } = useStorage();
@@ -81,9 +102,19 @@ export default function CoachPage() {
     setLoading(true);
     try {
       const input = await buildCoachInput(adapter, today, profile);
+      // Current LifeGraph patterns feed the coach context (max 2 lines).
+      // Context isn't "surfacing" — the Patterns card owns the no-repeat log.
+      try {
+        const patterns = await loadPatterns(adapter, profile, today);
+        input.patterns = patterns.slice(0, 2).map((pt) => pt.line);
+      } catch {
+        input.patterns = [];
+      }
 
-      // Try the live engine; fall back to the deterministic mock on any error.
-      let content: CoachReview | null = null;
+      // Try the live engine (adaptive shape); fall back to the deterministic
+      // mock on any error — converted through the same adaptive selector so
+      // both engines emit the same shape (v3 Phase 5).
+      let adaptive: AdaptiveReview | null = null;
       let source: AIReview["source"] = "mock";
       try {
         const res = await fetch(apiUrl("/api/coach"), {
@@ -92,17 +123,26 @@ export default function CoachPage() {
           body: JSON.stringify(input),
         });
         if (res.ok) {
-          const data = (await res.json()) as { review?: CoachReview };
-          if (data.review?.tomorrowPriority) {
-            content = data.review;
+          const data = (await res.json()) as { review?: AdaptiveReview };
+          if (data.review?.tomorrowPriority && Array.isArray(data.review.sections)) {
+            adaptive = data.review;
             source = "live";
           }
         }
       } catch {
         // Network/route failure — mock below.
       }
-      if (!content) content = generateMockAIFeedback(input);
+      const legacy = generateMockAIFeedback(input);
+      if (!adaptive) adaptive = adaptiveFromLegacy(legacy, input);
 
+      // Persist BOTH shapes: sections drive rendering; the legacy fields keep
+      // the stored type stable (rule 6) and pre-v3 readers working. Legacy
+      // fields come from matching sections, mock text filling any gap.
+      const legacyFields = Object.fromEntries(
+        adaptive.sections
+          .filter((sec) => sec.key !== "patternInsight" && sec.key !== "weeklyArc")
+          .map((sec) => [sec.key, sec.text])
+      );
       const saved: AIReview = {
         id: review?.id ?? uid(),
         date: today,
@@ -110,7 +150,10 @@ export default function CoachPage() {
         // Consented journal themes shaped this review → attribution shows (E6).
         journalInformed: input.journalThemes.length > 0,
         createdAt: new Date().toISOString(),
-        ...content,
+        ...legacy,
+        ...legacyFields,
+        tomorrowPriority: adaptive.tomorrowPriority,
+        sections: adaptive.sections,
       };
       await adapter.saveAIReview(saved);
       setReview(saved);
@@ -175,7 +218,41 @@ export default function CoachPage() {
 
           {review && (
             <div className="flex flex-col gap-3">
-              {SECTIONS.filter(({ key }) => review[key]).map(({ key, label, icon: Icon }) => (
+              {review.sections
+                ? [
+                    ...review.sections.map((sec) => {
+                      const meta = ADAPTIVE_META[sec.key as AdaptiveSectionKey] ?? {
+                        label: sec.key,
+                        icon: Gauge,
+                      };
+                      const Icon = meta.icon;
+                      const isArc = sec.key === "weeklyArc";
+                      return (
+                        <Card
+                          key={sec.key}
+                          className={
+                            isArc
+                              ? "notch-corner border-(--stroke-active) bg-gold/5 p-5"
+                              : "p-4"
+                          }
+                        >
+                          <p className={`flex items-center gap-2 microlabel ${isArc ? "text-gold" : "text-muted"}`}>
+                            <Icon className="size-3.5 text-gold" /> {meta.label}
+                          </p>
+                          <p className={`mt-1.5 leading-relaxed text-ivory ${isArc ? "text-base" : "text-sm"}`}>
+                            {sec.text}
+                          </p>
+                        </Card>
+                      );
+                    }),
+                    <Card key="tomorrowPriority" className="notch-corner border-gold/40 bg-gold/5 p-4">
+                      <p className="flex items-center gap-2 microlabel text-muted">
+                        <Target className="size-3.5 text-gold" /> #1 priority
+                      </p>
+                      <p className="mt-1.5 text-sm leading-relaxed text-ivory">{review.tomorrowPriority}</p>
+                    </Card>,
+                  ]
+                : SECTIONS.filter(({ key }) => review[key]).map(({ key, label, icon: Icon }) => (
                 <Card
                   key={key}
                   className={key === "tomorrowPriority" ? "notch-corner border-gold/40 bg-gold/5 p-4" : "p-4"}

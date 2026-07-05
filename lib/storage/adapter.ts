@@ -181,6 +181,10 @@ export interface StorageAdapter {
   getSocialSettings(): Promise<SocialSettings>;
   saveSocialSettings(s: SocialSettings): Promise<void>;
 
+  // LifeGraph surfacing log (v3 Phase 5 — no pattern repeats within a week)
+  getPatternLog(): Promise<Record<string, ISODate>>;
+  savePatternLog(log: Record<string, ISODate>): Promise<void>;
+
   // Food cache + meal photos (v3 Phase 4)
   listFoodCache(): Promise<CachedFood[]>;
   saveFoodCacheItem(item: CachedFood): Promise<void>;

@@ -982,6 +982,12 @@ export interface AIReview {
   /** E15 additions — optional so pre-E15 persisted reviews stay valid. */
   healthAdjustment?: string;
   relationshipSocialAdjustment?: string;
+  /**
+   * Adaptive sections (v3 Phase 5): only the 3–6 parts that earned their
+   * place, in coach order. Old 8-part reviews simply lack this and render
+   * through the legacy field map — both shapes stay valid forever.
+   */
+  sections?: { key: string; text: string }[];
   createdAt: ISODateTime;
 }
 
