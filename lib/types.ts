@@ -244,6 +244,11 @@ export interface DailyLog {
   hardDay?: boolean;
   /** Morning Plan card dismissed for this date. */
   morningPlanSeen?: boolean;
+  /**
+   * Protocol side-effect tags (v3 Phase 6) — render ONLY when Protocols is
+   * enabled. Patient-record observations, severity 1–5; never interpreted.
+   */
+  protocolSymptoms?: ProtocolSymptom[];
 }
 
 /**
@@ -989,6 +994,104 @@ export interface AIReview {
    */
   sections?: { key: string; text: string }[];
   createdAt: ISODateTime;
+}
+
+// ---------------------------------------------------------------------------
+// Protocols (v3 Phase 6) — prescribed-therapy patient records. Hard rails
+// (V3_SPEC §6.0, DECISIONS.md §9): the app records what the user's provider
+// prescribed and what the user did — it never recommends, calculates, or
+// adjusts anything. All fields are user-entered from their pharmacy label.
+// ---------------------------------------------------------------------------
+
+export type CompoundCategory = "trt" | "hgh" | "peptide" | "glp1" | "ancillary";
+export type CompoundForm = "injection" | "gel" | "patch" | "pellet" | "oral";
+
+export interface Compound {
+  id: string;
+  /** As printed on the pharmacy label. */
+  name: string;
+  category: CompoundCategory;
+  form: CompoundForm;
+  /** Label concentration, e.g. 200 mg/mL — user-entered, display math only. */
+  labelConcentration: number | null;
+  concentrationUnit: string;
+  /** Vial volume in mL (injectables) — drives the inventory countdown. */
+  vialVolumeMl: number | null;
+  /** Published half-life in hours; prefilled from the reference table, user-editable. */
+  halfLifeHours: number | null;
+  expiryDate: ISODate | null;
+  /** The prescriber's instructions, verbatim — a record, never a computation input. */
+  prescriberNote: string;
+  createdAt: ISODateTime;
+}
+
+export type SchedulePattern = "daily" | "eod" | "e3_5d" | "weekly" | "custom";
+
+export interface ProtocolSchedule {
+  id: string;
+  compoundId: string;
+  pattern: SchedulePattern;
+  /** For weekly/custom: 0=Mon … 6=Sun. e3_5d alternates AM/PM twice weekly. */
+  customDays?: number[];
+  /** "HH:MM" local, for the reminder. */
+  timeOfDay: string;
+  /** Dose per administration as prescribed, in doseUnit. */
+  dose: number;
+  doseUnit: string;
+  /** Anchor date the pattern counts from. */
+  startDate: ISODate;
+  paused: boolean;
+  /** Auto-resume date when paused (provider-directed breaks). */
+  resumeDate: ISODate | null;
+}
+
+export interface DoseEvent {
+  id: string;
+  compoundId: string;
+  scheduleId: string | null;
+  dose: number;
+  doseUnit: string;
+  route: string;
+  /** Injection-site id from PROTOCOL_SITES; empty for non-injection forms. */
+  site: string;
+  timestamp: ISODateTime;
+  note: string;
+  updatedAt?: ISODateTime;
+}
+
+export interface LabMarkerValue {
+  name: string;
+  value: number;
+  unit: string;
+  refLow: number | null;
+  refHigh: number | null;
+}
+
+export interface LabPanel {
+  id: string;
+  date: ISODate;
+  /** Lab/source name, user-entered. */
+  source: string;
+  markers: LabMarkerValue[];
+  createdAt: ISODateTime;
+  updatedAt?: ISODateTime;
+}
+
+export interface ProtocolSymptom {
+  tag: "acne" | "waterRetention" | "nightSweats" | "gi" | "injectionSite";
+  /** 1–5 severity, self-reported. */
+  severity: number;
+}
+
+export interface ProtocolSettings {
+  enabled: boolean;
+  /** User confirmed the protocol is prescribed and provider-supervised (§6.0.1). */
+  prescribedConfirmed: boolean;
+  /** Keeps every protocol collection out of cloud sync entirely. */
+  localOnly: boolean;
+  /** WebAuthn gate on the tab (credential id lives on this device). */
+  lockEnabled: boolean;
+  lockCredentialId: string | null;
 }
 
 // ---------------------------------------------------------------------------

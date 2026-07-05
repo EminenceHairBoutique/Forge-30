@@ -8,7 +8,12 @@ import type {
   BodyMetric,
   CachedFood,
   ConflictDebrief,
+  Compound,
   CustomWorkoutPlan,
+  ProtocolSettings,
+  ProtocolSchedule,
+  LabPanel,
+  DoseEvent,
   DailyLog,
   DebtItem,
   HealthMarkerEntry,
@@ -180,6 +185,22 @@ export interface StorageAdapter {
   saveSocialReflection(r: SocialReflection): Promise<void>;
   getSocialSettings(): Promise<SocialSettings>;
   saveSocialSettings(s: SocialSettings): Promise<void>;
+
+  // Protocols (v3 Phase 6 — prescribed-therapy records; §6.0 rails apply)
+  getProtocolSettings(): Promise<ProtocolSettings>;
+  saveProtocolSettings(s: ProtocolSettings): Promise<void>;
+  listCompounds(): Promise<Compound[]>;
+  saveCompound(c: Compound): Promise<void>;
+  deleteCompound(id: string): Promise<void>;
+  listProtocolSchedules(): Promise<ProtocolSchedule[]>;
+  saveProtocolSchedule(s: ProtocolSchedule): Promise<void>;
+  deleteProtocolSchedule(id: string): Promise<void>;
+  listDoseEvents(from: ISODate, to: ISODate): Promise<DoseEvent[]>;
+  saveDoseEvent(d: DoseEvent): Promise<void>;
+  deleteDoseEvent(id: string): Promise<void>;
+  listLabPanels(): Promise<LabPanel[]>;
+  saveLabPanel(p: LabPanel): Promise<void>;
+  deleteLabPanel(id: string): Promise<void>;
 
   // LifeGraph surfacing log (v3 Phase 5 — no pattern repeats within a week)
   getPatternLog(): Promise<Record<string, ISODate>>;

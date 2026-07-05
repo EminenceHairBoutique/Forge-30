@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { AdaptiveReview, CoachInput } from "@/lib/engine/mockCoach";
 import { ADAPTIVE_SECTION_KEYS } from "@/lib/engine/mockCoach";
+import { PROTOCOL_COACH_RAIL } from "@/lib/engine/coachGuardrails";
 
 /**
  * Live AI Coach route. The client POSTs the day's structured summary (all
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       model: process.env.COACH_MODEL ?? "claude-sonnet-5",
       max_tokens: 2048,
       thinking: { type: "adaptive" },
-      system: SYSTEM_PROMPT,
+      system: `${SYSTEM_PROMPT}\n\n${PROTOCOL_COACH_RAIL}`,
       output_config: { format: { type: "json_schema", schema: REVIEW_SCHEMA } },
       messages: [
         {

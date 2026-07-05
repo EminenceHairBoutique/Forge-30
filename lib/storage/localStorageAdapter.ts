@@ -8,8 +8,13 @@ import type {
   BodyMetric,
   CachedFood,
   ConflictDebrief,
+  Compound,
   CustomWorkoutPlan,
   DailyLog,
+  DoseEvent,
+  LabPanel,
+  ProtocolSchedule,
+  ProtocolSettings,
   DebtItem,
   HealthMarkerEntry,
   ISODate,
@@ -86,6 +91,9 @@ const KEYS = {
   pendingPurchases: `${PREFIX}:pendingPurchases`,
   foodCache: `${PREFIX}:foodCache`,
   patternLog: `${PREFIX}:patternLog`,
+  protocolSettings: `${PREFIX}:protocolSettings`,
+  compounds: `${PREFIX}:compounds`,
+  protocolSchedules: `${PREFIX}:protocolSchedules`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -112,6 +120,35 @@ export function setWriteObserver(observer: WriteObserver | null): void {
   writeObserver = observer;
 }
 
+/**
+ * Sync-exclusion registry (v3 Phase 6, §6.0.5 local-only mode). Excluded
+ * collections never reach the write observer (so they never enqueue for
+ * cloud sync) and the SyncedAdapter's pull path drops their remote rows.
+ * `protocolSettings` is ALWAYS excluded — the privacy toggle itself never
+ * leaves the device; the other protocol collections join it when the user
+ * turns local-only mode on.
+ */
+export const PROTOCOL_COLLECTIONS = [
+  "compounds",
+  "protocolSchedules",
+  "doseEvents",
+  "labPanels",
+] as const;
+
+const ALWAYS_EXCLUDED = new Set<string>(["protocolSettings"]);
+let syncExcluded = new Set<string>(ALWAYS_EXCLUDED);
+
+export function setProtocolLocalOnly(localOnly: boolean): void {
+  syncExcluded = new Set<string>([
+    ...ALWAYS_EXCLUDED,
+    ...(localOnly ? PROTOCOL_COLLECTIONS : []),
+  ]);
+}
+
+export function isSyncExcluded(collection: string): boolean {
+  return syncExcluded.has(collection);
+}
+
 const COLLECTION_BY_KEY: Record<string, string> = {};
 
 function notifyWrite(key: string, value: unknown): void {
@@ -120,7 +157,9 @@ function notifyWrite(key: string, value: unknown): void {
     for (const [name, k] of Object.entries(KEYS)) COLLECTION_BY_KEY[k] = name;
   }
   const collection = COLLECTION_BY_KEY[key];
-  if (collection) writeObserver(collection, null, value, "upsert");
+  if (collection && !isSyncExcluded(collection)) {
+    writeObserver(collection, null, value, "upsert");
+  }
 }
 
 /** Reads every existing collection into a snapshot keyed by collection name. */
@@ -233,11 +272,11 @@ function observeLargeStore(store: ReturnType<typeof createLargeStore>): ReturnTy
     importAll: (data) => store.importAll(data),
     async put(collection, id, value) {
       await store.put(collection, id, value);
-      writeObserver?.(collection, id, value, "upsert");
+      if (!isSyncExcluded(collection)) writeObserver?.(collection, id, value, "upsert");
     },
     async delete(collection, id) {
       await store.delete(collection, id);
-      writeObserver?.(collection, id, null, "delete");
+      if (!isSyncExcluded(collection)) writeObserver?.(collection, id, null, "delete");
     },
   };
 }
@@ -797,6 +836,85 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async saveSocialSettings(s: SocialSettings): Promise<void> {
     write(KEYS.socialSettings, s);
+  }
+
+  // -- Protocols (v3 Phase 6 — prescribed-therapy records) ----------------------------
+  async getProtocolSettings(): Promise<ProtocolSettings> {
+    const s = read<ProtocolSettings | null>(KEYS.protocolSettings, null);
+    const settings =
+      s ?? { enabled: false, prescribedConfirmed: false, localOnly: false, lockEnabled: false, lockCredentialId: null };
+    setProtocolLocalOnly(settings.localOnly);
+    return settings;
+  }
+
+  async saveProtocolSettings(s: ProtocolSettings): Promise<void> {
+    setProtocolLocalOnly(s.localOnly);
+    write(KEYS.protocolSettings, s);
+  }
+
+  async listCompounds(): Promise<Compound[]> {
+    return read<Compound[]>(KEYS.compounds, []);
+  }
+
+  async saveCompound(c: Compound): Promise<void> {
+    const list = read<Compound[]>(KEYS.compounds, []).filter((x) => x.id !== c.id);
+    write(KEYS.compounds, [...list, c]);
+  }
+
+  async deleteCompound(id: string): Promise<void> {
+    write(KEYS.compounds, read<Compound[]>(KEYS.compounds, []).filter((x) => x.id !== id));
+    // Schedules for a deleted compound go with it; dose history stays (a record).
+    write(
+      KEYS.protocolSchedules,
+      read<ProtocolSchedule[]>(KEYS.protocolSchedules, []).filter((x) => x.compoundId !== id)
+    );
+  }
+
+  async listProtocolSchedules(): Promise<ProtocolSchedule[]> {
+    return read<ProtocolSchedule[]>(KEYS.protocolSchedules, []);
+  }
+
+  async saveProtocolSchedule(s: ProtocolSchedule): Promise<void> {
+    const list = read<ProtocolSchedule[]>(KEYS.protocolSchedules, []).filter((x) => x.id !== s.id);
+    write(KEYS.protocolSchedules, [...list, s]);
+  }
+
+  async deleteProtocolSchedule(id: string): Promise<void> {
+    write(
+      KEYS.protocolSchedules,
+      read<ProtocolSchedule[]>(KEYS.protocolSchedules, []).filter((x) => x.id !== id)
+    );
+  }
+
+  async listDoseEvents(from: ISODate, to: ISODate): Promise<DoseEvent[]> {
+    const all = await this.large.list<DoseEvent>("doseEvents");
+    return Object.values(all)
+      .filter((d) => {
+        const day = d.timestamp.slice(0, 10);
+        return day >= from && day <= to;
+      })
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  }
+
+  async saveDoseEvent(d: DoseEvent): Promise<void> {
+    await this.large.put("doseEvents", d.id, { ...d, updatedAt: new Date().toISOString() });
+  }
+
+  async deleteDoseEvent(id: string): Promise<void> {
+    await this.large.delete("doseEvents", id);
+  }
+
+  async listLabPanels(): Promise<LabPanel[]> {
+    const all = await this.large.list<LabPanel>("labPanels");
+    return Object.values(all).sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async saveLabPanel(p: LabPanel): Promise<void> {
+    await this.large.put("labPanels", p.id, { ...p, updatedAt: new Date().toISOString() });
+  }
+
+  async deleteLabPanel(id: string): Promise<void> {
+    await this.large.delete("labPanels", id);
   }
 
   // -- LifeGraph surfacing log (v3 Phase 5) -------------------------------------------

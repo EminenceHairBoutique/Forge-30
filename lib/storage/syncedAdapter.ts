@@ -9,6 +9,7 @@ import {
 } from "@/lib/engine/sync";
 import { uid } from "@/lib/utils";
 import {
+  isSyncExcluded,
   LocalStorageAdapter,
   setWriteObserver,
   snapshotCollections,
@@ -164,6 +165,7 @@ export class SyncedAdapter extends LocalStorageAdapter {
   private async migrateLocalToCloud(): Promise<void> {
     const now = new Date().toISOString();
     for (const [collection, value] of Object.entries(snapshotCollections())) {
+      if (isSyncExcluded(collection)) continue;
       this.meta.blobUpdatedAt[collection] ??= now;
       this.outbox = enqueue(this.outbox, {
         id: uid(),
@@ -176,6 +178,7 @@ export class SyncedAdapter extends LocalStorageAdapter {
     }
     const large = await this.large.exportAll();
     for (const [collection, rows] of Object.entries(large)) {
+      if (isSyncExcluded(collection)) continue;
       for (const [rowId, data] of Object.entries(rows)) {
         this.outbox = enqueue(this.outbox, {
           id: uid(),
@@ -276,6 +279,8 @@ export class SyncedAdapter extends LocalStorageAdapter {
         for (const row of blobRows ?? []) {
           const collection = row.collection as string;
           const remoteAt = new Date(row.updated_at as string).toISOString();
+          // Local-only collections (§6.0.5) never apply from the cloud.
+          if (isSyncExcluded(collection)) continue;
           if (pendingBlobs.has(collection)) continue;
           const localAt = this.meta.blobUpdatedAt[collection] ?? "";
           if (remoteAt > localAt) {
@@ -307,6 +312,7 @@ export class SyncedAdapter extends LocalStorageAdapter {
         for (const row of largeRows ?? []) {
           const collection = row.collection as string;
           const rowId = row.row_id as string;
+          if (isSyncExcluded(collection)) continue;
           if (pendingRows.has(`${collection}:${rowId}`)) continue;
           if (row.deleted) await this.large.delete(collection, rowId);
           else await this.large.put(collection, rowId, row.data);
