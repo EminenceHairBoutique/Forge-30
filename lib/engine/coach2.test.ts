@@ -183,6 +183,7 @@ describe("coach memory builders", () => {
         speedFlag: false,
         confidence: 100,
         confidenceLevel: "high",
+        notes: [],
       },
       createdAt,
     });
