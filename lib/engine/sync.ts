@@ -1,0 +1,101 @@
+/**
+ * Pure sync engine (v3 Phase 1): outbox bookkeeping and last-write-wins merge
+ * for the offline-first SyncedAdapter. No network, no storage, no Date.now()
+ * — the adapter supplies timestamps; this module supplies the rules, so every
+ * rule is unit-testable.
+ *
+ * Granularity: localStorage collections sync as one blob-row per collection
+ * (`rowId: null`); IndexedDB (large-store) collections sync per record
+ * (`rowId: <recordId>`). LWW compares ISO-8601 `updatedAt` strings — string
+ * comparison is chronological for this format. Ties keep local (the device
+ * you're holding wins over an equally-old remote copy).
+ */
+
+export interface OutboxEntry {
+  /** Stable id for flush bookkeeping. */
+  id: string;
+  collection: string;
+  /** null = whole-collection blob; string = individual large-store record. */
+  rowId: string | null;
+  op: "upsert" | "delete";
+  /** Payload for upserts; ignored for deletes. */
+  data: unknown;
+  updatedAt: string;
+}
+
+/** A synced row as it exists locally or remotely, for merge decisions. */
+export interface SyncRow {
+  data: unknown;
+  updatedAt: string;
+}
+
+const rowKey = (collection: string, rowId: string | null) => `${collection} ${rowId ?? ""}`;
+
+/**
+ * Add an entry to the outbox. Dedupe is last-write-wins per
+ * (collection,rowId): a newer write replaces any pending one for the same
+ * row, keeping its position at the END of the queue (the row's final state
+ * is what syncs; ordering across different rows is preserved).
+ */
+export function enqueue(outbox: OutboxEntry[], entry: OutboxEntry): OutboxEntry[] {
+  const key = rowKey(entry.collection, entry.rowId);
+  return [...outbox.filter((e) => rowKey(e.collection, e.rowId) !== key), entry];
+}
+
+/** First `limit` entries to flush, plus the untouched remainder. */
+export function takeBatch(
+  outbox: OutboxEntry[],
+  limit: number
+): { batch: OutboxEntry[]; rest: OutboxEntry[] } {
+  return { batch: outbox.slice(0, limit), rest: outbox.slice(limit) };
+}
+
+/**
+ * Partial-flush recovery: entries that failed to flush return to the FRONT
+ * of the queue (they were the oldest work), unless a newer write for the
+ * same row landed in `rest` while the flush was in flight — the newer write
+ * supersedes the failed one.
+ */
+export function requeueFailed(rest: OutboxEntry[], failed: OutboxEntry[]): OutboxEntry[] {
+  const superseded = new Set(rest.map((e) => rowKey(e.collection, e.rowId)));
+  const retry = failed.filter((e) => !superseded.has(rowKey(e.collection, e.rowId)));
+  return [...retry, ...rest];
+}
+
+/** Last-write-wins: strictly-newer remote replaces local; ties keep local. */
+export function pickWinner(local: SyncRow | null, remote: SyncRow): "local" | "remote" {
+  if (local === null) return "remote";
+  return remote.updatedAt > local.updatedAt ? "remote" : "local";
+}
+
+/**
+ * Merge a pulled page of rows against local state. Returns only the rows the
+ * caller must write locally (remote won) — everything else is a no-op.
+ * `pendingRows` are rows with unflushed local writes; they always keep local
+ * (the outbox will push them; letting a pull clobber an unpushed write would
+ * lose data).
+ */
+export function mergePull(
+  localRows: Map<string, SyncRow>,
+  remoteRows: Map<string, SyncRow>,
+  pendingRows: Set<string>
+): Map<string, SyncRow> {
+  const toApply = new Map<string, SyncRow>();
+  for (const [key, remote] of remoteRows) {
+    if (pendingRows.has(key)) continue;
+    if (pickWinner(localRows.get(key) ?? null, remote) === "remote") {
+      toApply.set(key, remote);
+    }
+  }
+  return toApply;
+}
+
+/** Exponential backoff with a ceiling: 2s, 4s, 8s, … capped at 5 minutes. */
+export function backoffMs(attempt: number): number {
+  return Math.min(2000 * 2 ** Math.max(0, attempt), 300_000);
+}
+
+/** The latest updatedAt across pulled rows — the next `lastPulledAt`. */
+export function advanceCursor(lastPulledAt: string, pulled: SyncRow[]): string {
+  return pulled.reduce((max, r) => (r.updatedAt > max ? r.updatedAt : max), lastPulledAt);
+}

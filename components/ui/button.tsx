@@ -4,12 +4,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-(--radius-control) text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:pointer-events-none disabled:opacity-40 select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "press-scale inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-(--radius-control) text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:pointer-events-none disabled:opacity-40 select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-gold text-base active:bg-gold/85 lg:hover:bg-gold/90",
-        secondary: "bg-elevated text-ivory border border-line active:bg-elevated/70 lg:hover:border-gold/40",
+        /* The one primary action per surface: glass-primary gradient,
+           active stroke, the rationed ember glow, inner top highlight. */
+        default:
+          "[background:var(--grad-glass-primary)] text-ivory border border-(--stroke-active) [box-shadow:var(--glow-ember),inset_0_1px_0_rgba(255,244,228,0.14)] active:brightness-110 lg:hover:brightness-110",
+        /* Glass pill: quiet warm gradient + hairline + top highlight. */
+        secondary:
+          "[background:var(--grad-glass)] text-ivory border border-line [box-shadow:inset_0_1px_0_rgba(255,244,228,0.14)] active:border-gold/40 lg:hover:border-gold/40",
         ghost: "text-muted active:text-ivory lg:hover:text-ivory",
         outline: "border border-line bg-transparent text-ivory active:bg-elevated lg:hover:bg-elevated",
         destructive: "bg-danger/15 text-danger border border-danger/30 active:bg-danger/25",

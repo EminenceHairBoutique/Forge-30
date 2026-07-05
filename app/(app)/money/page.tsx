@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, CalendarCheck, HandCoins } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
+import { DISCLAIMERS } from "@/lib/engine/safetyCopy";
 import { useDay } from "@/lib/hooks/useDay";
 import { toISODate, addDays, formatMoney, mondayWeekday, cn } from "@/lib/utils";
 import { calculateSpendingBreakdown } from "@/lib/engine/trends";
@@ -15,6 +16,8 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/cards/StatCard";
 import { SpendLogSheet } from "@/components/forms/SpendLogSheet";
 import { SundayReviewSheet } from "@/components/forms/SundayReviewSheet";
+import { TimelineRow } from "@/components/ui/TimelineRow";
+import { MoneyPlanningSection } from "@/components/money/MoneyPlanningSection";
 
 export default function MoneyPage() {
   const { adapter, profile, revision, touch } = useStorage();
@@ -119,7 +122,7 @@ export default function MoneyPage() {
             <StatCard
               label="Stress purchases"
               value={week.stressPurchaseCount}
-              tone={week.stressPurchaseCount > 0 ? "warning" : "default"}
+              tone={week.stressPurchaseCount > 0 ? "gold" : "default"}
               sub="this week"
             />
           </div>
@@ -157,8 +160,8 @@ export default function MoneyPage() {
               </div>
             )}
             {todayEntries.map((e) => (
+              <TimelineRow key={e.id} time={e.loggedAt.slice(11, 16)}>
               <div
-                key={e.id}
                 className="flex min-h-11 items-center gap-2 rounded-(--radius-control) bg-elevated px-3 py-2"
               >
                 <div className="min-w-0 flex-1">
@@ -167,11 +170,13 @@ export default function MoneyPage() {
                     <span className="font-normal text-muted capitalize">· {e.category}</span>
                   </p>
                   <div className="mt-0.5 flex flex-wrap gap-1">
-                    <Badge variant={e.necessary ? "success" : "warning"}>
+                    {/* Category label the user chose, not a safety signal —
+                        orange stays reserved for genuine safety colors. */}
+                    <Badge variant={e.necessary ? "default" : "gold"}>
                       {e.necessary ? "necessary" : "unnecessary"}
                     </Badge>
                     <Badge>{e.business ? "business" : "personal"}</Badge>
-                    {e.stressPurchase && <Badge variant="danger">stress</Badge>}
+                    {e.stressPurchase && <Badge variant="gold">stress</Badge>}
                   </div>
                   {e.note && <p className="mt-0.5 text-xs text-muted">{e.note}</p>}
                 </div>
@@ -184,10 +189,17 @@ export default function MoneyPage() {
                   <Trash2 className="size-4" />
                 </button>
               </div>
+              </TimelineRow>
             ))}
           </CardContent>
         </Card>
       </div>
+
+      {/* Money planning (E13): safe-to-spend, cash flow, recurring, debts,
+          savings, caps, 24-hour pause, export. */}
+      <MoneyPlanningSection />
+
+      <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">{DISCLAIMERS.finance}</p>
 
       <SpendLogSheet open={logOpen} onOpenChange={setLogOpen} />
       <SundayReviewSheet open={reviewOpen} onOpenChange={setReviewOpen} />

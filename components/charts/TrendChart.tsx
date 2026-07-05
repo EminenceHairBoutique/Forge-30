@@ -1,9 +1,10 @@
 "use client";
 
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -12,20 +13,45 @@ import {
 } from "recharts";
 
 /**
- * Dark-themed trend line chart.
+ * Dark-themed trend line chart (Solaris instrument treatment).
  *
- * Data-mark colors are the validated chart palette (passes the lightness
- * band, chroma floor, CVD separation, and 3:1 contrast checks on the
- * #141416 surface) — distinct from the UI's muted brand gold, which is too
- * gray for marks. Status colors stay reserved for status.
+ * Series A renders with the molten gradient stroke (gold → ember) and the
+ * incandescent gold #ffb13d for its marks — vivid enough for data on the
+ * warm dark field (unlike the old muted brand gold). CHART_2 blue stays as
+ * the second-series color for CVD-safe separation from the warm family.
+ * Status colors stay reserved for status.
  */
-export const CHART_1 = "#B08A28"; // gold series
+export const CHART_1 = "#ffb13d"; // gold series (marks, legend)
+export const CHART_1_END = "#ff6a3d"; // ember gradient end for the A stroke
 export const CHART_2 = "#4C86D8"; // blue series
 
 export interface TrendPoint {
   label: string;
   a: number | null;
   b?: number | null;
+}
+
+/**
+ * Glow dot on the latest non-null point only (HUD signature); all other
+ * points stay dotless so the line reads clean.
+ */
+function LatestDot(props: {
+  cx?: number;
+  cy?: number;
+  index?: number;
+  data: TrendPoint[];
+  dataKey: "a" | "b";
+  fill: string;
+}) {
+  const { cx, cy, index, data, dataKey, fill } = props;
+  if (cx === undefined || cy === undefined || index === undefined) return null;
+  const lastIdx = data.reduce((acc, p, i) => (p[dataKey] != null ? i : acc), -1);
+  if (index !== lastIdx) return null;
+  return (
+    <g style={{ filter: `drop-shadow(0 0 6px ${fill})` }}>
+      <circle cx={cx} cy={cy} r={3.5} fill={fill} stroke="var(--bg-surface)" strokeWidth={1.5} />
+    </g>
+  );
 }
 
 export function TrendChart({
@@ -35,6 +61,7 @@ export function TrendChart({
   unit = "",
   target,
   height = 220,
+  yDomain,
 }: {
   data: TrendPoint[];
   seriesA: string;
@@ -43,6 +70,11 @@ export function TrendChart({
   /** Optional target reference line (e.g. calorie target). */
   target?: number;
   height?: number;
+  /**
+   * Fixed y-axis range for bounded metrics (e.g. [0, 100] for Forge Score).
+   * Without it a single point renders a meaningless auto axis.
+   */
+  yDomain?: [number, number];
 }) {
   const hasB = !!seriesB;
   return (
@@ -61,22 +93,34 @@ export function TrendChart({
         </div>
       )}
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
-          <CartesianGrid stroke="var(--line)" strokeDasharray="0" vertical={false} />
+        <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+          <defs>
+            {/* Solaris treatment: molten stroke (gold → ember toward the
+                latest point) + soft area fill for series A. */}
+            <linearGradient id="hudStrokeA" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={CHART_1} stopOpacity={0.45} />
+              <stop offset="100%" stopColor={CHART_1_END} stopOpacity={1} />
+            </linearGradient>
+            <linearGradient id="hudFillA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={CHART_1} stopOpacity={0.08} />
+              <stop offset="100%" stopColor={CHART_1} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="var(--stroke-hairline)" strokeDasharray="0" vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
+            tick={{ fill: "var(--text-secondary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
             tickLine={false}
-            axisLine={{ stroke: "var(--line)" }}
+            axisLine={{ stroke: "var(--stroke-hairline)" }}
             interval="preserveStartEnd"
             minTickGap={24}
           />
           <YAxis
-            tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
+            tick={{ fill: "var(--text-secondary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
             tickLine={false}
             axisLine={false}
             width={46}
-            domain={["auto", "auto"]}
+            domain={yDomain ?? ["auto", "auto"]}
           />
           <Tooltip
             cursor={{ stroke: "var(--text-secondary)", strokeWidth: 1 }}
@@ -103,13 +147,23 @@ export function TrendChart({
               }}
             />
           )}
+          <Area
+            type="monotone"
+            dataKey="a"
+            fill="url(#hudFillA)"
+            stroke="none"
+            connectNulls
+            tooltipType="none"
+            legendType="none"
+            activeDot={false}
+          />
           <Line
             type="monotone"
             dataKey="a"
             name={seriesA}
-            stroke={CHART_1}
+            stroke="url(#hudStrokeA)"
             strokeWidth={2}
-            dot={false}
+            dot={<LatestDot data={data} dataKey="a" fill={CHART_1} />}
             activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--bg-surface)" }}
             connectNulls
           />
@@ -120,12 +174,12 @@ export function TrendChart({
               name={seriesB}
               stroke={CHART_2}
               strokeWidth={2}
-              dot={false}
+              dot={<LatestDot data={data} dataKey="b" fill={CHART_2} />}
               activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--bg-surface)" }}
               connectNulls
             />
           )}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

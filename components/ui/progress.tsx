@@ -22,10 +22,11 @@ function Progress({
       className={cn("h-2 w-full overflow-hidden rounded-full bg-elevated", className)}
       {...props}
     >
+      {/* Molten gradient fill while in progress; teal only at completion. */}
       <div
         className={cn(
           "h-full rounded-full transition-[width] duration-500",
-          pct >= 100 ? "bg-success" : "bg-gold",
+          pct >= 100 ? "bg-success" : "[background:var(--grad-bar)]",
           barClassName
         )}
         style={{ width: `${pct}%` }}

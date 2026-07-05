@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, CheckCircle2, Flame, Sparkle, Undo2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
-import { toISODate, addDays, clamp, daysBetween, uid } from "@/lib/utils";
+import { computeStreak } from "@/lib/engine/streaks";
+import { recommendTracks } from "@/lib/engine/socialRules";
+import { toISODate, clamp, daysBetween, uid } from "@/lib/utils";
 import { SKILL_TRACKS, getDailySkillTask } from "@/lib/data/skills";
 import { BOOK_PLAN } from "@/lib/data/books";
 import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
-import type { SkillTask, SkillTrackDef } from "@/lib/types";
+import type { AssessmentResult, SkillTask, SkillTrackDef } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,24 +19,21 @@ import { Label } from "@/components/ui/label";
 import { CheckItem } from "@/components/ui/checkbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
+const DEFAULT_ACTIVE_TRACKS = ["finance", "regulation", "movement"];
+
+/** Per-track streak via the shared engine (freezes/earn-back included). */
 function streakFor(tasks: SkillTask[], trackId: string, today: string): number {
-  const days = new Set(tasks.filter((t) => t.trackId === trackId).map((t) => t.date));
-  let streak = 0;
-  let cursor = today;
-  // A missing today doesn't break the streak until the day is over.
-  if (!days.has(cursor)) cursor = addDays(cursor, -1);
-  while (days.has(cursor)) {
-    streak += 1;
-    cursor = addDays(cursor, -1);
-  }
-  return streak;
+  const days = tasks.filter((t) => t.trackId === trackId).map((t) => t.date);
+  return computeStreak(`skill:${trackId}`, days, today).current;
 }
 
 export default function SkillsPage() {
-  const { adapter, profile, revision, touch } = useStorage();
+  const { adapter, profile, saveProfile, revision, touch } = useStorage();
   const today = toISODate();
   const [tasks, setTasks] = useState<SkillTask[]>([]);
   const [checkedBooks, setCheckedBooks] = useState<number[]>([]);
+  const [results, setResults] = useState<AssessmentResult[]>([]);
+  const [manageOpen, setManageOpen] = useState(false);
   const [completing, setCompleting] = useState<SkillTrackDef | null>(null);
   const [minutes, setMinutes] = useState("15");
   const [note, setNote] = useState("");
@@ -45,10 +44,12 @@ export default function SkillsPage() {
     Promise.all([
       adapter.listSkillTasks(profile.startDate, today),
       adapter.getCheckedBooks(),
-    ]).then(([t, b]) => {
+      adapter.listAssessmentResults(),
+    ]).then(([t, b, r]) => {
       if (cancelled) return;
       setTasks(t);
       setCheckedBooks(b);
+      setResults(r);
     });
     return () => {
       cancelled = true;
@@ -66,6 +67,17 @@ export default function SkillsPage() {
   }, [tasks]);
 
   if (!profile) return null;
+
+  const activeIds = profile.activeSkillTracks ?? DEFAULT_ACTIVE_TRACKS;
+  const activeTracks = SKILL_TRACKS.filter((t) => activeIds.includes(t.id));
+  // From the user's own assessment results (E10) — suggestions, not homework.
+  const recommendations = recommendTracks(results).filter((r) => !activeIds.includes(r.trackId));
+
+  const toggleTrack = async (id: string, on: boolean) => {
+    const next = on ? [...activeIds, id] : activeIds.filter((t) => t !== id);
+    await saveProfile({ ...profile, activeSkillTracks: next });
+    touch();
+  };
 
   const complete = async () => {
     if (!completing) return;
@@ -97,9 +109,42 @@ export default function SkillsPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-4">
-      <PageHeader title="Skills" subtitle={`Day ${dayNumber} — 10–20 minutes each`} />
+      <PageHeader
+        title="Skills"
+        subtitle={`Day ${dayNumber} — 10–20 minutes each`}
+        action={
+          <Button size="sm" variant="secondary" onClick={() => setManageOpen(true)}>
+            Manage tracks
+          </Button>
+        }
+      />
 
-      {SKILL_TRACKS.map((track) => {
+      {recommendations.length > 0 && (
+        <Card className="border-gold/30 bg-gold/5">
+          <CardHeader>
+            <CardTitle>Recommended from your assessments</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {recommendations.map((rec) => {
+              const track = SKILL_TRACKS.find((t) => t.id === rec.trackId);
+              if (!track) return null;
+              return (
+                <div key={rec.trackId} className="flex items-center gap-2 rounded-(--radius-control) bg-elevated px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-ivory">{track.name}</p>
+                    <p className="text-xs text-muted">{rec.why}.</p>
+                  </div>
+                  <Button size="sm" variant="secondary" onClick={() => void toggleTrack(rec.trackId, true)}>
+                    Add
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTracks.map((track) => {
         const todayTask = getDailySkillTask(track, dayNumber);
         const doneToday = tasks.filter((t) => t.trackId === track.id && t.date === today);
         const xp = xpByTrack[track.id] ?? 0;
@@ -125,7 +170,7 @@ export default function SkillsPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="rounded-(--radius-control) border border-gold/30 bg-gold/5 px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                <p className="microlabel text-gold">
                   Today's task
                 </p>
                 <p className="mt-0.5 text-sm font-medium text-ivory">{todayTask}</p>
@@ -233,6 +278,28 @@ export default function SkillsPage() {
               </Button>
             </div>
           )}
+        </SheetContent>
+      </Sheet>
+      {/* Manage tracks */}
+      <Sheet open={manageOpen} onOpenChange={setManageOpen}>
+        <SheetContent title="Your skill tracks">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted">
+              Run 2–4 at a time — depth beats breadth. Progress on paused tracks is kept.
+            </p>
+            <div className="rounded-(--radius-card) border border-line bg-surface p-1">
+              {SKILL_TRACKS.map((t) => (
+                <CheckItem
+                  key={t.id}
+                  variant="toggle"
+                  label={t.name}
+                  sublabel={t.description}
+                  checked={activeIds.includes(t.id)}
+                  onCheckedChange={(v) => void toggleTrack(t.id, v)}
+                />
+              ))}
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
     </div>

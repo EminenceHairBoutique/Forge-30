@@ -8,6 +8,8 @@ import { PROGRAM_LENGTH_DAYS } from "@/lib/data/defaults";
 import { calculateWeeklySummary, summarizeWeek } from "@/lib/engine/weeklySummary";
 import { getBodyRecommendations } from "@/lib/engine/bodyRules";
 import { computePersonalRecords } from "@/lib/engine/trainingRules";
+import { calculateSmoothedWeightTrend } from "@/lib/engine/trends";
+import { estimateExpenditure } from "@/lib/engine/expenditure";
 import type {
   BodyMetric,
   CalendarState,
@@ -22,20 +24,23 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TrendChart, type TrendPoint } from "@/components/charts/TrendChart";
+import { PatternsCard } from "@/components/cards/PatternsCard";
 import { BodyMetricSheet } from "@/components/forms/BodyMetricSheet";
+import { BackupCard } from "@/components/settings/BackupCard";
 
 const STATE_STYLE: Record<CalendarState, { label: string; className: string }> = {
   complete: { label: "Complete", className: "border-success/50 bg-success/15 text-success" },
   partial: { label: "Partial", className: "border-gold/50 bg-gold/15 text-gold" },
   missed: { label: "Missed", className: "border-line bg-elevated text-muted" },
   recovery: { label: "Recovery", className: "border-[#4C86D8]/50 bg-[#4C86D8]/15 text-[#8FB7EA]" },
-  highStress: { label: "High stress", className: "border-warning/50 bg-warning/15 text-warning" },
+  highStress: { label: "High stress", className: "border-gold/40 bg-gold/10 text-gold" },
   highPain: { label: "High pain", className: "border-danger/50 bg-danger/15 text-danger" },
 };
 
 type Metric =
   | "forge"
   | "weight"
+  | "expenditure"
   | "calories"
   | "protein"
   | "workout"
@@ -47,6 +52,7 @@ type Metric =
 const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: "forge", label: "Forge Score" },
   { value: "weight", label: "Weight (lb)" },
+  { value: "expenditure", label: "Expenditure (est. kcal)" },
   { value: "calories", label: "Calories" },
   { value: "protein", label: "Protein (g)" },
   { value: "workout", label: "Workout completion %" },
@@ -55,6 +61,15 @@ const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: "pain", label: "Pain" },
   { value: "sleep", label: "Sleep (h)" },
 ];
+
+/** Fixed y-ranges for bounded metrics; unbounded ones (weight, kcal) auto-fit. */
+const METRIC_Y_DOMAIN: Partial<Record<Metric, [number, number]>> = {
+  forge: [0, 100],
+  workout: [0, 100],
+  moodStress: [0, 10],
+  pain: [0, 10],
+  sleep: [0, 12],
+};
 
 export default function ProgressPage() {
   const { adapter, profile, revision } = useStorage();
@@ -128,6 +143,9 @@ export default function ProgressPage() {
     for (const s of spending)
       spendByDate.set(s.date, (spendByDate.get(s.date) ?? 0) + s.amount);
     const metricByDate = new Map(metrics.map((m) => [m.date, m]));
+    const trendByDate = new Map(
+      calculateSmoothedWeightTrend(metrics).map((p) => [p.date, p.trendLb])
+    );
     let workoutsDone = 0;
 
     const lastDay = Math.min(daysBetween(start, today) + 1, PROGRAM_LENGTH_DAYS);
@@ -142,7 +160,18 @@ export default function ProgressPage() {
           points.push({ label, a: log ? log.forgeScore : null });
           break;
         case "weight":
-          points.push({ label, a: bm && bm.weightLb > 0 ? bm.weightLb : null });
+          points.push({
+            label,
+            a: bm && bm.weightLb > 0 ? bm.weightLb : null,
+            b: trendByDate.get(date) ?? null,
+          });
+          break;
+        case "expenditure":
+          // Rolling estimate: what the engine would have said on that day.
+          points.push({
+            label,
+            a: estimateExpenditure({ logs, metrics, today: date }).tdee,
+          });
           break;
         case "calories":
           points.push({ label, a: log && log.calories > 0 ? log.calories : null });
@@ -172,9 +201,13 @@ export default function ProgressPage() {
       }
     }
     return points;
-  }, [profile, metric, spending, metrics, logByDate, start, today]);
+  }, [profile, metric, spending, metrics, logs, logByDate, start, today]);
 
   if (!profile) return null;
+
+  const chartPointCount = chartData.filter((p) => p.a !== null || (p.b ?? null) !== null).length;
+  const latestChartPoint = [...chartData].reverse().find((p) => p.a !== null || (p.b ?? null) !== null);
+  const latestChartValue = latestChartPoint?.a ?? latestChartPoint?.b ?? null;
 
   const detailLog = dayDetail ? logByDate.get(dayDetail) : undefined;
   const detailWorkout = dayDetail ? workoutByDate.get(dayDetail) : undefined;
@@ -200,7 +233,7 @@ export default function ProgressPage() {
 
       {recommendations.length > 0 && (
         <Card className="border-gold/30 bg-gold/5 p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gold">
+          <p className="flex items-center gap-2 microlabel text-gold">
             <Stethoscope className="size-4" /> Coach recommendations
           </p>
           <ul className="mt-2 flex flex-col gap-1.5">
@@ -331,6 +364,9 @@ export default function ProgressPage() {
         )}
       </div>
 
+      {/* LifeGraph patterns in the weekly report (E14) */}
+      <PatternsCard title="Patterns in your data" limit={3} />
+
       {/* Trends */}
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3">
@@ -349,17 +385,33 @@ export default function ProgressPage() {
           </Select>
         </CardHeader>
         <CardContent>
-          {chartData.some((p) => p.a !== null || (p.b ?? null) !== null) ? (
+          {chartPointCount >= 2 ? (
             <TrendChart
               data={chartData}
-              seriesA={metric === "moodStress" ? "Mood" : (METRIC_OPTIONS.find((o) => o.value === metric)?.label ?? "")}
-              seriesB={metric === "moodStress" ? "Stress" : undefined}
+              seriesA={
+                metric === "moodStress"
+                  ? "Mood"
+                  : metric === "weight"
+                    ? "Scale weight"
+                    : (METRIC_OPTIONS.find((o) => o.value === metric)?.label ?? "")
+              }
+              seriesB={
+                metric === "moodStress" ? "Stress" : metric === "weight" ? "Trend weight" : undefined
+              }
               target={target}
+              yDomain={METRIC_Y_DOMAIN[metric]}
             />
           ) : (
-            <p className="py-10 text-center text-sm text-muted">
-              No data yet for this metric. It fills in as you log.
-            </p>
+            <div className="flex flex-col items-center gap-1.5 py-10 text-center">
+              <p className="display-num text-2xl text-ivory">
+                {chartPointCount === 1 ? latestChartValue : "—"}
+              </p>
+              <p className="text-sm text-muted">
+                {chartPointCount === 1
+                  ? "One day logged. A trend line starts at two — tomorrow's log draws it."
+                  : "No data yet for this metric. It fills in as you log."}
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -459,6 +511,7 @@ export default function ProgressPage() {
       </Sheet>
 
       <BodyMetricSheet open={bodyOpen} onOpenChange={setBodyOpen} />
+      <BackupCard compact />
     </div>
   );
 }

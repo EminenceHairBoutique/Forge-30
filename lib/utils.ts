@@ -48,6 +48,26 @@ export function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
+/** Light haptic tap where supported (Android Chrome; iOS Safari degrades silently). */
+export function vibrate(pattern: number | number[] = 10): void {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Unsupported/blocked — haptics are an enhancement only.
+    }
+  }
+}
+
+/** True when the user asks for reduced motion — every animation respects it. */
+export function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 export function formatMoney(n: number): string {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: n % 1 === 0 ? 0 : 2 });
 }

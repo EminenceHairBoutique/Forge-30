@@ -26,6 +26,9 @@ const goodDay: CoachInput = {
   skillMinutes: 15,
   skillMissedTwoDays: false,
   weightTrend7d: 1.2,
+  scoreState: "final",
+  hardDay: false,
+    journalThemes: [],
 };
 
 describe("generateMockAIFeedback", () => {
@@ -122,5 +125,172 @@ describe("generateMockAIFeedback", () => {
   it("references what was actually logged in the wins", () => {
     const r = generateMockAIFeedback(goodDay);
     expect(r.wentWell).toContain("Upper Push");
+  });
+
+  it("never passes a verdict on an in-progress day, even at 0/100", () => {
+    const morning = generateMockAIFeedback({
+      ...goodDay,
+      scoreState: "inProgress",
+      forgeScore: 0,
+      calories: 0,
+      protein: 0,
+      workoutStatus: "notStarted",
+      journalDone: false,
+      spendingChecked: false,
+      skillMinutes: 0,
+      mobilityDone: false,
+      sleepHours: 0,
+    });
+    expect(morning.scoreExplanation.toLowerCase()).not.toContain("rough day");
+    expect(morning.scoreExplanation.toLowerCase()).toContain("in progress");
+    expect(morning.scoreExplanation.toLowerCase()).toContain("not a verdict");
+    // Unlogged items read as "still open", not failures.
+    expect(morning.slipped.toLowerCase()).toMatch(/yet|still open/);
+    expect(morning.slipped.toLowerCase()).not.toContain("didn't happen");
+  });
+
+  it("points the #1 priority at the rest of today while in progress", () => {
+    const r = generateMockAIFeedback({ ...goodDay, scoreState: "inProgress", calories: 2000 });
+    expect(r.tomorrowPriority).toContain("Rest of today's #1");
+    expect(r.tomorrowPriority).not.toContain("Tomorrow's #1");
+  });
+
+  it("keeps verdict framing for a completed day", () => {
+    const r = generateMockAIFeedback({ ...goodDay, forgeScore: 30, calories: 1500, protein: 90 });
+    expect(r.scoreExplanation).toContain("Today was a 30/100");
+    expect(r.tomorrowPriority).toContain("Tomorrow's #1");
+  });
+});
+
+describe("hard day mode", () => {
+  const hardDayEmpty: CoachInput = {
+    ...goodDay,
+    hardDay: true,
+    scoreState: "inProgress",
+    forgeScore: 0,
+    calories: 0,
+    protein: 0,
+    workoutStatus: "notStarted",
+    journalDone: false,
+    spendingChecked: false,
+    skillMinutes: 0,
+    mobilityDone: false,
+    sleepHours: 0,
+    stress: 9,
+  };
+
+  it("reframes everything around the Minimum Viable Day, no audit", () => {
+    const r = generateMockAIFeedback(hardDayEmpty);
+    expect(r.scoreExplanation).toContain("Minimum Viable Day");
+    expect(r.slipped.toLowerCase()).toContain("don't get audited");
+    expect(r.slipped).not.toMatch(/short|behind|didn't happen/);
+    expect(r.physicalAdjustment.toLowerCase()).toContain("no training required");
+    expect(r.tomorrowPriority.toLowerCase()).toMatch(/minimum viable day|one meal/);
+  });
+
+  it("contains zero guilt copy and stays deterministic", () => {
+    const r = generateMockAIFeedback(hardDayEmpty);
+    for (const text of Object.values(r)) {
+      expect(text.toLowerCase()).not.toMatch(/fail|lazy|excuse|ruin|behind|slipped/);
+    }
+    expect(generateMockAIFeedback(hardDayEmpty)).toEqual(generateMockAIFeedback(hardDayEmpty));
+  });
+
+  it("acknowledges an MVD that was still met on a hard final day", () => {
+    const r = generateMockAIFeedback({
+      ...hardDayEmpty,
+      scoreState: "final",
+      calories: 800,
+      protein: 40,
+      journalDone: true,
+    });
+    expect(r.scoreExplanation.toLowerCase()).toContain("minimum viable day");
+    expect(r.wentWell.toLowerCase()).toContain("minimum");
+    expect(r.tomorrowPriority.toLowerCase()).toContain("nothing carried over");
+  });
+});
+
+describe("journal themes (E6 — consent-gated upstream)", () => {
+  it("names the top theme gently in the mental adjustment when themes arrive", () => {
+    const r = generateMockAIFeedback({ ...goodDay, stress: 3, journalThemes: ["work", "sleep"] });
+    expect(r.mentalAdjustment).toContain("work");
+    expect(r.mentalAdjustment.toLowerCase()).toContain("journal");
+    // A theme is an observation, never a verdict or a diagnosis.
+    expect(r.mentalAdjustment.toLowerCase()).not.toMatch(/disorder|diagnos|you are|you have/);
+  });
+
+  it("with no themes the mental adjustment is untouched by the journal path", () => {
+    const withEmpty = generateMockAIFeedback({ ...goodDay, journalThemes: [] });
+    expect(withEmpty.mentalAdjustment).not.toContain("keeps showing up");
+  });
+
+  it("high stress still outranks the journal theme", () => {
+    const r = generateMockAIFeedback({ ...goodDay, stress: 9, journalThemes: ["money"] });
+    expect(r.mentalAdjustment).toContain("breathing reset");
+  });
+});
+
+describe("E15 — health adjustment (BP rules)", () => {
+  it("BP crisis produces the urgent warning and outranks everything", () => {
+    const r = generateMockAIFeedback({ ...goodDay, bpCrisis: true, elevatedBpCount: 4 });
+    expect(r.healthAdjustment).toContain("180/120");
+    expect(r.healthAdjustment.toLowerCase()).toContain("emergency care");
+    // Urgent, but still not a diagnosis.
+    expect(r.healthAdjustment.toLowerCase()).not.toMatch(/you have hypertension|diagnosed/);
+  });
+
+  it("crisis copy is never gated — it shows even on a hard day", () => {
+    const r = generateMockAIFeedback({ ...goodDay, hardDay: true, bpCrisis: true });
+    expect(r.healthAdjustment).toContain("180/120");
+  });
+
+  it("repeated elevated readings → context tracking + clinician, no diagnosis", () => {
+    const r = generateMockAIFeedback({ ...goodDay, elevatedBpCount: 3 });
+    expect(r.healthAdjustment).toContain("130/80");
+    expect(r.healthAdjustment.toLowerCase()).toContain("clinician");
+    expect(r.healthAdjustment.toLowerCase()).toMatch(/caffeine|stress|sleep/);
+    expect(r.healthAdjustment.toLowerCase()).not.toMatch(/you have|hypertension diagnosis/);
+  });
+
+  it("no signals → neutral health part; single reading stays calm", () => {
+    const quiet = generateMockAIFeedback(goodDay);
+    expect(quiet.healthAdjustment.toLowerCase()).toContain("no health flags");
+    const one = generateMockAIFeedback({ ...goodDay, elevatedBpCount: 1 });
+    expect(one.healthAdjustment.toLowerCase()).toContain("context");
+    expect(one.healthAdjustment.toLowerCase()).not.toContain("clinician now");
+  });
+});
+
+describe("E15 — relationships & social adjustment", () => {
+  it("unrepaired conflict → one calm repair attempt with sample language", () => {
+    const r = generateMockAIFeedback({ ...goodDay, conflictUnrepaired: true });
+    expect(r.relationshipSocialAdjustment.toLowerCase()).toContain("repair");
+    expect(r.relationshipSocialAdjustment).toContain('"'); // sample line quoted
+    expect(r.relationshipSocialAdjustment.toLowerCase()).not.toMatch(/their fault|toxic|narcissist/);
+  });
+
+  it("isolation flagged → one low-pressure reach-out, observation not verdict", () => {
+    const r = generateMockAIFeedback({ ...goodDay, isolationFlagged: true, daysSinceOutreach: 12 });
+    expect(r.relationshipSocialAdjustment).toContain("12 days");
+    expect(r.relationshipSocialAdjustment.toLowerCase()).toContain("low-pressure");
+    expect(r.relationshipSocialAdjustment.toLowerCase()).not.toContain("you are isolated");
+  });
+
+  it("conflict outranks isolation when both fire", () => {
+    const r = generateMockAIFeedback({
+      ...goodDay,
+      conflictUnrepaired: true,
+      isolationFlagged: true,
+      daysSinceOutreach: 15,
+    });
+    expect(r.relationshipSocialAdjustment.toLowerCase()).toContain("repair");
+  });
+
+  it("both new fields are always present, including hard days", () => {
+    for (const input of [goodDay, { ...goodDay, hardDay: true }]) {
+      const r = generateMockAIFeedback(input);
+      expect(r.healthAdjustment.length).toBeGreaterThan(0);
+      expect(r.relationshipSocialAdjustment.length).toBeGreaterThan(0);
+    }
   });
 });

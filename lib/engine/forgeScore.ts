@@ -1,4 +1,4 @@
-import type { WorkoutStatus } from "@/lib/types";
+import type { DomainToggles, ForgeScoreWeights, WorkoutStatus } from "@/lib/types";
 import { clamp } from "@/lib/utils";
 
 /**
@@ -48,6 +48,69 @@ export interface ForgeScoreTargets {
   dailySpendingLimit: number;
 }
 
+/**
+ * Default component weights (sum = 100). This is the exact v1 scoring spec —
+ * passing no `weights` to `calculateForgeScore` reproduces it byte-for-byte,
+ * so the original test suite never regresses. v2 lets the user adjust these
+ * and renormalizes when a domain is turned off.
+ */
+export const DEFAULT_WEIGHTS: ForgeScoreWeights = {
+  calories: 15,
+  protein: 15,
+  water: 10,
+  workout: 15,
+  mobility: 10,
+  sleep: 10,
+  spending: 10,
+  mind: 10,
+  skill: 5,
+};
+
+export type ScoreComponentKey = keyof ForgeScoreWeights;
+
+/**
+ * Which score components each toggleable domain owns (E5). Sleep has no
+ * domain — recovery is universal. Health/relationships/social carry no score
+ * components yet; their toggles gate tabs as those land (E7/E11/E12).
+ */
+const DOMAIN_COMPONENTS: Partial<Record<keyof DomainToggles, ScoreComponentKey[]>> = {
+  nutrition: ["calories", "protein", "water"],
+  training: ["workout", "mobility"],
+  mind: ["mind"],
+  money: ["spending"],
+  skills: ["skill"],
+};
+
+/** Score components turned off by the profile's domain toggles. */
+export function disabledComponents(domains?: Partial<DomainToggles>): ScoreComponentKey[] {
+  if (!domains) return [];
+  const off: ScoreComponentKey[] = [];
+  for (const [domain, keys] of Object.entries(DOMAIN_COMPONENTS)) {
+    if (domains[domain as keyof DomainToggles] === false) off.push(...keys);
+  }
+  return off;
+}
+
+/**
+ * Scale a weight set so the *enabled* components sum to 100, preserving their
+ * relative proportions. Disabling a domain (onboarding) hands its weight to
+ * the rest rather than shrinking the achievable maximum. Disabled keys come
+ * back as 0; if everything is disabled the input is returned unchanged.
+ */
+export function renormalizeWeights(
+  weights: ForgeScoreWeights,
+  disabled: Iterable<ScoreComponentKey> = []
+): ForgeScoreWeights {
+  const off = new Set(disabled);
+  const keys = Object.keys(weights) as ScoreComponentKey[];
+  const enabledTotal = keys.reduce((sum, k) => (off.has(k) ? sum : sum + weights[k]), 0);
+  if (enabledTotal <= 0) return { ...weights };
+  const factor = 100 / enabledTotal;
+  const out = {} as ForgeScoreWeights;
+  for (const k of keys) out[k] = off.has(k) ? 0 : weights[k] * factor;
+  return out;
+}
+
 export interface ScoreComponent {
   key:
     | "calories"
@@ -75,6 +138,27 @@ export interface ForgeScoreResult {
   base: number;
   components: ScoreComponent[];
   penalties: ScorePenalty[];
+}
+
+/**
+ * Whether today's score is still building or is a finished-day verdict.
+ *
+ * A 0/100 at 8 AM isn't a rough day — it's an unstarted one. Until the
+ * user's evening boundary the score is presented as "score so far" and coach
+ * feedback is framed as a mid-day check-in; verdict language is only ever
+ * appropriate for a completed day (adherence-neutral rule at the system
+ * level). Pure: callers pass the current hour; engines never read the clock.
+ */
+export type ScoreState = "inProgress" | "final";
+
+export const DEFAULT_DAY_BOUNDARY_HOUR = 20;
+
+export function resolveScoreState(
+  hourOfDay: number,
+  boundaryHour: number = DEFAULT_DAY_BOUNDARY_HOUR
+): ScoreState {
+  const boundary = clamp(Math.round(boundaryHour), 0, 23);
+  return hourOfDay >= boundary ? "final" : "inProgress";
 }
 
 /**
@@ -124,31 +208,45 @@ function overspendPenalty(unnecessarySpend: number, dailyLimit: number): number 
 
 export function calculateForgeScore(
   inputs: ForgeScoreInputs,
-  targets: ForgeScoreTargets
+  targets: ForgeScoreTargets,
+  weights: ForgeScoreWeights = DEFAULT_WEIGHTS
 ): ForgeScoreResult {
-  const caloriePts = Math.round(calorieProteinCredit(inputs.calories, targets.calorieTarget, 15));
-  const proteinPts = Math.round(
-    calorieProteinCredit(inputs.protein, targets.proteinTarget, 15, true)
+  // Each component earns a fraction [0,1] of adherence, scaled by its weight —
+  // so the default weights reproduce the exact v1 point values, and a custom
+  // set (or a renormalized one after disabling a domain) just re-scales them.
+  const caloriePts = Math.round(
+    calorieProteinCredit(inputs.calories, targets.calorieTarget, weights.calories)
   );
-  const waterPts = targets.waterTarget > 0 && inputs.waterMl >= targets.waterTarget ? 10 : 0;
+  const proteinPts = Math.round(
+    calorieProteinCredit(inputs.protein, targets.proteinTarget, weights.protein, true)
+  );
+  const waterPts =
+    targets.waterTarget > 0 && inputs.waterMl >= targets.waterTarget ? Math.round(weights.water) : 0;
   const workoutPts =
-    inputs.workoutStatus === "complete" || inputs.workoutStatus === "rest" ? 15 : 0;
-  const mobilityPts = inputs.mobilityDone ? 10 : 0;
-  const sleepPts = inputs.sleepHours >= 7 ? 10 : inputs.sleepHours >= 6 ? 5 : 0;
-  const spendingPts = inputs.spendingChecked ? 10 : 0;
-  const mindPts = inputs.journalDone ? 10 : 0;
-  const skillPts = inputs.skillMinutes >= 10 ? 5 : 0;
+    inputs.workoutStatus === "complete" || inputs.workoutStatus === "rest"
+      ? Math.round(weights.workout)
+      : 0;
+  const mobilityPts = inputs.mobilityDone ? Math.round(weights.mobility) : 0;
+  const sleepPts =
+    inputs.sleepHours >= 7
+      ? Math.round(weights.sleep)
+      : inputs.sleepHours >= 6
+        ? Math.round(weights.sleep / 2)
+        : 0;
+  const spendingPts = inputs.spendingChecked ? Math.round(weights.spending) : 0;
+  const mindPts = inputs.journalDone ? Math.round(weights.mind) : 0;
+  const skillPts = inputs.skillMinutes >= 10 ? Math.round(weights.skill) : 0;
 
   const components: ScoreComponent[] = [
-    { key: "calories", label: "Calories on target", points: caloriePts, max: 15 },
-    { key: "protein", label: "Protein on target", points: proteinPts, max: 15 },
-    { key: "water", label: "Water target", points: waterPts, max: 10 },
-    { key: "workout", label: "Workout / recovery", points: workoutPts, max: 15 },
-    { key: "mobility", label: "Mobility / prehab", points: mobilityPts, max: 10 },
-    { key: "sleep", label: "Sleep", points: sleepPts, max: 10 },
-    { key: "spending", label: "Spending check", points: spendingPts, max: 10 },
-    { key: "mind", label: "Mind reset / journal", points: mindPts, max: 10 },
-    { key: "skill", label: "Skill progress", points: skillPts, max: 5 },
+    { key: "calories", label: "Calories on target", points: caloriePts, max: Math.round(weights.calories) },
+    { key: "protein", label: "Protein on target", points: proteinPts, max: Math.round(weights.protein) },
+    { key: "water", label: "Water target", points: waterPts, max: Math.round(weights.water) },
+    { key: "workout", label: "Workout / recovery", points: workoutPts, max: Math.round(weights.workout) },
+    { key: "mobility", label: "Mobility / prehab", points: mobilityPts, max: Math.round(weights.mobility) },
+    { key: "sleep", label: "Sleep", points: sleepPts, max: Math.round(weights.sleep) },
+    { key: "spending", label: "Spending check", points: spendingPts, max: Math.round(weights.spending) },
+    { key: "mind", label: "Mind reset / journal", points: mindPts, max: Math.round(weights.mind) },
+    { key: "skill", label: "Skill progress", points: skillPts, max: Math.round(weights.skill) },
   ];
 
   const penalties: ScorePenalty[] = [];

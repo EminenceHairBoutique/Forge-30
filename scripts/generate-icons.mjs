@@ -8,8 +8,8 @@ import path from "path";
 
 const OUT = path.resolve(process.cwd(), "public/icons");
 
-// The Forge30 mark: gold "F" over a "30" baseline on matte black, with a
-// subtle gold ring echoing the Forge Score ring on the Today screen.
+// The Forge30 mark (Solaris): incandescent gold "F" + "30" on warm black,
+// with a molten ring echoing the Forge Score gauge on the Today screen.
 // `pad` insets the artwork for maskable variants (safe zone ≈ 80%).
 function markSvg(size, { pad = 0 } = {}) {
   const s = size;
@@ -20,10 +20,10 @@ function markSvg(size, { pad = 0 } = {}) {
   const numSize = s * 0.17 * scale;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${s}" height="${s}" fill="#0A0A0B"/>
-  <circle cx="${c}" cy="${c}" r="${ringR}" fill="none" stroke="#C9A961" stroke-width="${s * 0.028 * scale}" opacity="0.55"/>
-  <text x="${c}" y="${c + fSize * 0.18}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="${fSize}" fill="#F5F1E8">F</text>
-  <text x="${c}" y="${c + ringR * 0.62}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="${numSize}" fill="#C9A961">30</text>
+  <rect width="${s}" height="${s}" fill="#0b0806"/>
+  <circle cx="${c}" cy="${c}" r="${ringR}" fill="none" stroke="#ffb13d" stroke-width="${s * 0.028 * scale}" opacity="0.8"/>
+  <text x="${c}" y="${c + fSize * 0.18}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="${fSize}" fill="#fff4e4">F</text>
+  <text x="${c}" y="${c + ringR * 0.62}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="${numSize}" fill="#ffb13d">30</text>
 </svg>`;
 }
 

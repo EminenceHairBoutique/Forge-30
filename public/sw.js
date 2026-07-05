@@ -10,7 +10,7 @@
  *    content-hashed and immutable.
  */
 
-const VERSION = "forge30-v1";
+const VERSION = "forge30-v21";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
@@ -24,8 +24,13 @@ const SHELL_ROUTES = [
   "/progress",
   "/coach",
   "/skills",
+  "/health",
+  "/assessments",
+  "/relationships",
+  "/social",
   "/settings",
   "/manifest.json",
+  "/protocols",
 ];
 
 self.addEventListener("install", (event) => {
@@ -96,4 +101,43 @@ self.addEventListener("fetch", (event) => {
       )
     );
   }
+});
+
+// --- Notifications (E9) -----------------------------------------------------
+// Web Push payloads (once the push backend exists) and clicks on any
+// notification shown via registration.showNotification (the in-app scheduler
+// uses that path today).
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    // Non-JSON payload — show the default shell notification.
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Forge30", {
+      body: data.body || "",
+      tag: data.tag || "forge30",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url || "/today" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/today";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ("focus" in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
 });

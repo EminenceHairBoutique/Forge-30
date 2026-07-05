@@ -2,33 +2,72 @@
 
 import { Ring } from "./Ring";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import type { ForgeScoreResult } from "@/lib/engine/forgeScore";
+import type { ForgeScoreResult, ScoreState } from "@/lib/engine/forgeScore";
+import { useCountUp } from "@/lib/hooks/useCountUp";
 import { cn } from "@/lib/utils";
 
 /**
- * The hero Forge Score ring on Today. Tapping it opens the full score
- * breakdown (components earned + penalties applied).
+ * The hero Forge Score gauge on Today — the Solaris signature. Molten
+ * gradient stroke over 30 day-ticks (structure encoding, one per program
+ * day), inner molten-core glow, gradient hero numeral, 1.1s sweep +
+ * count-up on the day-final reveal (the one rationed ember glow). Tapping
+ * it opens the full score breakdown (components earned + penalties
+ * applied). While the day is in progress the gauge reads as a pulsing
+ * partial sweep — a building number, not a verdict.
  */
-export function ScoreRing({ result }: { result: ForgeScoreResult }) {
+export function ScoreRing({
+  result,
+  state = "final",
+}: {
+  result: ForgeScoreResult;
+  state?: ScoreState;
+}) {
   const { score, components, penalties } = result;
+  const building = state === "inProgress";
+  // The evening reveal: the finished day's score counts up as the ring sweeps.
+  const shown = useCountUp(score, !building, 1100);
   return (
     <Sheet>
       <SheetTrigger asChild>
         <button
           type="button"
           className="flex flex-col items-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-gold/50 rounded-full"
-          aria-label={`Forge Score ${score} out of 100 — tap for breakdown`}
+          aria-label={`Forge Score ${score} out of 100${building ? " so far, day in progress" : ""} — tap for breakdown`}
         >
-          <Ring value={score} max={100} size={176} stroke={12} label={`Forge Score ${score}/100`}>
-            <span className="display-num text-6xl leading-none text-ivory">{score}</span>
-            <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Forge Score
+          <Ring
+            value={shown}
+            max={100}
+            size={176}
+            stroke={12}
+            ticks={30}
+            majorEvery={3}
+            glow={!building && score > 0}
+            pulse={building && score > 0}
+            gradient={["#ffd98a", "#ffb13d", "#ff6a3d"]}
+            sweep={!building}
+            label={`Forge Score ${score}/100`}
+          >
+            {/* Molten core: soft inner radiance behind the numeral. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-3 rounded-full"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 64%, rgba(255,120,50,0.22), transparent 62%)",
+              }}
+            />
+            <span className="display-num text-molten text-6xl leading-none">{shown}</span>
+            <span className="microlabel mt-1 text-muted">
+              {building ? "Score building" : "Forge Score"}
             </span>
+            {building && <span className="microlabel mt-0.5 text-[9px] text-muted/70">Day in progress</span>}
           </Ring>
-          <span className="text-xs text-muted">tap for breakdown</span>
+          <span className="text-xs text-muted">
+            {building ? "day in progress · tap for breakdown" : "tap for breakdown"}
+          </span>
         </button>
       </SheetTrigger>
-      <SheetContent title={`Forge Score ${score}/100`}>
+      <SheetContent title={building ? `Score so far — ${score}/100` : `Forge Score ${score}/100`}>
         <ul className="flex flex-col gap-1">
           {components.map((c) => (
             <li key={c.key} className="flex items-center justify-between py-1.5 text-sm">
@@ -46,7 +85,7 @@ export function ScoreRing({ result }: { result: ForgeScoreResult }) {
         </ul>
         {penalties.length > 0 && (
           <>
-            <p className="mt-4 mb-1 text-xs font-semibold uppercase tracking-widest text-muted">
+            <p className="mt-4 mb-1 microlabel text-muted">
               Penalties
             </p>
             <ul className="flex flex-col gap-1">
