@@ -65,8 +65,14 @@ export interface LifeGraphInputs {
   consentedNotes: JournalNote[];
   dailySpendingLimit: number;
   calorieTarget: number;
-  /** Protocol dose days (v3 Phase 6) — present only when Protocols is enabled. */
+  /** Protocol dose days (v3 Phase 6) — supply only when Protocols is enabled. */
   doseDates?: ISODate[];
+  /**
+   * Master gate for BOTH protocol flags (§6.0.6): when false/absent, dose
+   * and symptom signals do not exist — even if historical symptom data
+   * remains on old daily logs after the user disabled the tab.
+   */
+  protocolsEnabled?: boolean;
 }
 
 /** Build tri-state flag days from the collections everything already logs. */
@@ -124,11 +130,13 @@ export function buildDays(inputs: LifeGraphInputs): LifeGraphDay[] {
       const journal = journalByDate.get(log.date);
       if (journal) flags.conflictDay = journal.relationshipStress;
 
-      // Protocols: dose-day + symptom flags exist only when the caller
-      // supplied dose dates (i.e. the tab is enabled) or symptoms were logged.
-      if (doseDates.size > 0) flags.doseDay = doseDates.has(log.date);
-      if (log.protocolSymptoms !== undefined) {
-        flags.protocolSymptomDay = log.protocolSymptoms.some((x) => x.severity >= 3);
+      // Protocols (§6.0.6): BOTH flags exist only while the tab is enabled —
+      // historical symptom data on old logs stays invisible after disable.
+      if (inputs.protocolsEnabled === true) {
+        if (doseDates.size > 0) flags.doseDay = doseDates.has(log.date);
+        if (log.protocolSymptoms !== undefined) {
+          flags.protocolSymptomDay = log.protocolSymptoms.some((x) => x.severity >= 3);
+        }
       }
 
       const notes = notesByDate.get(log.date);

@@ -137,16 +137,43 @@ export const PROTOCOL_COLLECTIONS = [
 
 const ALWAYS_EXCLUDED = new Set<string>(["protocolSettings"]);
 let syncExcluded = new Set<string>(ALWAYS_EXCLUDED);
+let exclusionsHydrated = false;
 
 export function setProtocolLocalOnly(localOnly: boolean): void {
+  exclusionsHydrated = true;
   syncExcluded = new Set<string>([
     ...ALWAYS_EXCLUDED,
     ...(localOnly ? PROTOCOL_COLLECTIONS : []),
   ]);
 }
 
+/**
+ * Self-enforcing hydration (§6.0.5): the exclusion set is loaded from the
+ * persisted ProtocolSettings the FIRST time any sync-relevant path asks —
+ * write observation, pull-apply, or the first-sign-in migration — so the
+ * local-only guarantee never depends on UI mount order. Synchronous read;
+ * cheap; runs once per module load and again on every settings save.
+ */
+export function hydrateSyncExclusions(): void {
+  if (exclusionsHydrated || !canUseStorage()) return;
+  try {
+    const raw = window.localStorage.getItem(KEYS.protocolSettings);
+    const localOnly = raw ? (JSON.parse(raw) as { localOnly?: boolean }).localOnly === true : false;
+    setProtocolLocalOnly(localOnly);
+  } catch {
+    setProtocolLocalOnly(false);
+  }
+}
+
 export function isSyncExcluded(collection: string): boolean {
+  hydrateSyncExclusions();
   return syncExcluded.has(collection);
+}
+
+/** Test hook: clears the hydration cache so fixtures can re-seed storage. */
+export function resetSyncExclusionsForTests(): void {
+  exclusionsHydrated = false;
+  syncExcluded = new Set<string>(ALWAYS_EXCLUDED);
 }
 
 const COLLECTION_BY_KEY: Record<string, string> = {};

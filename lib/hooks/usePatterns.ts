@@ -51,6 +51,7 @@ export async function loadPatterns(
     dailySpendingLimit: profile.dailySpendingLimit,
     calorieTarget: profile.calorieTarget,
     doseDates,
+    protocolsEnabled: protocolSettings.enabled,
   });
   return detectPatterns(days, today);
 }

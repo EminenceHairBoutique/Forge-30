@@ -163,8 +163,18 @@ export function adaptiveFromLegacy(review: CoachReview, input: CoachInput): Adap
   };
 
   // The score read always earns its place; it opens with follow-through when
-  // yesterday's priority is known (the live prompt does the same).
-  push("scoreExplanation", review.scoreExplanation, true);
+  // yesterday's priority is known (the live prompt does the same). When a
+  // protocol record exists, its behavioral numbers ride along — stated
+  // plainly, never advised on (§6.0.3).
+  const protocolLine =
+    input.protocolAdherence7d !== null && input.protocolAdherence7d !== undefined
+      ? ` Protocol record this week: ${input.protocolAdherence7d}% of scheduled items logged${
+          (input.protocolMissedCount7d ?? 0) > 0
+            ? ` (${input.protocolMissedCount7d} still open — the doctor report has the detail)`
+            : ""
+        }.`
+      : "";
+  push("scoreExplanation", review.scoreExplanation + protocolLine, true);
   // Weekly arc owns Sunday; pattern insight rides any day a pattern exists.
   push("weeklyArc", weeklyArcText(input), input.isSunday === true && !!input.summary30d);
   push("patternInsight", input.patterns?.[0], (input.patterns?.length ?? 0) > 0);
