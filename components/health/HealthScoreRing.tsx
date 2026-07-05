@@ -31,7 +31,7 @@ export function HealthScoreRing({ result }: { result: HealthScoreResult }) {
             stroke={10}
             ticks={30}
             majorEvery={3}
-            gradient={["#ffd98a", "#ffb13d", "#ff6a3d"]}
+            gradient={["#00d4ff", "#9b7bff", "#4a2fd4"]}
             label={score === null ? "Health Score not started" : `Health Score ${score}/100`}
           >
             <span

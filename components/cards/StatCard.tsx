@@ -48,7 +48,9 @@ export function StatCard({
   const body = (
     <Card
       className={cn(
-        "flex h-full flex-col gap-1.5 p-4 transition-colors",
+        // Angular hull-cut + corner tick: instrument tiles read as panels,
+        // not cards (Starship S1). Emotional surfaces keep the soft base Card.
+        "hull-cut-sm corner-tick flex h-full flex-col gap-1.5 p-4 transition-colors",
         // Brackets live on the focusable Link when linked (focus lands
         // there, not on this div); non-linked cards show them on :active.
         !href && "focus-brackets",

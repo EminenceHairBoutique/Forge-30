@@ -572,3 +572,19 @@ textarea {
     display: none;
   }
 }
+
+/* Gauge targeting reticle — slow rotation, killed by reduced motion. */
+.starship-reticle {
+  transform-origin: center;
+  animation: reticle-spin 16s linear infinite;
+}
+@keyframes reticle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .starship-reticle {
+    animation: none;
+  }
+}

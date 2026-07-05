@@ -86,7 +86,7 @@ export function Ring({
         width={size}
         height={size}
         className="-rotate-90"
-        style={glow ? { filter: "drop-shadow(0 0 12px rgba(255,138,61,0.35))" } : undefined}
+        style={glow ? { filter: "drop-shadow(0 0 12px rgba(124,92,255,0.5))" } : undefined}
       >
         {gradient && (
           <defs>
@@ -116,7 +116,7 @@ export function Ring({
                 y1={t.y1}
                 x2={t.x2}
                 y2={t.y2}
-                stroke={t.major ? "rgba(255,244,228,0.35)" : "rgba(255,244,228,0.15)"}
+                stroke={t.major ? "var(--stroke-active)" : "var(--stroke-hairline)"}
                 strokeWidth={1}
               />
             ))}
