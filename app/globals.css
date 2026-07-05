@@ -27,7 +27,7 @@
   --text-secondary: #9a94c4;
   /* Primary brand = violet; "ember" is the deep-violet gradient partner;
      "gold-soft" the light-violet top stop. Cyan is the telemetry accent. */
-  --accent-gold: #7c5cff;
+  --accent-gold: #8a6dff;
   --accent-ember: #4a2fd4;
   --accent-gold-soft: #9b7bff;
   --accent-cyan: #00d4ff;
@@ -63,12 +63,12 @@
   --surface-safety: #eef0f6;
   --text-primary: #191630;
   --text-secondary: #5a5478;
-  --accent-gold: #6d4aff;
+  --accent-gold: #5f3ae8;
   --accent-ember: #4a2fd4;
-  --accent-gold-soft: #9b7bff;
-  --accent-cyan: #009fc4; /* darkened cyan for AA on white */
-  --accent-success: #00998c;
-  --accent-danger: #e11d48;
+  --accent-gold-soft: #7c5cff;
+  --accent-cyan: #0089a8; /* darkened cyan for AA on white */
+  --accent-success: #0a7a68;
+  --accent-danger: #c1123c;
   --stroke-hairline: rgba(29, 26, 51, 0.12);
   --stroke-active: rgba(109, 74, 255, 0.55);
   --line: var(--stroke-hairline);

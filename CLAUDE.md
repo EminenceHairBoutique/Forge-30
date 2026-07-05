@@ -1,6 +1,7 @@
 # CLAUDE.md — Forge30
 
-Forge30 is an installable, offline-first PWA (dark-only, mobile-first): a personal operating
+Forge30 is an installable, offline-first PWA (mobile-first, **dark by default** with an
+optional light theme via `[data-theme]`): a personal operating
 system connecting nutrition, training, mind, money, skills, health, and relationships into one
 daily loop. **`V3_SPEC.md` is the active spec** — it supersedes `v2_spec.md` where they
 conflict; where v3 is silent, v2 still applies. `AUDIT_V3.md` reconciles the spec against this
@@ -75,13 +76,20 @@ Every phase gates on: typecheck clean → lint clean → tests pass → build pa
    the PWA shell. Grow `REVIEW_SCHEMA` and `SYSTEM_PROMPT` together; keep model
    `claude-opus-4-8`, `thinking: adaptive`, `output_config.format` as-is.
 
-## Design system — "Solaris HUD"
+## Design system — "Starship OS" (was Solaris HUD; DECISIONS §15)
 
-Tokens in `app/globals.css` (Tailwind v4 `@theme`): warm base `#0b0806` · warm-glass
-surface/elevated (rgba tints; solids `#161210`/`#1d1712`) · ivory `#fff4e4` · muted `#b3a18a` ·
-gold `#ffb13d` · ember `#ff6a3d` (gradient partner, hero/primary only) · gold-soft `#ffd98a` ·
-success (teal) `#2de1c2` · danger `#ff3b30` · safety surface `#16181a`. **`warning` is retired**
-— there is no warning token or class. Molten/bar/glass gradients and the glow/stroke/radius
+Tokens in `app/globals.css` live under `:root[data-theme="dark"]` (default) and
+`[data-theme="light"]`. **The Solaris warm tokens were repointed onto the Starship violet/cyan
+HUD while keeping the SEMANTIC names** — `gold` is now the violet primary (`#8a6dff` dark /
+`#5f3ae8` light), `ember` the deep-violet gradient partner, `gold-soft` light-violet, plus a
+new `cyan` telemetry accent (`--color-cyan`); success teal, danger red (`#ff3b5c` dark /
+`#c1123c` light), safety surface cool-dark. Every existing utility reskins through the tokens;
+don't add a parallel token set. **`warning` is retired** — there is no warning token or class.
+Signature motifs: angular hull-cut clips (`.hull-cut`/`.hull-cut-sm`, `.corner-tick`), the
+plasma gauge (violet→cyan) with cyan reticle + corner brackets, the hexagonal floating dock
+with the diamond Coach core, and the one-time reduced-motion-safe `BootSequence`. Theme is a
+device preference (`forge30:theme`, never synced) toggled in Settings; the no-FOUC script is
+in the root layout. Fonts: Space Grotesk display, JetBrains Mono microlabels, Inter body. Molten/bar/glass gradients and the glow/stroke/radius
 scale are defined once in `:root`. Primitives in `components/ui/` are shadcn-style and
 deliberately hand-rolled where iOS reliability matters (native `<select>`, not Radix) — follow
 that pattern for new form controls. Microlabels (`.microlabel`, Geist Mono 10px/.16em) are the

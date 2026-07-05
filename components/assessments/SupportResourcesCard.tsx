@@ -10,9 +10,9 @@ export function SupportResourcesCard() {
   return (
     <div
       role="status"
-      className="rounded-(--radius-control) border border-gold/50 bg-gold/10 px-3.5 py-3"
+      className="bg-safety rounded-(--radius-control) border border-danger/40 px-3.5 py-3"
     >
-      <p className="flex items-center gap-1.5 microlabel text-gold">
+      <p className="flex items-center gap-1.5 microlabel text-danger">
         <LifeBuoy className="size-3.5" /> Support, right now if you need it
       </p>
       <p className="mt-1.5 text-sm leading-relaxed text-ivory">

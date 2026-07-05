@@ -175,3 +175,33 @@ patch wins on every point it addresses). Reskin only — engine logic and copy u
   dark-alert sweep and byte-identical crisis copy are non-negotiable (S3).
 - **Fonts:** Space Grotesk (display), JetBrains Mono (microlabels), Inter (body) via
   `next/font` (self-hosted at build → CSP-safe); Geist stays as fallback.
+
+## 16. Starship §2 safety-color sweep — re-mapping list (S3)
+
+Visual treatment only; every crisis line, hotline number, and disclaimer is byte-identical
+(verified by diff + the safetyCopy suite). Safety surfaces render on the neutral cool-dark
+`bg-safety` in the **red family only** (`--accent-danger`: `#ff3b5c` dark / `#c1123c` light),
+never the violet/cyan brand.
+
+Re-mappings applied:
+- `SupportResourcesCard` (self-harm crisis support): `border-gold/50 bg-gold/10 text-gold`
+  (brand) → `bg-safety border-danger/40 text-danger` (red-family caution, icon + label).
+- `PainStopModal` (sharp-pain protocol): step 1 "Stop the movement" stays `text-danger`
+  (the genuine safety imperative); follow-up steps 2–4 dropped `text-gold` → neutral bold
+  (no brand color inside a safety surface).
+- Already §2-compliant, reskin automatically through the danger/safety tokens (no brand
+  leak): BP crisis flow (`BloodPressureSheet`), BP stage chips, injury red-flag cards, the
+  four persistent section disclaimers, overspend indicators. `Badge variant="caution"/"danger"`
+  is the shared red-family primitive.
+
+## 17. Contrast (WCAG AA) tuning for the light theme + dark violet (S3)
+
+The light inversion is the biggest contrast risk. Computed ratios drove these token nudges so
+all text pairs clear 4.5:1 (graphics 3:1):
+- Dark violet primary `#7c5cff` → `#8a6dff` (clears 4.5 on elevated surfaces for violet
+  microlabels/eyebrows).
+- Light violet `#6d4aff` → `#5f3ae8` (4.8 on the bright base); light gold-soft → `#7c5cff`.
+- Light danger `#e11d48` → `#c1123c` (5.4 on `bg-safety`); light success `#00998c` →
+  `#0a7a68` (5.25 on white); light cyan `#009fc4` → `#0089a8`.
+Dark body text (primary 17:1, secondary 6–7:1) and all completion/telemetry accents already
+passed.

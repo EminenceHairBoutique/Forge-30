@@ -179,3 +179,19 @@ verbatim trust line) pinned by lib/data/pricing.test.ts.
 WAIT(operator): Stripe test-mode checkout → webhook → tier flip round trip; trial grants once;
 portal opens for a subscribed user; downgrade leaves all data readable; paywall renders for
 all three tiers via the dev tier switcher.
+
+## Starship OS visual overhaul (S0–S3, 2026-07-05)
+
+Reskin only — engine logic and all copy unchanged; 438 tests stayed green throughout.
+Shipped: [data-theme] dark-default + light themes (token repoint of Solaris→violet/cyan
+keeping semantic names), Space Grotesk/JetBrains Mono/Inter via next/font, theme toggle +
+no-FOUC script; plasma gauge (violet→cyan) with cyan reticle + corner brackets; angular
+hull-cut stat tiles; violet/cyan charts; hexagonal floating HUD dock with the protruding
+diamond Coach core; one-time BootSequence; §2 safety sweep (red-family on cool-dark, crisis
+copy byte-identical, DECISIONS §16); AA contrast tuning both themes (DECISIONS §17); complete
+reduced-motion path (boot skipped, all six infinite animations guarded).
+
+WAIT(device): physical iPhone pass — read one screenshot as "operating system" first; verify
+the boot splash on cold launch and its reduced-motion skip; check the floating dock clears the
+home indicator and the quick-deploy chips; confirm AA on OLED for muted text over the brightest
+light wash; confirm the theme toggle survives an installed-PWA relaunch (no FOUC).
