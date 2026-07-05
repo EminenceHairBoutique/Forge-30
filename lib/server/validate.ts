@@ -156,6 +156,7 @@ const COACH_OPTIONAL: Record<string, FieldSpec> = {
   isSunday: { kind: "boolean" },
   protocolAdherence7d: { kind: "number", nullable: true },
   protocolMissedCount7d: { kind: "number" },
+  sleepQuality: { kind: "enum", values: ["rough", "ok", "good"] },
 };
 
 export function validateCoachInput(raw: unknown): Validation<CoachInput> {

@@ -5,6 +5,7 @@ import { Hammer, RotateCcw } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { buildWorkoutWeek, type BuilderInputs, type BuiltWeek } from "@/lib/engine/workoutBuilder";
 import { injuriesFromPainFlags } from "@/lib/engine/trainingRules";
+import { programBuilderDefaults } from "@/lib/engine/programs";
 import { GOAL_LABELS } from "@/components/shell/OnboardingGate";
 import { uid } from "@/lib/utils";
 import type { CustomWorkoutPlan, EquipmentAccess, GoalId, TrainingExperience } from "@/lib/types";
@@ -29,13 +30,20 @@ export function BuilderSheet({
   hasCustomPlan: boolean;
 }) {
   const { adapter, profile, touch } = useStorage();
+  // Defaults come from the §3.1 schedule answers shaped by the chosen
+  // program (§3.2) — every knob stays editable right here.
+  const programDefaults = programBuilderDefaults(profile?.program, {
+    trainingDaysPerWeek: profile?.trainingDaysPerWeek,
+    sessionMinutes: profile?.sessionMinutes,
+    trainingExperience: profile?.trainingExperience,
+  });
   const [goal, setGoal] = useState<GoalId>(profile?.primaryGoal ?? "gainMuscle");
-  const [days, setDays] = useState<BuilderInputs["daysPerWeek"]>(4);
-  const [minutes, setMinutes] = useState<BuilderInputs["sessionMinutes"]>(60);
-  const [equipment, setEquipment] = useState<EquipmentAccess>(profile?.equipment ?? "fullGym");
-  const [experience, setExperience] = useState<TrainingExperience>(
-    profile?.trainingExperience ?? "intermediate"
+  const [days, setDays] = useState<BuilderInputs["daysPerWeek"]>(programDefaults.daysPerWeek);
+  const [minutes, setMinutes] = useState<BuilderInputs["sessionMinutes"]>(
+    programDefaults.sessionMinutes
   );
+  const [equipment, setEquipment] = useState<EquipmentAccess>(profile?.equipment ?? "fullGym");
+  const [experience, setExperience] = useState<TrainingExperience>(programDefaults.experience);
   const [preview, setPreview] = useState<BuiltWeek | null>(null);
 
   const injuries = [

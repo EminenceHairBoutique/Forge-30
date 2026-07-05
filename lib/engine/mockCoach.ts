@@ -75,6 +75,9 @@ export interface CoachInput {
    *  may say about them. */
   protocolAdherence7d?: number | null;
   protocolMissedCount7d?: number;
+  /** Self-reported sleep quality from onboarding (v3.3 §3.1) — context for
+   *  sleep framing, never a diagnosis. */
+  sleepQuality?: "rough" | "ok" | "good";
 }
 
 export interface CoachReview {
@@ -288,7 +291,14 @@ export function generateMockAIFeedback(input: CoachInput): CoachReview {
   if (proteinShort <= 10 && input.protein > 0) wins.push("protein landed on target");
   if (caloriesShort <= 200 && input.calories > 0) wins.push("calories were right where they should be");
   if (input.waterMl >= input.waterTarget && input.waterTarget > 0) wins.push("water was handled");
-  if (input.sleepHours >= 7) wins.push(`${input.sleepHours}h of sleep is real recovery`);
+  if (input.sleepHours >= 7)
+    wins.push(
+      // §3.1 context: someone who reported rough sleep gets credit for the
+      // improvement, not just the number.
+      input.sleepQuality === "rough"
+        ? `${input.sleepHours}h of sleep — a real win given sleep's been rough lately`
+        : `${input.sleepHours}h of sleep is real recovery`
+    );
   if (input.journalDone) wins.push("you did the mind check-in");
   if (input.spendingChecked && !overspent) wins.push("spending stayed visible and inside the limit");
   if (input.skillMinutes >= 10) wins.push(`${input.skillMinutes} minutes of skill work went in`);

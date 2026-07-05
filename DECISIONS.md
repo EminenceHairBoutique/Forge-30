@@ -131,3 +131,12 @@ results render under the new name with zero migration. **Rationale (Claude audit
 benefit; "Stress Response Patterns" describes the same content — learned protective
 patterns, named without judgment — in the register the rest of the app uses. Content,
 items, scoring, and the not-a-diagnosis/PTSD safety framing are unchanged.
+
+## 13. Export is never paywalled (v3.3 §3.3 vs §5 conflict, resolved)
+
+V3_3_PROMPT §3.3 gates the JSON full export on Elite, while its own Phase 5 lists
+"export/delete-data controls" as never-paywalled (per both audits) — and the free JSON
+backup/restore has shipped since v1. Regressing a shipped data-portability control violates
+the standing guardrail rule, so **all exports stay free at every tier**: the versioned JSON
+envelope (with the new include-media toggle) and all five per-collection CSVs. The Elite
+anchor list loses nothing users already owned.

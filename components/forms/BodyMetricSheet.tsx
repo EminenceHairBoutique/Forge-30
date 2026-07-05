@@ -56,17 +56,33 @@ export function BodyMetricSheet({
   const { adapter, touch } = useStorage();
   const today = toISODate();
   const [draft, setDraft] = useState<BodyMetric>(() => emptyMetric(today));
+  // §3.4: the photo never rides the metric record — it goes to the large
+  // store (IndexedDB) keyed by metric id, and is excluded from cloud sync.
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoChanged, setPhotoChanged] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    adapter.getBodyMetric(today).then((m) => setDraft(m ?? emptyMetric(today)));
+    setPhotoChanged(false);
+    void adapter.getBodyMetric(today).then(async (m) => {
+      const next = m ?? emptyMetric(today);
+      setDraft(next);
+      const stored = next.hasPhoto ? await adapter.getBodyPhoto(next.id) : null;
+      setPhoto(stored ?? next.photoUrl ?? null);
+    });
   }, [open, adapter, today]);
 
   const num = (key: keyof BodyMetric) => (v: string) =>
     setDraft({ ...draft, [key]: Math.max(0, Number(v) || 0) });
 
   const save = async () => {
-    await adapter.saveBodyMetric({ ...draft, date: today });
+    if (photoChanged && photo) await adapter.saveBodyPhoto(draft.id, photo);
+    await adapter.saveBodyMetric({
+      ...draft,
+      date: today,
+      photoUrl: "",
+      hasPhoto: draft.hasPhoto || (photoChanged && !!photo),
+    });
     touch();
     onOpenChange(false);
   };
@@ -117,13 +133,16 @@ export function BodyMetricSheet({
               className="text-sm text-muted file:mr-3 file:min-h-11 file:rounded-(--radius-control) file:border file:border-line file:bg-elevated file:px-3 file:text-sm file:font-semibold file:text-ivory"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (file) setDraft({ ...draft, photoUrl: await fileToThumbnail(file) });
+                if (file) {
+                  setPhoto(await fileToThumbnail(file));
+                  setPhotoChanged(true);
+                }
               }}
             />
-            {draft.photoUrl && (
+            {photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={draft.photoUrl}
+                src={photo}
                 alt="Progress preview"
                 className="mt-1 h-32 w-24 rounded-(--radius-control) border border-line object-cover"
               />

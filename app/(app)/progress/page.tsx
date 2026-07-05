@@ -79,6 +79,7 @@ export default function ProgressPage() {
   const [spending, setSpending] = useState<SpendingEntry[]>([]);
   const [metrics, setMetrics] = useState<BodyMetric[]>([]);
   const [metric, setMetric] = useState<Metric>("forge");
+  const [bodyPhotos, setBodyPhotos] = useState<{ id: string; date: string; src: string }[]>([]);
   const [dayDetail, setDayDetail] = useState<string | null>(null);
   // Calendar starts as a heat-strip (v3.3 C5); tap expands the full grid.
   const [calExpanded, setCalExpanded] = useState(false);
@@ -204,6 +205,26 @@ export default function ProgressPage() {
     }
     return points;
   }, [profile, metric, spending, metrics, logs, logByDate, start, today]);
+
+  // §3.4: photos live in the large store keyed by metric id (legacy records
+  // may still carry an embedded photoUrl until the one-time relocation runs).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const withPhoto = metrics.filter((m) => m.hasPhoto || m.photoUrl).slice(-8);
+      const loaded = await Promise.all(
+        withPhoto.map(async (m) => ({
+          id: m.id,
+          date: m.date,
+          src: (await adapter.getBodyPhoto(m.id)) ?? m.photoUrl ?? "",
+        }))
+      );
+      if (!cancelled) setBodyPhotos(loaded.filter((p) => p.src));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [metrics, adapter]);
 
   if (!profile) return null;
 
@@ -470,20 +491,17 @@ export default function ProgressPage() {
             <CardTitle>Body log</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {metrics.some((m) => m.photoUrl) && (
+            {bodyPhotos.length > 0 && (
               <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                {metrics
-                  .filter((m) => m.photoUrl)
-                  .slice(-8)
-                  .map((m) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={m.id}
-                      src={m.photoUrl}
-                      alt={`Progress photo ${m.date}`}
-                      className="h-28 w-20 shrink-0 rounded-(--radius-control) border border-line object-cover"
-                    />
-                  ))}
+                {bodyPhotos.map((p) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={p.id}
+                    src={p.src}
+                    alt={`Progress photo ${p.date}`}
+                    className="h-28 w-20 shrink-0 rounded-(--radius-control) border border-line object-cover"
+                  />
+                ))}
               </div>
             )}
             {metrics

@@ -125,3 +125,20 @@ WAIT(device) — VoiceOver spot-check list:
 - ScoreRing: role=img label announces score + "tap for breakdown".
 - Progress heat-strip: "Expand the 30-day calendar" then per-day labels in the grid.
 - Coach tabs: selected state announced; horizontal scroll reachable.
+
+## v3.3 Phase 3 — personalization, programs, export, media (2026-07-05)
+
+Shipped: §3.1 onboarding gains schedule (days/week, minutes/session), sleep quality, and a
+program picker suggested from the answers (every field consumed: schedule + program →
+builder defaults; sleep quality → coach context + mock framing; diet/equipment/experience
+were already consumed by the builder and targets). §3.2 programs — First 30 / Comeback 30 /
+Busy 30 over pure engines (suggestProgram, programBuilderDefaults, quickAddFirst), Settings
+switch affects future days only (non-destructive by test). §3.3 CSV export (days, meals,
+workouts-per-set, spending, body) + include-media toggle on the JSON export; all free
+(DECISIONS §13). §3.4 progress photos relocated to IndexedDB (one-time idempotent migration,
+never synced), voice notes prefer opus @96kbps with a 30-second-left countdown, voice sync
+is opt-in ("Sync voice recordings"), media usage surfaced in Settings.
+
+WAIT(device): record a full 3:00 note on iOS Safari and confirm ≲3 MB on disk (the
+mediaUsage line in Settings shows it) and playback works; verify photo relocation on a
+device carrying pre-v3.3 embedded photos.

@@ -1,6 +1,7 @@
 "use client";
 
 import { flagEnabled } from "@/lib/flags";
+import { quickAddFirst } from "@/lib/engine/programs";
 import { useEffect, useRef, useState } from "react";
 import { Barcode, Camera, Search as SearchIcon, Trash2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
@@ -62,9 +63,12 @@ export function AddMealSheet({
   onOpenChange: (open: boolean) => void;
   defaultSlot?: MealSlot;
 }) {
-  const { adapter, touch } = useStorage();
-  // Photo leads only when its flag is on (§2.9: flag-off = hidden).
-  const [tab, setTab] = useState<Tab>(flagEnabled("photoMeal") ? "photo" : "search");
+  const { adapter, touch, profile } = useStorage();
+  // Busy 30 leads with quick-adds (§3.2); otherwise photo when its flag is
+  // on (§2.9: flag-off = hidden).
+  const [tab, setTab] = useState<Tab>(
+    quickAddFirst(profile?.program) ? "quick" : flagEnabled("photoMeal") ? "photo" : "search"
+  );
   const [slot, setSlot] = useState<MealSlot>(defaultSlot);
   const [saved, setSaved] = useState<SavedMeal[]>([]);
 
@@ -93,6 +97,9 @@ export function AddMealSheet({
 
   useEffect(() => {
     if (open) {
+      // Re-resolve the leading tab at open time — the profile (and its
+      // program) may not have loaded when the sheet first mounted.
+      setTab(quickAddFirst(profile?.program) ? "quick" : flagEnabled("photoMeal") ? "photo" : "search");
       setSlot(defaultSlot);
       adapter.listSavedMeals().then(setSaved);
       adapter.listFoodCache().then(setRecents);
@@ -100,7 +107,7 @@ export function AddMealSheet({
         (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.() === true
       );
     }
-  }, [open, defaultSlot, adapter]);
+  }, [open, defaultSlot, adapter, profile]);
 
   // Debounced server search; the recents cache filters instantly + offline.
   useEffect(() => {

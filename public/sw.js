@@ -14,7 +14,7 @@
  *    content-hashed and immutable.
  */
 
-const VERSION = "forge30-7c22938-202607052055";
+const VERSION = "forge30-966c491-202607052115";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 

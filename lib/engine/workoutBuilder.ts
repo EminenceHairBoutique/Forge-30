@@ -31,7 +31,7 @@ export function workoutForDate(custom: CustomWorkoutPlan | null, date: ISODate):
 export interface BuilderInputs {
   goal: GoalId;
   daysPerWeek: 2 | 3 | 4 | 5 | 6;
-  sessionMinutes: 30 | 45 | 60 | 75;
+  sessionMinutes: 20 | 30 | 45 | 60 | 75 | 90;
   equipment: EquipmentAccess;
   experience: TrainingExperience;
   injuries: InjuryProfile[];
@@ -126,7 +126,7 @@ const WEEK_LAYOUT: Record<number, { weekday: number; template: keyof typeof DAY_
   ],
 };
 
-const SLOTS_BY_MINUTES: Record<number, number> = { 30: 4, 45: 5, 60: 6, 75: 7 };
+const SLOTS_BY_MINUTES: Record<number, number> = { 20: 3, 30: 4, 45: 5, 60: 6, 75: 7, 90: 7 };
 
 /** RIR guidance alongside RPE, by experience (spec: RIR alongside RPE). */
 export function experienceGuidance(experience: TrainingExperience): string {

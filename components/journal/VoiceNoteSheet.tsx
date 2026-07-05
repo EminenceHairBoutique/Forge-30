@@ -64,7 +64,15 @@ export function VoiceNoteSheet({
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      // §3.4 compression: prefer opus-in-webm (a 3:00 note lands well under
+      // 3 MB); iOS MediaRecorder yields mp4/aac — accept what the platform
+      // gives rather than failing.
+      const preferred = "audio/webm;codecs=opus";
+      const recorder =
+        typeof MediaRecorder.isTypeSupported === "function" &&
+        MediaRecorder.isTypeSupported(preferred)
+          ? new MediaRecorder(stream, { mimeType: preferred, audioBitsPerSecond: 96_000 })
+          : new MediaRecorder(stream);
       chunksRef.current = [];
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -144,6 +152,11 @@ export function VoiceNoteSheet({
                 <p className="display-num text-3xl text-ivory" aria-live="polite">
                   {mmss}
                 </p>
+                {recording && MAX_SECONDS - seconds <= 30 && (
+                  <p role="status" className="microlabel text-gold">
+                    {MAX_SECONDS - seconds}s left — notes cap at 3:00
+                  </p>
+                )}
                 {recording && (
                   <p
                     role="status"

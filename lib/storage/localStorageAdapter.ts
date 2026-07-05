@@ -40,6 +40,7 @@ import type {
   TomorrowPlan,
   UserProfile,
   WorkoutEntry,
+  MediaPrefs,
 } from "@/lib/types";
 import type { StorageAdapter } from "./adapter";
 import { DEFAULT_TIER, isTier, type Tier } from "@/lib/engine/entitlements";
@@ -70,6 +71,7 @@ const KEYS = {
   skillTasks: `${PREFIX}:skillTasks`,
   books: `${PREFIX}:books`,
   bodyMetrics: `${PREFIX}:bodyMetrics`,
+  mediaPrefs: `${PREFIX}:mediaPrefs`,
   aiReviews: `${PREFIX}:aiReviews`,
   entitlements: `${PREFIX}:entitlements`,
   tomorrowPlans: `${PREFIX}:tomorrowPlans`,
@@ -135,16 +137,35 @@ export const PROTOCOL_COLLECTIONS = [
   "labPanels",
 ] as const;
 
-const ALWAYS_EXCLUDED = new Set<string>(["protocolSettings"]);
-let syncExcluded = new Set<string>(ALWAYS_EXCLUDED);
+// Media rules (v3.3 §3.4): progress photos never sync (Supabase Storage is
+// a future phase); voice audio syncs only with the explicit opt-in below;
+// the prefs records themselves stay on-device like protocolSettings.
+const ALWAYS_EXCLUDED = new Set<string>(["protocolSettings", "mediaPrefs", "bodyPhotos"]);
+let protocolLocalOnly = false;
+let voiceSyncOptIn = false;
+let syncExcluded = new Set<string>([...ALWAYS_EXCLUDED, "journalAudio"]);
 let exclusionsHydrated = false;
 
-export function setProtocolLocalOnly(localOnly: boolean): void {
-  exclusionsHydrated = true;
+function rebuildExclusions(): void {
   syncExcluded = new Set<string>([
     ...ALWAYS_EXCLUDED,
-    ...(localOnly ? PROTOCOL_COLLECTIONS : []),
+    ...(protocolLocalOnly ? PROTOCOL_COLLECTIONS : []),
+    ...(voiceSyncOptIn ? [] : ["journalAudio"]),
   ]);
+}
+
+export function setProtocolLocalOnly(localOnly: boolean): void {
+  // Hydrate first so setting one dimension never freezes the other at its
+  // default while a stricter persisted value exists (§6.0.5 cold start).
+  hydrateSyncExclusions();
+  protocolLocalOnly = localOnly;
+  rebuildExclusions();
+}
+
+export function setVoiceSyncOptIn(optIn: boolean): void {
+  hydrateSyncExclusions();
+  voiceSyncOptIn = optIn;
+  rebuildExclusions();
 }
 
 /**
@@ -156,13 +177,22 @@ export function setProtocolLocalOnly(localOnly: boolean): void {
  */
 export function hydrateSyncExclusions(): void {
   if (exclusionsHydrated || !canUseStorage()) return;
+  exclusionsHydrated = true;
   try {
     const raw = window.localStorage.getItem(KEYS.protocolSettings);
-    const localOnly = raw ? (JSON.parse(raw) as { localOnly?: boolean }).localOnly === true : false;
-    setProtocolLocalOnly(localOnly);
+    protocolLocalOnly = raw
+      ? (JSON.parse(raw) as { localOnly?: boolean }).localOnly === true
+      : false;
   } catch {
-    setProtocolLocalOnly(false);
+    protocolLocalOnly = false;
   }
+  try {
+    const raw = window.localStorage.getItem(KEYS.mediaPrefs);
+    voiceSyncOptIn = raw ? (JSON.parse(raw) as { syncVoice?: boolean }).syncVoice === true : false;
+  } catch {
+    voiceSyncOptIn = false;
+  }
+  rebuildExclusions();
 }
 
 export function isSyncExcluded(collection: string): boolean {
@@ -173,7 +203,9 @@ export function isSyncExcluded(collection: string): boolean {
 /** Test hook: clears the hydration cache so fixtures can re-seed storage. */
 export function resetSyncExclusionsForTests(): void {
   exclusionsHydrated = false;
-  syncExcluded = new Set<string>(ALWAYS_EXCLUDED);
+  protocolLocalOnly = false;
+  voiceSyncOptIn = false;
+  syncExcluded = new Set<string>([...ALWAYS_EXCLUDED, "journalAudio"]);
 }
 
 const COLLECTION_BY_KEY: Record<string, string> = {};
@@ -964,6 +996,70 @@ export class LocalStorageAdapter implements StorageAdapter {
     write(KEYS.foodCache, [item, ...list].slice(0, 50));
   }
 
+  // -- Media discipline (v3.3 §3.4) ---------------------------------------------
+
+  async saveBodyPhoto(metricId: string, dataUrl: string): Promise<void> {
+    await this.cleanupRemovedLarge();
+    await this.large.put("bodyPhotos", metricId, dataUrl);
+  }
+
+  async getBodyPhoto(metricId: string): Promise<string | null> {
+    await this.relocateEmbeddedBodyPhotos();
+    return (await this.large.get<string>("bodyPhotos", metricId)) ?? null;
+  }
+
+  async getMediaPrefs(): Promise<MediaPrefs> {
+    const stored = read<Partial<MediaPrefs>>(KEYS.mediaPrefs, {});
+    return { syncVoice: stored.syncVoice === true };
+  }
+
+  async saveMediaPrefs(prefs: MediaPrefs): Promise<void> {
+    write(KEYS.mediaPrefs, prefs);
+    setVoiceSyncOptIn(prefs.syncVoice);
+  }
+
+  async mediaUsageBytes(): Promise<number> {
+    let total = 0;
+    for (const collection of ["journalAudio", "mealPhotos", "bodyPhotos"]) {
+      const records = await this.large.list<unknown>(collection);
+      for (const value of Object.values(records)) {
+        if (typeof value === "string") {
+          // Data URLs are base64: ~3 bytes per 4 characters.
+          total += Math.round(value.length * 0.75);
+        }
+      }
+    }
+    return total;
+  }
+
+  /**
+   * One-time §3.4 relocation: pre-v3.3 body metrics embedded the photo data
+   * URL in the metric record (localStorage). Move each into the large
+   * store, blank the legacy field, and mark hasPhoto. Idempotent — a moved
+   * record has no photoUrl left to move.
+   */
+  private photosRelocated = false;
+
+  private async relocateEmbeddedBodyPhotos(): Promise<void> {
+    if (this.photosRelocated || !canUseStorage()) return;
+    this.photosRelocated = true;
+    try {
+      const all = read<Record<string, BodyMetric>>(KEYS.bodyMetrics, {});
+      let changed = false;
+      for (const metric of Object.values(all)) {
+        if (metric.photoUrl) {
+          await this.large.put("bodyPhotos", metric.id, metric.photoUrl);
+          metric.photoUrl = "";
+          metric.hasPhoto = true;
+          changed = true;
+        }
+      }
+      if (changed) write(KEYS.bodyMetrics, all);
+    } catch {
+      this.photosRelocated = false;
+    }
+  }
+
   async saveMealPhoto(mealId: string, dataUrl: string): Promise<void> {
     await this.large.put("mealPhotos", mealId, dataUrl);
   }
@@ -1000,6 +1096,7 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   // -- Body metrics ------------------------------------------------------------------------
   async getBodyMetric(date: ISODate): Promise<BodyMetric | null> {
+    await this.relocateEmbeddedBodyPhotos();
     return read<Record<ISODate, BodyMetric>>(KEYS.bodyMetrics, {})[date] ?? null;
   }
 
@@ -1010,6 +1107,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async listBodyMetrics(from: ISODate, to: ISODate): Promise<BodyMetric[]> {
+    await this.relocateEmbeddedBodyPhotos();
     return Object.values(read<Record<ISODate, BodyMetric>>(KEYS.bodyMetrics, {}))
       .filter((m) => inRange(m.date, from, to))
       .sort((a, b) => a.date.localeCompare(b.date));
