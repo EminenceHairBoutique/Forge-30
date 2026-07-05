@@ -20,3 +20,13 @@ strength of this file alone.
 - [ ] RLS spot-check: querying sync_blobs with a second user's JWT returns zero rows.
 - [ ] Signed-out first-run remains byte-for-byte the local experience (no auth prompt
       anywhere except the quiet Settings/Progress cards).
+
+## Phase 2 — web push (WAIT: operator env + devices)
+- [ ] Generate VAPID keys (`npx web-push generate-vapid-keys`), set env, run 0002_push.sql,
+      confirm the Vercel cron (vercel.json, every 15 min) fires with CRON_SECRET.
+- [ ] Installed iOS PWA (16.4+): enable background push from Settings → receive a morning
+      brief; confirm no permission prompt ever appears in a Safari tab (install card shows
+      instead).
+- [ ] Android/desktop Chrome: subscribe → receive evening close when a day is incomplete.
+- [ ] Double-fire the cron manually → notification_log unique key sends nothing twice.
+- [ ] Fully log a day → zero pushes that day; set quiet hours to now → silence.

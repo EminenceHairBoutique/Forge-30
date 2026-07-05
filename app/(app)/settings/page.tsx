@@ -16,7 +16,7 @@ import {
 } from "@/lib/engine/forgeScore";
 import { Select } from "@/components/ui/select";
 import { DEFAULT_DOMAINS, DEFAULT_MVD, DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
-import { notificationPermission } from "@/lib/push/subscription";
+import { notificationPermission } from "@/lib/push/client";
 import { flagEnabled as flagOn } from "@/lib/flags";
 import type {
   DomainToggles,
@@ -29,6 +29,7 @@ import type {
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackupCard } from "@/components/settings/BackupCard";
+import { PushCard } from "@/components/settings/PushCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,7 +61,8 @@ const MVD_LABELS: { key: keyof MvdDefinition; label: string; sub?: string }[] = 
   { key: "movement", label: "Move a little", sub: "any workout, rest day, or a walk" },
 ];
 
-const NOTIFICATION_LABELS: { key: keyof NotificationPrefs; label: string; sub: string }[] = [
+type BooleanPrefKey = "morningPlan" | "eveningReview" | "streakReminder" | "weeklyReport";
+const NOTIFICATION_LABELS: { key: BooleanPrefKey; label: string; sub: string }[] = [
   { key: "morningPlan", label: "Morning plan", sub: "one nudge before noon until you've seen it" },
   { key: "eveningReview", label: "Evening review", sub: "when the day wraps and no review exists" },
   { key: "streakReminder", label: "Streak protection", sub: "evening heads-up when today's still open" },
@@ -322,8 +324,50 @@ export default function SettingsPage() {
               />
             ))}
           </div>
+          {/* Quiet hours (v3 Phase 2): both in-app timing docs and the server
+              push respect these; default 21:30–08:00. */}
+          <div className="flex items-end gap-3">
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label htmlFor="quiet-start">Quiet from</Label>
+              <Input
+                id="quiet-start"
+                type="time"
+                value={draft.notifications?.quietStart ?? "21:30"}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    notifications: {
+                      ...DEFAULT_NOTIFICATIONS,
+                      ...(draft.notifications ?? {}),
+                      quietStart: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label htmlFor="quiet-end">Until</Label>
+              <Input
+                id="quiet-end"
+                type="time"
+                value={draft.notifications?.quietEnd ?? "08:00"}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    notifications: {
+                      ...DEFAULT_NOTIFICATIONS,
+                      ...(draft.notifications ?? {}),
+                      quietEnd: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+          </div>
+          <PushCard />
           <p className="text-xs text-muted">
-            Reminders fire while Forge30 is open{flagOn("pushServer") ? "" : "; true background push arrives with a later update"}.
+            In-app reminders fire while Forge30 is open; background push (when enabled above)
+            covers closed-app delivery with the same quiet rules.
           </p>
         </CardContent>
       </Card>

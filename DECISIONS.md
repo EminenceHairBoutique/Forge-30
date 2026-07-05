@@ -71,3 +71,13 @@ Executes in Phase 5 (coach route) and Phase 2/4 (haiku/vision routes).
 
 None so far: no v3 instruction has conflicted with the A2.4 safety guardrails. Entries land
 here if one ever does — the guardrail wins.
+
+## 8. Streak repair semantics (v3 Phase 2 parity check, 2026-07-05)
+
+V3_SPEC §2.3 paraphrases repair as "hitting Minimum Viable Day before noon the next day."
+The shipped engine (E3, built to the v2 spec §Streaks) uses the v2 earn-back: **2 met days
+inside a 48-hour window** — date-granular, no hidden clock, fully tested. Freeze economics
+match v3 exactly (1 earned per 7 days, auto-applied, max 2 banked). Since v3 defers to v2
+where its own text is a summary, the v2 semantics stand; switching to an hour-granular noon
+deadline would add clock state the engine deliberately doesn't keep. Revisit only if the
+operator asks for the stricter deadline.

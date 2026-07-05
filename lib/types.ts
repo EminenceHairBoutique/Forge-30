@@ -115,6 +115,9 @@ export interface NotificationPrefs {
   streakReminder: boolean;
   /** Sunday-evening weekly report nudge. Optional/additive; absent = on. */
   weeklyReport?: boolean;
+  /** Quiet hours (v3 Phase 2) — "HH:MM" local; defaults 21:30 → 08:00. */
+  quietStart?: string;
+  quietEnd?: string;
 }
 
 /**

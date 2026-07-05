@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useStorage } from "@/lib/storage/provider";
 import { dueNotifications, type NotificationType } from "@/lib/engine/notificationRules";
 import { resolveScoreState } from "@/lib/engine/forgeScore";
-import { notificationPermission } from "@/lib/push/subscription";
+import { notificationPermission } from "@/lib/push/client";
 import { DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
 import { mondayWeekday, toISODate } from "@/lib/utils";
 

@@ -23,8 +23,6 @@ export const FLAGS = {
   ocrThreads: false,
   /** Real-time conversation analysis (legal review required). */
   realtimeAnalysis: false,
-  /** Server-side Web Push sending (needs backend + VAPID keys). */
-  pushServer: false,
   /** Live research mode behavior on /api/research (needs AI key). */
   researchLive: false,
   /** Live-AI narrative for the Psyche Report (mock template ships first). */

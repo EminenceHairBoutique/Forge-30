@@ -43,6 +43,147 @@ export interface NotificationContext {
   freezes: number;
 }
 
+// ---------------------------------------------------------------------------
+// Server push (v3 Phase 2) — the cron route's decision engine. Same register
+// as everything above: state, never shame. Hard rules from V3_SPEC §2.2:
+// at most 2 pushes/day, zero on fully-logged days, quiet hours respected
+// (default 21:30–08:00), every type individually off-able via the same
+// NotificationPrefs the in-app reminders use.
+// ---------------------------------------------------------------------------
+
+export type ServerPushType = "morningBrief" | "eveningClose" | "streakAtRisk";
+
+export interface ServerPush {
+  type: ServerPushType;
+  title: string;
+  body: string;
+  url: string;
+}
+
+export interface ServerPushContext {
+  /** Local time at the user's device, minutes since midnight. */
+  minutesLocal: number;
+  today: ISODate;
+  prefs: NotificationPrefs;
+  /** Types already sent today (the idempotency log) — enforces the 2/day cap. */
+  sentToday: ServerPushType[];
+  /** Every domain the user tracks is logged — the "leave them alone" state. */
+  fullyLogged: boolean;
+  /** Yesterday's #1 priority from the coach review, if any. */
+  yesterdayPriority: string | null;
+  /** The 1–2 quickest still-open items, shortest first (e.g. "the 60-second check-in"). */
+  quickestMissing: string[];
+  streakCurrent: number;
+  /** Minimum Viable Day already met today. */
+  mvdMet: boolean;
+}
+
+export const QUIET_START_DEFAULT = "21:30";
+export const QUIET_END_DEFAULT = "08:00";
+export const DAILY_PUSH_CAP = 2;
+/** Streak-at-risk only defends streaks worth defending. */
+export const STREAK_AT_RISK_MIN = 5;
+
+const toMinutes = (hhmm: string): number => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+};
+
+/** True when the local time falls inside the (possibly midnight-crossing) quiet window. */
+export function inQuietHours(minutesLocal: number, prefs: NotificationPrefs): boolean {
+  const start = toMinutes(prefs.quietStart ?? QUIET_START_DEFAULT);
+  const end = toMinutes(prefs.quietEnd ?? QUIET_END_DEFAULT);
+  if (start === end) return false;
+  return start < end
+    ? minutesLocal >= start && minutesLocal < end
+    : minutesLocal >= start || minutesLocal < end;
+}
+
+/**
+ * The at-most-one push due right now (the cron runs every few minutes; the
+ * sent-log makes re-runs no-ops). Returning a single push per tick — combined
+ * with the per-day sent log — is what makes double-fires impossible.
+ */
+export function dueServerPush(ctx: ServerPushContext): ServerPush | null {
+  if (ctx.fullyLogged) return null;
+  if (ctx.sentToday.length >= DAILY_PUSH_CAP) return null;
+  if (inQuietHours(ctx.minutesLocal, ctx.prefs)) return null;
+  const sent = new Set(ctx.sentToday);
+
+  // Morning brief — 08:00–09:59, carries yesterday's #1 forward.
+  if (
+    ctx.prefs.morningPlan &&
+    !sent.has("morningBrief") &&
+    ctx.minutesLocal >= toMinutes("08:00") &&
+    ctx.minutesLocal < toMinutes("10:00")
+  ) {
+    return {
+      type: "morningBrief",
+      title: "Today's #1",
+      body: ctx.yesterdayPriority
+        ? `From last night's review: ${ctx.yesterdayPriority}`
+        : "Fifteen seconds sets the day: today's plan is ready.",
+      url: "/today",
+    };
+  }
+
+  // Streak-at-risk — 19:00–20:29, only for streaks ≥5 with the MVD still open.
+  if (
+    ctx.prefs.streakReminder &&
+    !sent.has("streakAtRisk") &&
+    ctx.streakCurrent >= STREAK_AT_RISK_MIN &&
+    !ctx.mvdMet &&
+    ctx.minutesLocal >= toMinutes("19:00") &&
+    ctx.minutesLocal < toMinutes("20:30")
+  ) {
+    return {
+      type: "streakAtRisk",
+      title: `Day ${ctx.streakCurrent + 1} is still open`,
+      body: "The minimum day takes about two minutes. That's all the streak asks.",
+      url: "/today",
+    };
+  }
+
+  // Evening close — 20:30 until quiet hours, only when the day is incomplete.
+  if (
+    ctx.prefs.eveningReview &&
+    !sent.has("eveningClose") &&
+    ctx.quickestMissing.length > 0 &&
+    ctx.minutesLocal >= toMinutes("20:30")
+  ) {
+    const items = ctx.quickestMissing.slice(0, 2).join(" and ");
+    return {
+      type: "eveningClose",
+      title: "20 minutes to close out today",
+      body: `Still open: ${items}.`,
+      url: "/today",
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Derive the evening-close inputs from a day's log: the quickest still-open
+ * items (shortest-effort first, neutral names) and whether everything the
+ * log tracks is in. Pure; the cron route maps a synced DailyLog through it.
+ */
+export function missingItems(log: {
+  calories: number;
+  mood: number;
+  journalDone: boolean;
+  spendingChecked: boolean;
+  workoutStatus: string;
+}): string[] {
+  const out: string[] = [];
+  if (log.mood === 0) out.push("the 60-second check-in");
+  if (!log.spendingChecked) out.push("the spending check");
+  if (log.calories === 0) out.push("one meal log");
+  if (!log.journalDone) out.push("a two-line journal note");
+  if (log.workoutStatus === "none") out.push("today's movement (the 10-minute minimum counts)");
+  return out;
+}
+
 export function dueNotifications(ctx: NotificationContext): AppNotification[] {
   const out: AppNotification[] = [];
   const firedToday = (t: NotificationType) => ctx.lastFired[t] === ctx.today;
