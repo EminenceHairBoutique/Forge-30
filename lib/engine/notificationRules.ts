@@ -15,7 +15,8 @@ export type NotificationType =
   | "morningPlan"
   | "eveningReview"
   | "streakReminder"
-  | "weeklyReport";
+  | "weeklyReport"
+  | "protocolDose";
 
 export interface AppNotification {
   type: NotificationType;
@@ -41,6 +42,14 @@ export interface NotificationContext {
   streakCurrent: number;
   streakAtRisk: boolean;
   freezes: number;
+  /**
+   * Protocols (v3 Phase 6): count of scheduled items due today and still
+   * unlogged, plus the earliest scheduled minute. Copy stays DISCREET —
+   * never a compound name on a lock screen (§6.0.5).
+   */
+  protocolDueCount?: number;
+  protocolEarliestMinutes?: number | null;
+  protocolsEnabled?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +242,26 @@ export function dueNotifications(ctx: NotificationContext): AppNotification[] {
           ? "No pressure: your banked freeze covers today if it comes to that. Two easy minutes keeps the streak alive on its own."
           : "Two easy minutes keeps it alive: one meal logged and the quick check-in.",
       url: "/today",
+    });
+  }
+
+  // Protocol dose reminder — discreet by construction: no compound names,
+  // no doses, just "scheduled item". Once per day, after the earliest
+  // scheduled time, only while something is still unlogged.
+  if (
+    ctx.prefs.protocolReminders !== false &&
+    ctx.protocolsEnabled === true &&
+    !firedToday("protocolDose") &&
+    (ctx.protocolDueCount ?? 0) > 0 &&
+    ctx.protocolEarliestMinutes !== null &&
+    ctx.protocolEarliestMinutes !== undefined &&
+    ctx.hour * 60 >= ctx.protocolEarliestMinutes
+  ) {
+    out.push({
+      type: "protocolDose",
+      title: "Scheduled item due",
+      body: "Ten seconds to log it — your record stays complete.",
+      url: "/protocols",
     });
   }
 

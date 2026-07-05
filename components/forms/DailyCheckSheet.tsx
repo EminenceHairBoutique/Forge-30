@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { getHealthProvider } from "@/lib/health/provider";
+import { useStorage } from "@/lib/storage/provider";
 import { detectedSuggestions, type DetectedSuggestion } from "@/lib/engine/healthMerge";
+import { PROTOCOL_SYMPTOM_TAGS } from "@/lib/data/protocolReference";
+import type { ProtocolSymptom } from "@/lib/types";
 import type { DailyLog } from "@/lib/types";
 
 /**
@@ -24,14 +27,19 @@ export function DailyCheckSheet({
   log: DailyLog;
   onSave: (patch: Partial<DailyLog>) => Promise<void>;
 }) {
+  const { adapter } = useStorage();
   const [open, setOpen] = useState(false);
   const [sleep, setSleep] = useState(log.sleepHours ? String(log.sleepHours) : "");
   const [steps, setSteps] = useState(log.steps ? String(log.steps) : "");
   const [mobility, setMobility] = useState(log.mobilityDone);
   const [detected, setDetected] = useState<DetectedSuggestion[]>([]);
+  const [protocolsOn, setProtocolsOn] = useState(false);
+  const [symptoms, setSymptoms] = useState<ProtocolSymptom[]>(log.protocolSymptoms ?? []);
 
   useEffect(() => {
     if (!open) return;
+    // Symptom tags render only when Protocols is enabled (§6.0.6).
+    void adapter.getProtocolSettings().then((s) => setProtocolsOn(s.enabled));
     let cancelled = false;
     void (async () => {
       const provider = await getHealthProvider();
@@ -54,11 +62,22 @@ export function DailyCheckSheet({
     setDetected((d) => d.filter((x) => x.field !== s.field));
   };
 
+  const toggleSymptom = (tag: ProtocolSymptom["tag"]) => {
+    setSymptoms((xs) =>
+      xs.some((x) => x.tag === tag) ? xs.filter((x) => x.tag !== tag) : [...xs, { tag, severity: 2 }]
+    );
+  };
+
+  const setSeverity = (tag: ProtocolSymptom["tag"], severity: number) => {
+    setSymptoms((xs) => xs.map((x) => (x.tag === tag ? { ...x, severity } : x)));
+  };
+
   const save = async () => {
     await onSave({
       sleepHours: Math.max(0, Number(sleep) || 0),
       steps: Math.max(0, Math.round(Number(steps) || 0)),
       mobilityDone: mobility,
+      ...(protocolsOn ? { protocolSymptoms: symptoms } : {}),
     });
     setOpen(false);
   };
@@ -72,6 +91,7 @@ export function DailyCheckSheet({
           setSleep(log.sleepHours ? String(log.sleepHours) : "");
           setSteps(log.steps ? String(log.steps) : "");
           setMobility(log.mobilityDone);
+          setSymptoms(log.protocolSymptoms ?? []);
         }
       }}
     >
@@ -130,6 +150,52 @@ export function DailyCheckSheet({
             <span className="text-sm font-medium text-ivory">Mobility / prehab done</span>
             <Switch checked={mobility} onCheckedChange={setMobility} aria-label="Mobility done" />
           </div>
+          {protocolsOn && (
+            <div className="flex flex-col gap-2">
+              <p className="microlabel text-muted">Protocol notes (optional)</p>
+              <div className="flex flex-wrap gap-2">
+                {PROTOCOL_SYMPTOM_TAGS.map(({ tag, label }) => {
+                  const active = symptoms.find((x) => x.tag === tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      aria-pressed={!!active}
+                      onClick={() => toggleSymptom(tag as ProtocolSymptom["tag"])}
+                      className={`min-h-11 rounded-full border px-3 text-sm font-semibold transition-colors ${
+                        active ? "border-gold/50 bg-gold/10 text-gold" : "border-line bg-elevated text-muted"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {symptoms.map((sym) => (
+                <div key={sym.tag} className="flex items-center justify-between gap-2 rounded-(--radius-control) bg-elevated px-3 py-2">
+                  <span className="text-sm text-ivory">
+                    {PROTOCOL_SYMPTOM_TAGS.find((t) => t.tag === sym.tag)?.label} severity
+                  </span>
+                  <div className="flex gap-1" role="radiogroup" aria-label={`${sym.tag} severity`}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={sym.severity === n}
+                        onClick={() => setSeverity(sym.tag, n)}
+                        className={`size-9 rounded-full border text-sm font-semibold ${
+                          sym.severity === n ? "border-gold/60 bg-gold/15 text-gold" : "border-line text-muted"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <Button size="lg" onClick={save}>
             Save
           </Button>

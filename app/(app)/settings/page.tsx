@@ -30,6 +30,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackupCard } from "@/components/settings/BackupCard";
 import { PushCard } from "@/components/settings/PushCard";
+import { ProtocolsCard } from "@/components/settings/ProtocolsCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -274,6 +275,8 @@ export default function SettingsPage() {
           </Select>
         </CardContent>
       </Card>
+
+      <ProtocolsCard />
 
       <Card>
         <CardHeader>

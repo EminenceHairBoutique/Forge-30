@@ -118,6 +118,8 @@ export interface NotificationPrefs {
   /** Quiet hours (v3 Phase 2) — "HH:MM" local; defaults 21:30 → 08:00. */
   quietStart?: string;
   quietEnd?: string;
+  /** Protocol dose reminders (v3 Phase 6, discreet copy). Absent = on. */
+  protocolReminders?: boolean;
 }
 
 /**

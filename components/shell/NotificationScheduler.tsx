@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useStorage } from "@/lib/storage/provider";
 import { dueNotifications, type NotificationType } from "@/lib/engine/notificationRules";
+import { dueToday } from "@/lib/engine/protocols";
 import { resolveScoreState } from "@/lib/engine/forgeScore";
 import { notificationPermission } from "@/lib/push/client";
 import { DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
@@ -56,12 +57,31 @@ export function NotificationScheduler() {
       try {
         const now = new Date();
         const today = toISODate(now);
-        const [log, review, streak, lastFired] = await Promise.all([
+        const [log, review, streak, lastFired, protocolSettings] = await Promise.all([
           adapter.getDailyLog(today),
           adapter.getAIReview(today),
           adapter.getStreak("daily"),
           adapter.getNotificationLog(),
+          adapter.getProtocolSettings(),
         ]);
+
+        // Protocols due-state (only loaded when the tab is enabled — §6.0.6).
+        let protocolDueCount = 0;
+        let protocolEarliestMinutes: number | null = null;
+        if (protocolSettings.enabled) {
+          const [schedules, compounds, doses] = await Promise.all([
+            adapter.listProtocolSchedules(),
+            adapter.listCompounds(),
+            adapter.listDoseEvents(today, today),
+          ]);
+          const due = dueToday(schedules, compounds, doses, today).filter((d) => !d.logged);
+          protocolDueCount = due.length;
+          protocolEarliestMinutes = due.reduce<number | null>((min, d) => {
+            const [h, m] = d.schedule.timeOfDay.split(":").map(Number);
+            const mins = (h ?? 0) * 60 + (m ?? 0);
+            return min === null || mins < min ? mins : min;
+          }, null);
+        }
 
         const due = dueNotifications({
           hour: now.getHours(),
@@ -75,6 +95,9 @@ export function NotificationScheduler() {
           streakCurrent: streak?.current ?? 0,
           streakAtRisk: streak?.atRisk ?? false,
           freezes: streak?.freezes ?? 0,
+          protocolsEnabled: protocolSettings.enabled,
+          protocolDueCount,
+          protocolEarliestMinutes,
         });
 
         if (due.length > 0) {

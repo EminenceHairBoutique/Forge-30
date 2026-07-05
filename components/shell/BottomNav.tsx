@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -19,9 +19,11 @@ import {
   Settings,
   Users,
   ClipboardList,
+  Pill,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useStorage } from "@/lib/storage/provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -56,8 +58,19 @@ const LOG_PATHS = LOG_DESTINATIONS.filter((d) => !d.soon).map((d) => d.href);
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { adapter, revision } = useStorage();
   const [logOpen, setLogOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [protocolsEnabled, setProtocolsEnabled] = useState(false);
+
+  // Protocols is invisible unless enabled (§6.0.6) — including here.
+  useEffect(() => {
+    void adapter.getProtocolSettings().then((s) => setProtocolsEnabled(s.enabled));
+  }, [adapter, revision]);
+
+  const moreItems = protocolsEnabled
+    ? [...MORE_DESTINATIONS, { href: "/protocols", label: "Protocols", icon: Pill }]
+    : MORE_DESTINATIONS;
 
   const navigate = (href: string, close: (o: boolean) => void) => {
     close(false);
@@ -172,7 +185,7 @@ export function BottomNav() {
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent title="More">
-          <DestinationGrid items={MORE_DESTINATIONS} close={setMoreOpen} />
+          <DestinationGrid items={moreItems} close={setMoreOpen} />
         </SheetContent>
       </Sheet>
     </>

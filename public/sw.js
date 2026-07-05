@@ -10,7 +10,7 @@
  *    content-hashed and immutable.
  */
 
-const VERSION = "forge30-v19";
+const VERSION = "forge30-v20";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
@@ -30,6 +30,7 @@ const SHELL_ROUTES = [
   "/social",
   "/settings",
   "/manifest.json",
+  "/protocols",
 ];
 
 self.addEventListener("install", (event) => {
