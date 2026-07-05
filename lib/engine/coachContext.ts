@@ -8,6 +8,7 @@ import { resolveScoreState } from "./forgeScore";
 import { missedRecentDays } from "./streaks";
 import { notesForConsumer, themesForCoach } from "./journalRules";
 import { isolationSignal } from "./socialRules";
+import { adherence } from "./protocols";
 import type {
   CoachInput,
   CoachStylePrefs,
@@ -200,5 +201,29 @@ export async function buildCoachInput(
     streakFreezes: dailyStreak?.freezes ?? 0,
     coachStyle: coachStyleFromResults(assessmentResults),
     isSunday: new Date(`${date}T12:00:00`).getDay() === 0,
+    ...(await protocolContext(adapter, date)),
+  };
+}
+
+/**
+ * Behavioral protocol context (v3 Phase 6): adherence numbers only, present
+ * only while the tab is enabled. What the coach may say about them is
+ * governed by the §6.0.3 rail in the system prompt.
+ */
+async function protocolContext(
+  adapter: StorageAdapter,
+  date: string
+): Promise<Pick<CoachInput, "protocolAdherence7d" | "protocolMissedCount7d">> {
+  const settings = await adapter.getProtocolSettings();
+  if (!settings.enabled) return {};
+  const from = addDays(date, -6);
+  const [schedules, doses] = await Promise.all([
+    adapter.listProtocolSchedules(),
+    adapter.listDoseEvents(from, date),
+  ]);
+  const a = adherence(schedules, doses, from, date);
+  return {
+    protocolAdherence7d: a.percent,
+    protocolMissedCount7d: Math.max(0, a.scheduledCount - a.loggedCount),
   };
 }

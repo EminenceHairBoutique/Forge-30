@@ -70,6 +70,11 @@ export interface CoachInput {
   coachStyle?: CoachStylePrefs | null;
   /** Sunday: the review becomes the weekly arc. */
   isSunday?: boolean;
+  /** Protocols (v3 Phase 6) — behavioral only: adherence over 7 days and
+   *  missed scheduled items. The §6.0.3 rail governs everything the coach
+   *  may say about them. */
+  protocolAdherence7d?: number | null;
+  protocolMissedCount7d?: number;
 }
 
 export interface CoachReview {

@@ -42,7 +42,11 @@ export type LifeFlag =
   | "noPlan"
   | "calorieOvershoot"
   | "conflictDay"
-  | "lonelyDay";
+  | "lonelyDay"
+  // Protocols (v3 Phase 6) — behavioral signals only, prescriber framing on
+  // every pattern that uses them.
+  | "doseDay"
+  | "protocolSymptomDay";
 
 export interface LifeGraphDay {
   date: ISODate;
@@ -61,6 +65,8 @@ export interface LifeGraphInputs {
   consentedNotes: JournalNote[];
   dailySpendingLimit: number;
   calorieTarget: number;
+  /** Protocol dose days (v3 Phase 6) — present only when Protocols is enabled. */
+  doseDates?: ISODate[];
 }
 
 /** Build tri-state flag days from the collections everything already logs. */
@@ -79,6 +85,7 @@ export function buildDays(inputs: LifeGraphInputs): LifeGraphDay[] {
   for (const n of inputs.consentedNotes) {
     notesByDate.set(n.date, [...(notesByDate.get(n.date) ?? []), n]);
   }
+  const doseDates = new Set(inputs.doseDates ?? []);
 
   return [...inputs.logs]
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -117,6 +124,13 @@ export function buildDays(inputs: LifeGraphInputs): LifeGraphDay[] {
       const journal = journalByDate.get(log.date);
       if (journal) flags.conflictDay = journal.relationshipStress;
 
+      // Protocols: dose-day + symptom flags exist only when the caller
+      // supplied dose dates (i.e. the tab is enabled) or symptoms were logged.
+      if (doseDates.size > 0) flags.doseDay = doseDates.has(log.date);
+      if (log.protocolSymptoms !== undefined) {
+        flags.protocolSymptomDay = log.protocolSymptoms.some((x) => x.severity >= 3);
+      }
+
       const notes = notesByDate.get(log.date);
       if (notes && notes.length > 0) {
         flags.lonelyDay = notes.some((n) =>
@@ -149,6 +163,28 @@ export interface PatternDef {
 
 /** Seeded pairs from the spec. Deterministic order = deterministic output. */
 export const PATTERN_DEFS: PatternDef[] = [
+  // Protocol patterns (v3 Phase 6): behavioral observations with prescriber
+  // framing — never interpretive, never medical.
+  {
+    id: "dose-sleep",
+    a: "doseDay",
+    b: "poorSleep",
+    lagDays: 1,
+    aLabel: "scheduled dose days",
+    bLabel: "the following night's sleep ran short",
+    experiment:
+      "Worth showing your prescriber alongside the doctor report — bring the sleep numbers too.",
+  },
+  {
+    id: "symptom-mood",
+    a: "protocolSymptomDay",
+    b: "lowMood",
+    lagDays: 0,
+    aLabel: "days with a protocol symptom noted",
+    bLabel: "mood rated low the same day",
+    experiment:
+      "A pattern worth showing your prescriber — the symptom log in the doctor report has the details.",
+  },
   {
     id: "stress-spend",
     a: "highStress",

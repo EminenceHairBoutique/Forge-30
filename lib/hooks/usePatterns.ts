@@ -26,15 +26,21 @@ export async function loadPatterns(
   today: string
 ): Promise<DetectedPattern[]> {
   const from = addDays(today, -30);
-  const [logs, spending, bloodPressure, plans, journals, notes, consent] = await Promise.all([
-    adapter.listDailyLogs(from, today),
-    adapter.listSpendingRange(from, today),
-    adapter.listBloodPressure(from, today),
-    adapter.listTomorrowPlans(from, today),
-    adapter.listJournals(from, today),
-    adapter.listJournalNotes(from, today),
-    adapter.getJournalConsent(),
-  ]);
+  const [logs, spending, bloodPressure, plans, journals, notes, consent, protocolSettings] =
+    await Promise.all([
+      adapter.listDailyLogs(from, today),
+      adapter.listSpendingRange(from, today),
+      adapter.listBloodPressure(from, today),
+      adapter.listTomorrowPlans(from, today),
+      adapter.listJournals(from, today),
+      adapter.listJournalNotes(from, today),
+      adapter.getJournalConsent(),
+      adapter.getProtocolSettings(),
+    ]);
+  // Dose-day signals join only when the tab is enabled (§6.0.6).
+  const doseDates = protocolSettings.enabled
+    ? (await adapter.listDoseEvents(from, today)).map((d) => d.timestamp.slice(0, 10))
+    : [];
   const days = buildDays({
     logs,
     spending,
@@ -44,6 +50,7 @@ export async function loadPatterns(
     consentedNotes: notesForConsumer(notes, consent, "lifeGraph"),
     dailySpendingLimit: profile.dailySpendingLimit,
     calorieTarget: profile.calorieTarget,
+    doseDates,
   });
   return detectPatterns(days, today);
 }

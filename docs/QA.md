@@ -61,3 +61,12 @@ strength of this file alone.
 - [ ] Pattern shown on the Patterns card does not re-surface within 7 days; the coach can
       still reference it (context ≠ surfacing).
 - [ ] Coaching Style retake visibly shifts the live coach's register (directness/structure).
+
+## Phase 6 — Protocols (WAIT: device + operator)
+- [ ] Real iPhone: dose log round-trip <5s from open to logged (spec acceptance).
+- [ ] WebAuthn lock: enable with Face ID/Touch ID, relock on reload, unlock ceremony works.
+- [ ] Local-only mode with a live Supabase project: log doses → confirm sync_blobs/sync_rows
+      contain zero protocol collections (integration acceptance).
+- [ ] Server push never names compounds on a lock screen (in-app reminder verified discreet;
+      server-side protocol reminders are deliberately not implemented — privacy-first).
+- [ ] Doctor report prints correctly from iOS Safari (print → PDF).
