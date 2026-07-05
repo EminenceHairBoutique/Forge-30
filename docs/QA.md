@@ -70,3 +70,14 @@ strength of this file alone.
 - [ ] Server push never names compounds on a lock screen (in-app reminder verified discreet;
       server-side protocol reminders are deliberately not implemented — privacy-first).
 - [ ] Doctor report prints correctly from iOS Safari (print → PDF).
+
+## Phase 7 — subscriptions (WAIT: operator Stripe account)
+- [ ] Run 0004_subscriptions.sql; create Stripe products/prices; set env incl. price ids.
+- [ ] `stripe listen --forward-to /api/stripe/webhook` → checkout with a test card →
+      subscriptions row lands with tier/status/period; cancel → tier returns to free with
+      data intact (non-destructive downgrade).
+- [ ] 7-day trial starts at checkout; trialing status grants Pro.
+- [ ] Free account: 4th photo analysis in a month returns the friendly 402 and the sheet
+      shows the upgrade path; search/manual keep working.
+- [ ] Elite account: coach responses come from the opus model (check response metadata).
+- [ ] Unconfigured build: zero purchase UI anywhere (regression-checked in CI Playwright).

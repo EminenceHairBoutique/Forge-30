@@ -21,6 +21,7 @@ import type {
   ProtocolSettings,
 } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { useTier } from "@/lib/hooks/useTier";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendChart } from "@/components/charts/TrendChart";
@@ -38,6 +39,7 @@ import { siteStatuses } from "@/lib/engine/protocols";
  */
 export default function ProtocolsPage() {
   const { adapter, revision, touch } = useStorage();
+  const { can } = useTier();
   const today = toISODate();
   const [settings, setSettings] = useState<ProtocolSettings | null>(null);
   const [compounds, setCompounds] = useState<Compound[]>([]);
@@ -206,16 +208,21 @@ export default function ProtocolsPage() {
         title="Protocols"
         subtitle="Your prescribed-therapy record"
         action={
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              setEditing(null);
-              setSheetOpen(true);
-            }}
-          >
-            <Plus className="size-4" /> Add compound
-          </Button>
+          // Free tracks one compound end-to-end; Pro removes the limit.
+          can("protocolsUnlimitedCompounds") || compounds.length < 1 ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(null);
+                setSheetOpen(true);
+              }}
+            >
+              <Plus className="size-4" /> Add compound
+            </Button>
+          ) : (
+            <span className="microlabel text-muted">1 compound on Forge · more with Pro</span>
+          )
         }
       />
 
@@ -320,8 +327,8 @@ export default function ProtocolsPage() {
         </Card>
       )}
 
-      {/* Estimated level curve */}
-      {curveCompound && curve.length > 0 && (
+      {/* Estimated level curve — Pro insight depth; the record itself is free. */}
+      {curveCompound && curve.length > 0 && can("protocolLevelCurves") && (
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Estimated level</CardTitle>

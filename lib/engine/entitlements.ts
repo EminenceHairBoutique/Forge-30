@@ -41,6 +41,9 @@ export const FEATURE_TIERS = {
   exportImport: "plus",
   // Pro
   adaptiveNutrition: "pro",
+  protocolsUnlimitedCompounds: "pro",
+  protocolLevelCurves: "pro",
+  protocolLabImport: "pro",
   injuryAwareTraining: "pro",
   assessments: "pro",
   psycheReport: "pro",
@@ -89,3 +92,20 @@ export const DEFAULT_TIER: Tier = "max";
 export function isTier(value: unknown): value is Tier {
   return typeof value === "string" && (TIERS as readonly string[]).includes(value);
 }
+
+/**
+ * Server subscription tier → client tier (v3 Phase 7). The sellable ladder
+ * is Free / Pro / Elite (V3_SPEC Phase 7); the client's finer-grained rank
+ * system maps Elite onto "max". Client tiers are UX only — every AI route
+ * re-checks server-side.
+ */
+export function tierFromSubscription(sub: "free" | "pro" | "elite"): Tier {
+  if (sub === "elite") return "max";
+  return sub;
+}
+
+/** Paywall display names for the sellable tiers. */
+export const TIER_PRICING: Record<"pro" | "elite", { label: string; monthly: string; yearly: string }> = {
+  pro: { label: "Pro", monthly: "$9.99/mo", yearly: "$79.99/yr" },
+  elite: { label: "Elite", monthly: "$19.99/mo", yearly: "$149.99/yr" },
+};

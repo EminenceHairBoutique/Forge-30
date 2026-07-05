@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { UserProfile } from "@/lib/types";
 import { getSupabase, syncConfigured } from "@/lib/supabase/client";
+import { apiUrl } from "@/lib/api";
+import { isTier, tierFromSubscription } from "@/lib/engine/entitlements";
 import type { StorageAdapter } from "./adapter";
 import { LocalStorageAdapter } from "./localStorageAdapter";
 import { SyncedAdapter } from "./syncedAdapter";
@@ -57,6 +59,35 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   useEffect(() => () => syncedRef.current?.dispose(), []);
+
+  // v3 Phase 7: when a billing backend exists, the server's entitlement
+  // drives the stored client tier (UX gating only — AI routes re-check).
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase || !userId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const res = await fetch(apiUrl("/api/entitlements"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const ent = (await res.json()) as { tier?: string; billingConfigured?: boolean };
+        if (ent.billingConfigured && (ent.tier === "free" || ent.tier === "pro" || ent.tier === "elite")) {
+          const mapped = tierFromSubscription(ent.tier);
+          if (isTier(mapped)) await adapter.saveTier(mapped);
+        }
+      } catch {
+        // Offline/unconfigured: the stored tier stands.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, adapter]);
 
   // Track the Supabase session (no-op when the build isn't configured).
   useEffect(() => {

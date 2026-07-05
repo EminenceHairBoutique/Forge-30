@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackupCard } from "@/components/settings/BackupCard";
 import { PushCard } from "@/components/settings/PushCard";
 import { ProtocolsCard } from "@/components/settings/ProtocolsCard";
+import { SubscriptionCard } from "@/components/settings/SubscriptionCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -159,6 +160,8 @@ export default function SettingsPage() {
       <PageHeader title="Settings" subtitle="Targets, pain flags, and data." />
 
       <BackupCard />
+
+      <SubscriptionCard />
 
       <Card>
         <CardHeader>
