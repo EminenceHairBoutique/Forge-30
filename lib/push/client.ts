@@ -1,3 +1,4 @@
+import { apiUrl } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase/client";
 
 /**
@@ -44,7 +45,7 @@ export function needsInstallFirst(): boolean {
 
 export async function pushServerConfigured(): Promise<string | null> {
   try {
-    const res = await fetch("/api/push/subscribe");
+    const res = await fetch(apiUrl("/api/push/subscribe"));
     if (!res.ok) return null;
     const { publicKey } = (await res.json()) as { publicKey?: string };
     return publicKey ?? null;
@@ -82,7 +83,7 @@ export async function subscribeToPush(publicKey: string): Promise<string | null>
     applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
   });
   const json = sub.toJSON();
-  const res = await fetch("/api/push/subscribe", {
+  const res = await fetch(apiUrl("/api/push/subscribe"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...auth },
     body: JSON.stringify({
@@ -102,7 +103,7 @@ export async function unsubscribeFromPush(): Promise<void> {
   if (!sub) return;
   const auth = await authHeader();
   if (auth) {
-    await fetch("/api/push/subscribe", {
+    await fetch(apiUrl("/api/push/subscribe"), {
       method: "DELETE",
       headers: { "Content-Type": "application/json", ...auth },
       body: JSON.stringify({ endpoint: sub.endpoint }),

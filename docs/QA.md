@@ -30,3 +30,15 @@ strength of this file alone.
 - [ ] Android/desktop Chrome: subscribe → receive evening close when a day is incomplete.
 - [ ] Double-fire the cron manually → notification_log unique key sends nothing twice.
 - [ ] Fully log a day → zero pushes that day; set quiet hours to now → silence.
+
+## Phase 3 — Capacitor/HealthKit (WAIT: device + Xcode)
+- [ ] `npm run build:native` with a real NEXT_PUBLIC_API_ORIGIN completes and `npx cap sync
+      ios` ingests out-native/.
+- [ ] Verify @perfood/capacitor-healthkit maintenance status; install + bridge-match per
+      docs/NATIVE_BUILD.md.
+- [ ] On-device: grant permissions → steps/sleep chips appear in Daily check without typing;
+      deny permissions → sheet is plain manual entry, zero error states.
+- [ ] Manual entry beats detected values everywhere (type a number, chip never overwrites).
+- [ ] Web build: the healthkit chunk exists as a lazy asset but is never fetched on the
+      web — confirm via DevTools Network that no healthkit chunk loads on any page (the
+      dynamic import sits behind the Capacitor bridge check).

@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { ClipboardCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ClipboardCheck, Watch } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { getHealthProvider } from "@/lib/health/provider";
+import { detectedSuggestions, type DetectedSuggestion } from "@/lib/engine/healthMerge";
 import type { DailyLog } from "@/lib/types";
 
-/** Quick sheet for the manually-tracked daily basics: sleep, steps, mobility. */
+/**
+ * Quick sheet for the manually-tracked daily basics: sleep, steps, mobility.
+ * Under the native shell (v3 Phase 3), HealthKit pre-fills as "detected"
+ * chips — one tap accepts into the input, manual typing always wins, and on
+ * the web nothing changes (the null provider never detects anything).
+ */
 export function DailyCheckSheet({
   log,
   onSave,
@@ -21,6 +28,31 @@ export function DailyCheckSheet({
   const [sleep, setSleep] = useState(log.sleepHours ? String(log.sleepHours) : "");
   const [steps, setSteps] = useState(log.steps ? String(log.steps) : "");
   const [mobility, setMobility] = useState(log.mobilityDone);
+  const [detected, setDetected] = useState<DetectedSuggestion[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void (async () => {
+      const provider = await getHealthProvider();
+      if (!provider.isAvailable()) return;
+      const [sleepH, stepCount] = await Promise.all([
+        provider.getSleep(log.date),
+        provider.getSteps(log.date),
+      ]);
+      if (cancelled) return;
+      setDetected(detectedSuggestions(log, { sleepHours: sleepH, steps: stepCount }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, log]);
+
+  const accept = (s: DetectedSuggestion) => {
+    if (s.field === "sleepHours") setSleep(String(s.value));
+    else setSteps(String(s.value));
+    setDetected((d) => d.filter((x) => x.field !== s.field));
+  };
 
   const save = async () => {
     await onSave({
@@ -50,6 +82,22 @@ export function DailyCheckSheet({
       </SheetTrigger>
       <SheetContent title="Daily check">
         <div className="flex flex-col gap-4">
+          {detected.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {detected.map((s) => (
+                <button
+                  key={s.field}
+                  type="button"
+                  onClick={() => accept(s)}
+                  className="press-scale flex min-h-11 items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-3 text-sm font-semibold text-gold"
+                >
+                  <Watch className="size-4" />
+                  {s.label}: {s.value.toLocaleString()}
+                  {s.unit} — tap to use
+                </button>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="dc-sleep">Sleep (hours)</Label>

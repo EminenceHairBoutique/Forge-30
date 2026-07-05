@@ -2,7 +2,7 @@
   "name": "forge30",
   "version": "1.0.0",
   "private": true,
-  "description": "Forge30 — a mobile-first, all-in-one 30-day lifestyle improvement PWA.",
+  "description": "Forge30 \u2014 a mobile-first, all-in-one 30-day lifestyle improvement PWA.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,10 +11,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "build:native": "node scripts/build-native.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-slot": "^1.1.2",
     "@supabase/supabase-js": "^2.110.0",
@@ -30,6 +34,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",

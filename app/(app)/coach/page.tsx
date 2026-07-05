@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CoachModePanel } from "@/components/coach/CoachModePanel";
 import { COACH_MODES, type CoachModeId } from "@/lib/engine/coachModes";
+import { apiUrl } from "@/lib/api";
 
 const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] = [
   { key: "scoreExplanation", label: "Today's score", icon: Gauge },
@@ -85,7 +86,7 @@ export default function CoachPage() {
       let content: CoachReview | null = null;
       let source: AIReview["source"] = "mock";
       try {
-        const res = await fetch("/api/coach", {
+        const res = await fetch(apiUrl("/api/coach"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
