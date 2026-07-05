@@ -21,7 +21,6 @@ import type {
   OutreachEntry,
   PendingPurchase,
   ReconnectPerson,
-  Recording,
   RecurringExpense,
   SavedMeal,
   SavingsGoal,
@@ -41,6 +40,8 @@ import { DEFAULT_TIER, isTier, type Tier } from "@/lib/engine/entitlements";
 import { createLargeStore } from "./largeStore";
 import {
   SCHEMA_VERSION,
+  DROPPED_LARGE_COLLECTIONS,
+  REMOVED_ASSESSMENT_IDS,
   VERSION_KEY,
   buildExport,
   runMigrations,
@@ -236,6 +237,33 @@ export class LocalStorageAdapter implements StorageAdapter {
   // -- Data lifecycle ----------------------------------------------------------
   /** Large-record backend (IndexedDB, localStorage fallback) — see largeStore.ts. */
   private large = createLargeStore();
+  private largeCleaned = false;
+
+  /**
+   * One-shot prune of large-store data whose feature was removed (v3 §A3):
+   * dropped collections are cleared and results of removed assessments are
+   * deleted. Idempotent and cheap on already-clean stores, so it simply runs
+   * once per adapter instance before the first large-store read.
+   */
+  private async cleanupRemovedLarge(): Promise<void> {
+    if (this.largeCleaned) return;
+    this.largeCleaned = true;
+    try {
+      for (const collection of DROPPED_LARGE_COLLECTIONS) {
+        await this.large.clear(collection);
+      }
+      const removed: readonly string[] = REMOVED_ASSESSMENT_IDS;
+      const results = await this.large.list<AssessmentResult>("assessmentResults");
+      for (const [id, r] of Object.entries(results)) {
+        if (removed.includes(r.assessmentId)) {
+          await this.large.delete("assessmentResults", id);
+        }
+      }
+    } catch {
+      // Cleanup is best-effort; a failure just retries on the next instance.
+      this.largeCleaned = false;
+    }
+  }
 
   async exportAll(): Promise<ExportFile> {
     ensureMigrated();
@@ -255,7 +283,17 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
     window.localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
     migrationChecked = true;
-    await this.large.importAll(valid.large ?? {});
+    const incomingLarge = { ...(valid.large ?? {}) };
+    for (const collection of DROPPED_LARGE_COLLECTIONS) delete incomingLarge[collection];
+    const removedIds: readonly string[] = REMOVED_ASSESSMENT_IDS;
+    if (incomingLarge.assessmentResults) {
+      incomingLarge.assessmentResults = Object.fromEntries(
+        Object.entries(incomingLarge.assessmentResults).filter(
+          ([, r]) => !removedIds.includes((r as AssessmentResult).assessmentId)
+        )
+      );
+    }
+    await this.large.importAll(incomingLarge);
   }
 
   // -- Daily logs --------------------------------------------------------------
@@ -695,22 +733,9 @@ export class LocalStorageAdapter implements StorageAdapter {
     write(KEYS.socialSettings, s);
   }
 
-  // -- Consensual recordings (Phase NEXT C) ------------------------------------------
-  async listRecordings(): Promise<Recording[]> {
-    const all = await this.large.list<Recording>("recordings");
-    return Object.values(all).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-
-  async saveRecording(r: Recording): Promise<void> {
-    await this.large.put("recordings", r.id, r);
-  }
-
-  async deleteRecording(id: string): Promise<void> {
-    await this.large.delete("recordings", id);
-  }
-
   // -- Assessments (E10) -----------------------------------------------------------
   async listAssessmentResults(): Promise<AssessmentResult[]> {
+    await this.cleanupRemovedLarge();
     const all = await this.large.list<AssessmentResult>("assessmentResults");
     return Object.values(all).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }

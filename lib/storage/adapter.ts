@@ -21,7 +21,6 @@ import type {
   OutreachEntry,
   PendingPurchase,
   ReconnectPerson,
-  Recording,
   RecurringExpense,
   SavedMeal,
   SavingsGoal,
@@ -180,11 +179,6 @@ export interface StorageAdapter {
   saveSocialReflection(r: SocialReflection): Promise<void>;
   getSocialSettings(): Promise<SocialSettings>;
   saveSocialSettings(s: SocialSettings): Promise<void>;
-
-  // Consensual recordings (Phase NEXT C — large store, flag-gated UI)
-  listRecordings(): Promise<Recording[]>;
-  saveRecording(r: Recording): Promise<void>;
-  deleteRecording(id: string): Promise<void>;
 
   // Assessments (E10 — large store; results and in-flight progress)
   listAssessmentResults(): Promise<AssessmentResult[]>;

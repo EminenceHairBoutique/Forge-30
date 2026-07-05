@@ -158,31 +158,6 @@ export function buildPsycheReport(
     }
   }
 
-  const cognitive = latest.get("cognitiveSkills");
-  if (cognitive) {
-    const best = [...cognitive.traits].sort((a, b) => b.score - a.score)[0];
-    if (best) {
-      sections.push({
-        heading: "Cognitive strengths",
-        body: `${best.label} led your cognitive baseline (${best.score}/100). Not an IQ measure — a training baseline that moves with sleep and stress; the monthly retake trend is the real signal.`,
-      });
-    }
-  }
-
-  const clusterB = latest.get("clusterB");
-  if (clusterB) {
-    const elevated = clusterB.traits.filter((t) => t.band === "high");
-    if (elevated.length > 0) {
-      sections.push({
-        heading: "Growth edges",
-        body: `The trait screening flagged ${elevated.map((t) => t.label.toLowerCase()).join(" and ")} as worth exploring — an observation about patterns, never a label. Each links a concrete practice, and if these match real-life costs, a licensed evaluation is the strong move.`,
-      });
-      growthPlan.push(
-        "From the trait screening: pick the one linked practice attached to your highest elevation and run it for two weeks before re-judging anything."
-      );
-    }
-  }
-
   if (journalThemes.length > 0) {
     sections.push({
       heading: "What your journal keeps circling",

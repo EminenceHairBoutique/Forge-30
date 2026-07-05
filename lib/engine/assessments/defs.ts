@@ -44,29 +44,7 @@ export interface AttentionQuestion {
   expected: number;
 }
 
-/**
- * Timed mini-task (Phase NEXT B-2): a multiple-choice item under a visible
- * countdown. The runner records a 0–100 score (correctness × speed credit
- * via `timedItemScore`) into the same answers map. Deterministic content —
- * fixed options, fixed correct index; never claims to measure IQ.
- */
-export interface TimedQuestion {
-  id: string;
-  kind: "timed";
-  trait: string;
-  /** Countdown for the answer phase. */
-  timeLimitMs: number;
-  /** Task family — drives the renderer's layout only. */
-  task: "patternGrid" | "digitRecall" | "verbalOddOne" | "symbolMatch";
-  prompt: string;
-  /** digitRecall: content flashed for memorizeMs before options appear. */
-  memorize?: string;
-  memorizeMs?: number;
-  options: string[];
-  correctIndex: number;
-}
-
-export type BankQuestion = LikertQuestion | AttentionQuestion | TimedQuestion;
+export type BankQuestion = LikertQuestion | AttentionQuestion;
 
 /** Skip `skipIds` when the answer to `afterId` is ≤/≥ the bound. */
 export interface BranchRule {

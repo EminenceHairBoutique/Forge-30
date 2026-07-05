@@ -5,7 +5,7 @@ import type {
   ISODate,
 } from "@/lib/types";
 import { clamp } from "@/lib/utils";
-import type { AssessmentDef, BankQuestion, LikertQuestion, TimedQuestion } from "./defs";
+import type { AssessmentDef, BankQuestion, LikertQuestion } from "./defs";
 
 /**
  * Scoring + branching + the validity system (E10). Deterministic throughout.
@@ -139,19 +139,23 @@ export function computeValidity(
   };
 }
 
-// --- Timed items (Phase NEXT B-2) ---------------------------------------------------
+// --- Support routing ---------------------------------------------------------------
+
+export const SUPPORT_TRIGGER_LEVEL = 4;
 
 /**
- * Score for one timed multiple-choice item, computed by the runner the
- * moment the option is tapped and stored in the answers map: a wrong answer
- * (or no answer before the limit) is 0; a correct answer earns 40 baseline
- * plus up to 60 speed credit, linearly by time remaining. Pure and clamped —
- * same inputs, same score.
+ * True the moment any supportFlag item is answered at/above the trigger
+ * level. Pure; the runner calls it after every answer and renders support
+ * resources inline immediately — before the assessment finishes, regardless
+ * of tier, regardless of anything.
  */
-export function timedItemScore(correct: boolean, elapsedMs: number, timeLimitMs: number): number {
-  if (!correct) return 0;
-  const remaining = clamp(1 - elapsedMs / Math.max(1, timeLimitMs), 0, 1);
-  return Math.round(40 + 60 * remaining);
+export function supportTriggered(def: AssessmentDef, answers: Record<string, number>): boolean {
+  return def.questions.some(
+    (q): q is LikertQuestion =>
+      q.kind === "likert" &&
+      q.supportFlag === true &&
+      (answers[q.id] ?? 0) >= SUPPORT_TRIGGER_LEVEL
+  );
 }
 
 // --- Scoring ----------------------------------------------------------------------
@@ -186,22 +190,9 @@ export function scoreAssessment(args: {
         return q.reverse ? 6 - raw : raw;
       })
       .filter((v): v is number => v !== null);
-    // Timed items (B-2) carry runner-computed 0–100 scores directly.
-    const timedScores = visible
-      .filter((q): q is TimedQuestion => q.kind === "timed" && q.trait === trait.key)
-      .map((q) => answers[q.id])
-      .filter((v): v is number => v !== undefined)
-      .map((v) => clamp(v, 0, 100));
-    const likertScore = scores.length
+    const score = scores.length
       ? Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length - 1) / 4) * 100)
-      : null;
-    const timedScore = timedScores.length
-      ? Math.round(timedScores.reduce((a, b) => a + b, 0) / timedScores.length)
-      : null;
-    const score =
-      likertScore !== null && timedScore !== null
-        ? Math.round((likertScore + timedScore) / 2)
-        : (likertScore ?? timedScore ?? 50);
+      : 50;
     const b = band(score);
     return {
       key: trait.key,

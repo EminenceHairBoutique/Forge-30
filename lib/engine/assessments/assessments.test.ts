@@ -67,7 +67,7 @@ describe("bank integrity", () => {
       const texts = [
         def.tagline,
         def.resultNote,
-        ...def.questions.map((q) => (q.kind === "timed" ? q.prompt : q.text)),
+        ...def.questions.map((q) => q.text),
         ...def.traits.flatMap((t) => [t.blurb, t.low, t.high, t.balanced]),
         ...(def.rankItems ?? []).map((i) => i.blurb),
       ];

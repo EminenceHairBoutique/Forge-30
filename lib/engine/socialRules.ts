@@ -122,17 +122,6 @@ export function recommendTracks(results: AssessmentResult[]): TrackRecommendatio
   if (fawn?.band === "high") {
     push("communication", "your coping profile leans fawn — boundary scripts turn peacekeeping into honest peace");
   }
-  if (latest.get("cognitiveSkills")) {
-    const wm = trait("cognitiveSkills", "workingMemory");
-    if (wm && wm.band !== "high") {
-      push("metaLearning", "your cognitive baseline shows working memory has headroom — the learning-how-to-learn track trains it directly");
-    }
-  }
-  const clusterB = latest.get("clusterB");
-  if (clusterB && clusterB.traits.some((t) => t.band === "high")) {
-    push("regulation", "the trait screening flagged patterns that respond best to regulation reps — small, daily, unglamorous");
-  }
-
   const values = latest.get("values");
   if (values?.ranking?.slice(0, 3).includes("health")) {
     push("nutritionBasics", "health sits in your top-3 values — nutrition literacy is its cheapest lever");

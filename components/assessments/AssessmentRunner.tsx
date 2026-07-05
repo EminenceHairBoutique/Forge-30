@@ -3,14 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useStorage } from "@/lib/storage/provider";
 import { getAssessmentDef } from "@/lib/engine/assessments/bank";
-import { nextQuestion, scoreAssessment, visibleQuestions } from "@/lib/engine/assessments/scoring";
+import { nextQuestion, scoreAssessment, supportTriggered, visibleQuestions } from "@/lib/engine/assessments/scoring";
 import { toISODate, uid } from "@/lib/utils";
 import type { AssessmentId, AssessmentProgress, AssessmentResult } from "@/lib/types";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { TimedTaskItem } from "./TimedTaskItem";
 import { SupportResourcesCard } from "./SupportResourcesCard";
-import { supportTriggered } from "@/lib/engine/assessments/clusterB";
 
 const LIKERT_LABELS = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"];
 
@@ -94,10 +92,7 @@ export function AssessmentRunner({
     const q = nextQuestion(def, answers);
     if (!q) return;
     const nextAnswers = { ...answers, [q.id]: value };
-    // Timed items are *supposed* to be fast — their timings stay out of the
-    // validity speed signal (B-2), so only likert/attention taps are logged.
-    const nextTimings =
-      q.kind === "timed" ? timings : [...timings, Date.now() - shownAt.current];
+    const nextTimings = [...timings, Date.now() - shownAt.current];
     shownAt.current = Date.now();
     setAnswers(nextAnswers);
     setTimings(nextTimings);
@@ -142,7 +137,7 @@ export function AssessmentRunner({
                 : `Pick your top ${total}, most important first (${done}/${total})`}
             </p>
 
-            {/* Self-harm-adjacent routing (B-3): fires mid-run on an elevated
+            {/* Self-harm-adjacent routing: fires mid-run on an elevated
                 flagged answer, stays visible, gated by nothing. */}
             {supportTriggered(def, answers) && <SupportResourcesCard />}
 
@@ -152,11 +147,7 @@ export function AssessmentRunner({
               </p>
             )}
 
-            {def.kind === "likert" && current && current.kind === "timed" && (
-              <TimedTaskItem question={current} onScore={(s) => void answer(s)} />
-            )}
-
-            {def.kind === "likert" && current && current.kind !== "timed" && (
+            {def.kind === "likert" && current && (
               <>
                 <p className="min-h-16 text-base leading-relaxed text-ivory">{current.text}</p>
                 <div className="flex flex-col gap-1.5">

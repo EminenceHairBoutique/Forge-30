@@ -1,10 +1,28 @@
 # CLAUDE.md — Forge30
 
 Forge30 is an installable, offline-first PWA (dark-only, mobile-first): a personal operating
-system connecting nutrition, training, mind, money, skills — and, in v2, health and
-relationships — into one daily loop. **Read `v2_spec.md` before any large change** (its §0.1 is
-a verified audit of this codebase). `AUDIT.md` is the Phase 0 audit; `V2_PLAN.md` maps the spec
-onto this repo phase by phase.
+system connecting nutrition, training, mind, money, skills, health, and relationships into one
+daily loop. **`V3_SPEC.md` is the active spec** — it supersedes `v2_spec.md` where they
+conflict; where v3 is silent, v2 still applies. `AUDIT_V3.md` reconciles the spec against this
+branch; `DECISIONS.md` records binding scope decisions (do not re-litigate them);
+`V3_PLAN.md` maps Phases 1–5 file by file.
+
+## v3 rules (V3_SPEC Part A)
+
+- **Cut features stay cut** (DECISIONS.md): no consensual-recording code, no
+  clinical-adjacent screeners, no IQ-adjacent testing. The Coaching Style & Values assessment
+  is the sanctioned replacement — preferences, never diagnoses.
+- **Every failure falls back gracefully**: coach → mock engine; sync → local; HealthKit →
+  manual entry; photo logging → search/manual. Nothing hard-breaks on a missing key, network,
+  or permission.
+- **Model usage (server-side only):** coach reads `process.env.COACH_MODEL`, default
+  `claude-sonnet-5`; photo/vision `claude-sonnet-5`; micro-copy `claude-haiku-4-5-20251001`.
+  Structured outputs with JSON schemas on every route; any parse failure → deterministic
+  fallback. API keys never reach the client — all Anthropic calls go through `app/api/*`.
+- Server-only env (`SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`,
+  `ANTHROPIC_API_KEY`) is never imported by client code.
+- Adherence-neutral extends to notification copy: state, never shame; hard cap 2/day; zero on
+  fully-logged days; quiet hours respected; every type can be disabled.
 
 ## Stack & commands
 
@@ -17,7 +35,7 @@ npm run dev          # dev server on :3000
 npm run build        # production build — must stay green
 npm start            # serve production build (service worker active)
 npm run typecheck    # tsc --noEmit — must stay clean
-npm test             # Vitest; test count only ever grows (36 at v2 start — check, don't guess)
+npm test             # Vitest; count only ever grows (301 at v3 Phase 0 — DECISIONS.md §2)
 npm run lint
 npm run icons        # regenerate public/icons/ from scripts/generate-icons.mjs
 ```

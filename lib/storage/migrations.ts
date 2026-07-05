@@ -14,7 +14,7 @@
 import { DEFAULT_DOMAINS, DEFAULT_MVD, DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
 
 /** Bump this whenever a persisted shape changes, and add a MIGRATIONS step. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const VERSION_KEY = "forge30:schemaVersion";
 
@@ -64,7 +64,28 @@ const MIGRATIONS: Record<number, (c: CollectionSnapshot) => CollectionSnapshot> 
       },
     };
   },
+  // v2 → v3 (V3_SPEC §A3 cuts): the consensual-recording framework is removed,
+  // so the profile's recordingJurisdiction field goes with it. Idempotent:
+  // deleting an absent key is a no-op. The recordings large-store collection
+  // and orphaned results of removed assessments are pruned by the adapter via
+  // DROPPED_LARGE_COLLECTIONS / REMOVED_ASSESSMENT_IDS below.
+  2: (c) => {
+    const profile = c.profile;
+    if (typeof profile !== "object" || profile === null) return c;
+    const p = { ...(profile as Record<string, unknown>) };
+    delete p.recordingJurisdiction;
+    return { ...c, profile: p };
+  },
 };
+
+/**
+ * Large-store collections whose feature was removed in v3 (§A3). The adapter
+ * clears these on load and drops them from imports — both idempotent.
+ */
+export const DROPPED_LARGE_COLLECTIONS = ["recordings"] as const;
+
+/** Assessment ids removed in v3 (§A3); stored results of these are pruned. */
+export const REMOVED_ASSESSMENT_IDS = ["clusterB", "cognitiveSkills"] as const;
 
 export class UnsupportedSchemaError extends Error {
   constructor(found: number) {

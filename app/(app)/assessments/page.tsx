@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { PaywallCard } from "@/components/cards/PaywallCard";
 import { AssessmentRunner } from "@/components/assessments/AssessmentRunner";
-import { ClusterBResultExtras } from "@/components/assessments/ClusterBResultExtras";
 import { SupportResourcesCard } from "@/components/assessments/SupportResourcesCard";
 
 export default function AssessmentsPage() {
@@ -233,10 +232,6 @@ export default function AssessmentsPage() {
                     {compareResults(detailPrev, detail).framing}
                   </p>
                 </div>
-              )}
-
-              {detail.assessmentId === "clusterB" && (
-                <ClusterBResultExtras result={detail} journalThemes={journalThemes} />
               )}
 
               {detail.validity.notes.length > 0 && (

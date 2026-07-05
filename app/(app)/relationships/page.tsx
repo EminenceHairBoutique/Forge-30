@@ -8,7 +8,6 @@ import {
   HeartHandshake,
   LifeBuoy,
   MessageSquareText,
-  Mic,
   NotebookPen,
   Plus,
   Shield,
@@ -50,8 +49,6 @@ import { ScaleSlider } from "@/components/ui/slider";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { PaywallCard } from "@/components/cards/PaywallCard";
 import { AssessmentRunner } from "@/components/assessments/AssessmentRunner";
-import { RecordingSheet } from "@/components/recording/RecordingSheet";
-import { flagEnabled } from "@/lib/flags";
 
 const EMPTY_DEBRIEF = {
   whatHappened: "",
@@ -79,7 +76,6 @@ export default function RelationshipsPage() {
   const [debriefDraft, setDebriefDraft] = useState(EMPTY_DEBRIEF);
   const [support, setSupport] = useState<DebriefSupport | null>(null);
   const [threadOpen, setThreadOpen] = useState(false);
-  const [recordingOpen, setRecordingOpen] = useState(false);
   const [threadText, setThreadText] = useState("");
   const [redactNames, setRedactNames] = useState("");
   const [analysis, setAnalysis] = useState<ThreadAnalysis | null>(null);
@@ -400,28 +396,6 @@ export default function RelationshipsPage() {
             </CardContent>
           </Card>
 
-          {/* Consensual recording (Phase NEXT C) — dev flag until counsel review */}
-          {flagEnabled("consensualRecording") && (
-            <Card>
-              <CardHeader className="flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Mic className="size-4 text-gold" /> Record a conversation
-                </CardTitle>
-                <Button size="sm" variant="secondary" onClick={() => setRecordingOpen(true)}>
-                  Open consent flow
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted">
-                  Consent-first by construction: location sets the consent flow (unknown means
-                  everyone consents), agreement is affirmed before the record button exists, and
-                  a REC indicator stays visible the whole time. General information, not legal
-                  advice.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Timeline */}
           <Card>
             <CardHeader className="flex-row items-center justify-between">
@@ -549,24 +523,6 @@ export default function RelationshipsPage() {
           </Card>
         </div>
       </PaywallCard>
-
-      {/* Recording scaffold — WAIT(legal). Placeholder shows only while the
-          consensualRecording flag is off; dev builds render the real flow above. */}
-      {!flagEnabled("consensualRecording") && (
-      <Card className="opacity-70">
-        <CardHeader className="flex-row items-center gap-2">
-          <Mic className="size-4 text-muted" />
-          <CardTitle>Conversation recording — not available</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-xs leading-relaxed text-muted">
-            Recording laws differ by jurisdiction (one-party vs. all-party consent), so this
-            ships only after legal review. If you ever record a conversation anywhere, tell the
-            other person first — consent isn't just the legal bar, it's the relationship one.
-          </p>
-        </CardContent>
-      </Card>
-      )}
 
       {!escalate && SafetyCard}
 
@@ -735,9 +691,6 @@ export default function RelationshipsPage() {
         </SheetContent>
       </Sheet>
 
-      {flagEnabled("consensualRecording") && (
-        <RecordingSheet open={recordingOpen} onOpenChange={setRecordingOpen} />
-      )}
 
       {/* Thread analysis sheet */}
       <Sheet

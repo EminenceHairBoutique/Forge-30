@@ -222,6 +222,23 @@ describe("runMigrations", () => {
     });
   });
 
+  it("v2 → v3 drops the removed recordingJurisdiction field and nothing else", () => {
+    const withField = {
+      profile: { name: "T", onboardingComplete: true, recordingJurisdiction: "TX" },
+      meals: [{ id: "m1" }],
+    };
+    const { collections, version } = runMigrations(withField, 2);
+    expect(version).toBe(SCHEMA_VERSION);
+    expect(collections.profile).toEqual({ name: "T", onboardingComplete: true });
+    expect(collections.meals).toEqual([{ id: "m1" }]);
+  });
+
+  it("v2 → v3 is idempotent when the field is already absent", () => {
+    const clean = { profile: { name: "T", onboardingComplete: true } };
+    const { collections } = runMigrations(clean, 2);
+    expect(collections.profile).toEqual(clean.profile);
+  });
+
   it("migrates an empty snapshot (fresh install) cleanly", () => {
     const result = runMigrations({}, 1);
     expect(result.collections).toEqual({});
