@@ -29,6 +29,7 @@ import type {
   ProgramId,
 } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { useTheme } from "@/lib/hooks/useTheme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackupCard } from "@/components/settings/BackupCard";
 import { CloudAccountCard } from "@/components/settings/CloudAccountCard";
@@ -88,6 +89,7 @@ const WEIGHT_FIELDS: { key: ScoreComponentKey; label: string }[] = [
 
 export default function SettingsPage() {
   const { adapter, profile, saveProfile, touch } = useStorage();
+  const { theme, setTheme } = useTheme();
   const { tier } = useTier();
   const router = useRouter();
   const [draft, setDraft] = useState<UserProfile | null>(null);
@@ -204,6 +206,26 @@ export default function SettingsPage() {
       <BackupCard />
 
       <SubscriptionCard />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm text-muted">
+            Dark is the default — easier on the eyes for night logging. Light is the bright
+            Starship look.
+          </p>
+          <div className="flex items-center justify-between rounded-(--radius-control) border border-line bg-elevated px-3 py-2">
+            <span className="text-sm text-ivory">Light theme</span>
+            <Switch
+              checked={theme === "light"}
+              onCheckedChange={(v) => setTheme(v ? "light" : "dark")}
+              aria-label="Light theme"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

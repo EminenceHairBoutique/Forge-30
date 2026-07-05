@@ -41,6 +41,7 @@ import type {
   UserProfile,
   WorkoutEntry,
   MediaPrefs,
+  UiTheme,
 } from "@/lib/types";
 import type { StorageAdapter } from "./adapter";
 import { DEFAULT_TIER, isTier, type Tier } from "@/lib/engine/entitlements";
@@ -72,6 +73,7 @@ const KEYS = {
   books: `${PREFIX}:books`,
   bodyMetrics: `${PREFIX}:bodyMetrics`,
   mediaPrefs: `${PREFIX}:mediaPrefs`,
+  theme: `${PREFIX}:theme`,
   aiReviews: `${PREFIX}:aiReviews`,
   entitlements: `${PREFIX}:entitlements`,
   tomorrowPlans: `${PREFIX}:tomorrowPlans`,
@@ -1006,6 +1008,23 @@ export class LocalStorageAdapter implements StorageAdapter {
   async getBodyPhoto(metricId: string): Promise<string | null> {
     await this.relocateEmbeddedBodyPhotos();
     return (await this.large.get<string>("bodyPhotos", metricId)) ?? null;
+  }
+
+  // -- UI theme (Starship S0): dark default; the pre-hydration script in the
+  // root layout reads this same key. Never synced (device preference).
+  async getTheme(): Promise<UiTheme> {
+    if (!canUseStorage()) return "dark";
+    try {
+      const raw = window.localStorage.getItem(KEYS.theme);
+      const value = raw ? (JSON.parse(raw) as unknown) : null;
+      return value === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  }
+
+  async saveTheme(theme: UiTheme): Promise<void> {
+    write(KEYS.theme, theme);
   }
 
   async getMediaPrefs(): Promise<MediaPrefs> {

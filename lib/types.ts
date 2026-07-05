@@ -227,6 +227,9 @@ export interface MediaPrefs {
   syncVoice: boolean;
 }
 
+/** UI theme (Starship S0) — dark default, device-only preference. */
+export type UiTheme = "dark" | "light";
+
 export type SleepQuality = "rough" | "ok" | "good";
 
 /** 30-day program identities (v3.3 §3.2). */

@@ -151,3 +151,27 @@ shipping the plumbing now means flipping the flag + provisioning a provider is t
 remaining step, and the voice note always saves and plays back regardless. The transcript,
 when one exists, is always returned as editable text the user approves into the caption —
 never an automatic write.
+
+## 15. Starship OS visual overhaul (operator decision + reconciliation, 2026-07-05)
+
+`FORGE30_STARSHIP_OS_IMPLEMENTATION.pdf` as amended by `STARSHIP_RECONCILIATION.md` (the
+patch wins on every point it addresses). Reskin only — engine logic and copy untouched.
+
+- **Theme (operator decision):** ship **both light and dark via `[data-theme]`, dark as the
+  default**. Rationale: the app has heavy night-usage surfaces (Mind, Journal, in-bed
+  protocol dose logging); a blinding health app is a retention risk, so dark leads. Light is
+  the bright Starship look behind a Settings toggle. The retired `FLAGS.lightMode` is
+  superseded by this real preference (stored `forge30:theme`, device-only, never synced).
+- **Palette strategy:** the Solaris warm tokens are repointed onto the Starship violet/cyan
+  palette while keeping the SEMANTIC names (`gold`→violet primary, `ember`→deep-violet
+  gradient partner, `gold-soft`→light violet, new `cyan` telemetry accent). Every existing
+  utility reskins through the tokens — no mass component rewrite.
+- **Reconciliation adaptations:** test baseline is **438** (not the patch's 367 — v3.3
+  shipped since); work stays on `claude/forge30-pwa-build-2hb416` (not a new `starship-os`
+  branch) per the standing push constraint; corrected file paths used
+  (`components/health/HealthScoreRing.tsx`, `components/today/Streak*.tsx`); the existing
+  `BottomNav`/`DestinationGrid` are **restyled, not rebuilt**; the existing
+  `prefersReducedMotion` helper in `lib/utils.ts` is the one motion path. The §2 safety
+  dark-alert sweep and byte-identical crisis copy are non-negotiable (S3).
+- **Fonts:** Space Grotesk (display), JetBrains Mono (microlabels), Inter (body) via
+  `next/font` (self-hosted at build → CSP-safe); Geist stays as fallback.
