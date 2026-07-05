@@ -249,3 +249,16 @@ Per `FORGE30_PHASE_NEXT_HUD_ASSESSMENTS_RECORDING.md`, sequenced A → B → C:
   in dev, OFF in every production build until counsel signs off per
   `RECORDING_LEGAL_REVIEW.md`. `realtimeAnalysis` stays false. Geolocation assist
   deliberately not implemented (manual picker only).
+- **Solaris HUD (design-identity addendum): SHIPPED.** Replaced Workstream A's generic HUD
+  with the final identity — molten luxe base + instrument details. Token rewrite (warm black
+  `#0b0806`, warm-glass surfaces, incandescent gold `#ffb13d`, ember `#ff6a3d`, teal success,
+  molten/bar/glass gradients, solar wash), molten ScoreRing/HealthScoreRing gauges (gradient
+  stroke + core glow + gradient numeral + 1.1s reveal), gradient progress fills, molten chart
+  stroke, full microlabel migration (Geist Mono 10px/.16em), glass shell (26px blur, 18px
+  sheet radius + drag handle, glass pill buttons, one glowing primary per surface), and the
+  §2 safety-color resolution: `warning` retired repo-wide — safety is red-family-only at two
+  intensities on cool-dark `--surface-safety` (BP stages, BP guidance, pain banner, overhead
+  flag), informational variance re-mapped to gold (stress purchases, high-stress chips).
+  Icons/manifest/theme regenerated on the new palette. AA audit 21/21 pairs pass (worst text
+  case muted-on-wash 5.32:1); reduced-motion/transparency guards, ≤3 blur layers, and ≤3
+  ember-glow surfaces verified by script. SW v12→v15 across the four commits.

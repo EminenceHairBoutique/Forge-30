@@ -48,7 +48,10 @@ export function StatCard({
   const body = (
     <Card
       className={cn(
-        "focus-brackets flex h-full flex-col gap-1.5 p-4 transition-colors",
+        "flex h-full flex-col gap-1.5 p-4 transition-colors",
+        // Brackets live on the focusable Link when linked (focus lands
+        // there, not on this div); non-linked cards show them on :active.
+        !href && "focus-brackets",
         href && "active:border-(--stroke-active) lg:hover:border-(--stroke-active)",
         className
       )}
@@ -78,7 +81,10 @@ export function StatCard({
   );
 
   return href ? (
-    <Link href={href} className="block h-full min-h-11">
+    <Link
+      href={href}
+      className="focus-brackets block h-full min-h-11 rounded-(--radius-card) outline-none"
+    >
       {body}
     </Link>
   ) : (

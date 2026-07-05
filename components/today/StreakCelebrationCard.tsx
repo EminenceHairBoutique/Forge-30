@@ -44,7 +44,7 @@ export function StreakCelebrationCard({
   };
 
   return (
-    <Card className="animate-rise notch-corner relative flex flex-col items-center gap-3 border-gold/40 bg-gold/10 p-5 text-center shadow-(--glow-gold)">
+    <Card className="animate-rise notch-corner relative flex flex-col items-center gap-3 border-gold/40 bg-gold/10 p-5 text-center shadow-(--glow-teal)">
       <button
         type="button"
         aria-label="Dismiss celebration"

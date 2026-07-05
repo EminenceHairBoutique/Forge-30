@@ -37,9 +37,6 @@
      teal only on completion/milestone moments. Nothing else. */
   --glow-ember: 0 0 30px rgba(255, 138, 61, 0.3);
   --glow-teal: 0 0 18px rgba(45, 225, 194, 0.35);
-  /* Legacy aliases (pre-Solaris names) — same values, kept for callers. */
-  --glow-gold: var(--glow-ember);
-  --glow-success: var(--glow-teal);
   /* Gradients — defined once. Molten: hero numerals + gauge stroke (via SVG
      stops); bar: progress fills; glass: pill buttons; glass-primary: the one
      primary action per surface. */

@@ -44,9 +44,9 @@ import { HealthMarkerSheet } from "@/components/health/HealthMarkerSheet";
 const BP_TONE: Record<string, string> = {
   normal: "border-success/50 bg-success/15 text-success",
   elevated: "border-line bg-elevated text-muted",
-  stage1: "border-danger/40 bg-danger/10 text-danger",
-  stage2: "border-danger/50 bg-danger/15 text-danger",
-  crisis: "border-danger bg-danger/25 text-danger",
+  stage1: "border-danger/40 bg-safety text-danger",
+  stage2: "border-danger/50 bg-safety text-danger",
+  crisis: "border-danger bg-safety text-danger",
 };
 
 /** Doctor-ready print export: a clean same-origin print window. */
