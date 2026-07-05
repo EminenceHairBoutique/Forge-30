@@ -107,3 +107,18 @@ cross-promoting a research-use-only peptide retailer creates FDA intended-use ev
 against the retailer and drug-facilitation exposure for the app. Additionally (§6.0.7):
 nothing in Forge30 links to any vendor of any compound. This rule survives every future
 phase and is grep-gated in the Phase 6 review.
+
+## 11. v3.3 audit remediation adaptations (operator context, 2026-07-05)
+
+`V3_3_PROMPT.md` (Claude + ChatGPT audits, reconciled) is the active remediation prompt.
+Three adaptations, logged per its global-acceptance rule:
+
+- **Audit source files not provided.** The prompt says to commit `FORGE30_AUDIT_JUL5.md` and
+  `Forge30_Audit.md` alongside it; neither was uploaded. The prompt's inline task text (IDs
+  B1–B6, C1–C10, D2–D5, E, F, G woven into Phases 1–5) is self-contained and is the
+  executed source of truth. The audit files can be added later without changing scope.
+- **Branch.** Work continues on `claude/forge30-pwa-build-2hb416` (the session's binding
+  push target) rather than a new `v3.3-audit-fixes` branch.
+- **Baseline.** The prompt cites `e142800` · 367 tests; the actual baseline is `1ad949b`
+  (the Rev 3.1 review-fix commit, two HIGH rail fixes included) · **369 tests**. The
+  only-grows floor for v3.3 is 369.
