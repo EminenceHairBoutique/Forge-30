@@ -350,12 +350,14 @@ export default function ProgressPage() {
                   <p className="text-xs text-muted">avg sleep</p>
                 </div>
               </div>
-              <div className="rounded-(--radius-control) bg-elevated px-3 py-2">
-                <p className="text-xs text-muted">
-                  Most-missed habit:{" "}
-                  <span className="font-semibold text-ivory">{weekSummary.mostMissedHabit}</span>
-                </p>
-              </div>
+              {weekSummary.mostMissedHabit && (
+                <div className="rounded-(--radius-control) bg-elevated px-3 py-2">
+                  <p className="text-xs text-muted">
+                    Most-missed habit:{" "}
+                    <span className="font-semibold text-ivory">{weekSummary.mostMissedHabit}</span>
+                  </p>
+                </div>
+              )}
               <p className="text-sm leading-relaxed text-ivory">
                 {summarizeWeek(weekSummary, profile)}
               </p>

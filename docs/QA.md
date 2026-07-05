@@ -81,3 +81,22 @@ strength of this file alone.
       shows the upgrade path; search/manual keep working.
 - [ ] Elite account: coach responses come from the opus model (check response metadata).
 - [ ] Unconfigured build: zero purchase UI anywhere (regression-checked in CI Playwright).
+
+## v3.3 Phase 1 — rate limiting, validation, hygiene (2026-07-05)
+
+Shipped and covered by tests: fixed-window daily limits on /api/coach (10 free / 40 pro /
+80 elite), /api/nutrition/photo (+20/day burst atop the monthly quota), /api/protocols/labimport
+(20/day) and /api/research (Elite, 10/day); the ALLOW_UNMETERED hard guard (a Supabase-less
+deployment with an API key resolves anonymous callers to FREE tier unless the operator opts
+in); request validation on coach/photo/labimport/push bodies (64 KB JSON cap, image caps,
+unknown-key rejection); cross-origin pin on API routes (native shell origins allow-listed);
+security headers + CSP; SW version stamped per build with the opt-in update toast; account
+deletion endpoint; error boundaries; ESLint flat config + CI.
+
+WAIT(operator):
+- Create the `rate_limits` table (supabase/migrations/0005_rate_limits.sql).
+- Decide ALLOW_UNMETERED for any personal deployment (docs in .env.example).
+- After first deploy: confirm CSP report console is quiet on iOS Safari + Chrome, then keep
+  the enforced policy (documented in next.config.ts).
+- Verify the update toast on an installed PWA across one deploy.
+- Account deletion end-to-end against a real Supabase project (needs auth.admin).

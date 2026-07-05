@@ -20,7 +20,7 @@ import { computePersonalRecords } from "@/lib/engine/trainingRules";
 import { summarizeJournal } from "@/lib/engine/journalRules";
 import { notesForConsumer } from "@/lib/engine/journalRules";
 import { toISODate, addDays, daysBetween, mondayWeekday } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 /**

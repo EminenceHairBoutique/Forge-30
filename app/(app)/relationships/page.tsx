@@ -210,7 +210,7 @@ export default function RelationshipsPage() {
       <CardContent className="flex flex-col gap-2">
         {escalate && (
           <p className="text-sm font-semibold text-ivory">
-            Something you've logged here matters more than any pattern chart: if there is fear,
+            Something you’ve logged here matters more than any pattern chart: if there is fear,
             control, threats, or violence in this relationship, the people below are trained for
             exactly that conversation — confidential, judgment-free.
           </p>
@@ -478,7 +478,7 @@ export default function RelationshipsPage() {
                 value={couplesId}
                 onChange={(e) => setCouplesId(e.target.value as AssessmentId | "")}
               >
-                <option value="">Pick an assessment you've taken…</option>
+                <option value="">Pick an assessment you’ve taken…</option>
                 {ASSESSMENT_BANK.filter((d) =>
                   selfResults.some((r) => r.assessmentId === d.id)
                 ).map((d) => (
@@ -761,7 +761,7 @@ export default function RelationshipsPage() {
                 )}
                 {analysis.findings.length === 0 && (
                   <p className="text-sm text-muted">
-                    No named pattern shows up in this thread — that's a finding too.
+                    No named pattern shows up in this thread — that’s a finding too.
                   </p>
                 )}
                 <div className="flex gap-2">

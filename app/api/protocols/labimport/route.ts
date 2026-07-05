@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { resolveEntitlement } from "@/lib/server/entitlements";
 import { canUseLiveCoach } from "@/lib/engine/subscription";
+import { PHOTO_DAILY_BURST } from "@/lib/engine/rateLimit";
+import { callerId, consumeRateLimit } from "@/lib/server/rateLimit";
+import { crossOriginBlocked } from "@/lib/server/origin";
+import { readJsonBody, validateImagePayload } from "@/lib/server/validate";
 
 /**
  * AI lab import (v3 Phase 6.2, Pro) — a photo of a lab report in, extracted
@@ -52,6 +56,9 @@ Rules:
 - Transcription only: never interpret results, never comment on values, never add markers that aren't printed.`;
 
 export async function POST(request: Request) {
+  if (crossOriginBlocked(request)) {
+    return NextResponse.json({ error: "Cross-origin requests aren't accepted." }, { status: 403 });
+  }
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "Lab import isn't configured — manual entry works the same." },
@@ -65,17 +72,20 @@ export async function POST(request: Request) {
       { status: 402 }
     );
   }
-  let body: { image?: string; mediaType?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+  const burst = await consumeRateLimit("labimport", callerId(request, ent.userId), PHOTO_DAILY_BURST);
+  if (!burst.allowed) {
+    return NextResponse.json(
+      { error: "That's a lot of imports for one day — manual entry keeps working; the counter resets tomorrow." },
+      { status: 429 }
+    );
   }
-  const image = body.image ?? "";
-  const mediaType = body.mediaType === "image/png" ? "image/png" : "image/jpeg";
-  if (!image || image.length > MAX_IMAGE_BYTES) {
+  const body = await readJsonBody(request, MAX_IMAGE_BYTES + 4096);
+  if (!body.ok) return NextResponse.json({ error: body.error }, { status: 400 });
+  const payload = validateImagePayload(body.value, MAX_IMAGE_BYTES);
+  if (!payload.ok) {
     return NextResponse.json({ error: "Send one downscaled image." }, { status: 400 });
   }
+  const { image, mediaType } = payload.value;
   try {
     const client = new Anthropic();
     const response = await client.messages.create({

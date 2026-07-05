@@ -110,6 +110,8 @@ export function MoneyPlanningSection() {
     };
   }, [adapter, monthStart, today, revision]);
 
+  // `revision` is the deliberate trigger: a fresh timestamp after each write.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const nowIso = useMemo(() => new Date().toISOString(), [revision]);
 
   if (!settings) return null;

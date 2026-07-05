@@ -1,4 +1,3 @@
-/* GENERATED from public/sw.template.js by scripts/generate-sw.mjs — do not edit. */
 /*
  * Forge30 service worker (hand-rolled). THIS FILE IS THE SOURCE —
  * public/sw.js is generated from it by scripts/generate-sw.mjs (runs as
@@ -14,7 +13,7 @@
  *    content-hashed and immutable.
  */
 
-const VERSION = "forge30-7ac1487-202607052041";
+const VERSION = "__SW_VERSION__";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 

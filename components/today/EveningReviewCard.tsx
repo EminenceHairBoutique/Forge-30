@@ -21,7 +21,7 @@ export function EveningReviewCard({ onPlanTomorrow }: { onPlanTomorrow: () => vo
       </p>
       <p className="text-sm text-ivory">
         The day is wrapped and the score is final. Two minutes closes the loop: the honest
-        review, then tomorrow's #1.
+        review, then tomorrow’s #1.
       </p>
       <div className="flex gap-2">
         <Button

@@ -171,12 +171,12 @@ export default function SkillsPage() {
             <CardContent className="flex flex-col gap-3">
               <div className="rounded-(--radius-control) border border-gold/30 bg-gold/5 px-3 py-2.5">
                 <p className="microlabel text-gold">
-                  Today's task
+                  Today’s task
                 </p>
                 <p className="mt-0.5 text-sm font-medium text-ivory">{todayTask}</p>
               </div>
               {doneToday.length === 0 ? (
-                <Button onClick={() => setCompleting(track)}>Complete today's task</Button>
+                <Button onClick={() => setCompleting(track)}>Complete today’s task</Button>
               ) : (
                 doneToday.map((t) => (
                   <div key={t.id} className="flex items-center justify-between gap-2 rounded-(--radius-control) bg-elevated px-3 py-2">

@@ -16,10 +16,10 @@ export function SupportResourcesCard() {
         <LifeBuoy className="size-3.5" /> Support, right now if you need it
       </p>
       <p className="mt-1.5 text-sm leading-relaxed text-ivory">
-        That answer matters more than any score. If you're having thoughts of hurting yourself,
+        That answer matters more than any score. If you’re having thoughts of hurting yourself,
         you deserve support today: in the US, call or text <strong>988</strong> (Suicide &amp;
         Crisis Lifeline, 24/7); elsewhere, <strong>findahelpline.com</strong> lists free lines by
-        country. If you're in immediate danger, contact emergency services now.
+        country. If you’re in immediate danger, contact emergency services now.
       </p>
       <p className="mt-1.5 text-xs leading-relaxed text-muted">
         These resources are always free in this app and never depend on finishing anything.

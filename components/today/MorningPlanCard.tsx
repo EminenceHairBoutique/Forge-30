@@ -42,7 +42,7 @@ export function MorningPlanCard({
         <p className="flex items-start gap-2 text-sm text-ivory">
           <Target className="mt-0.5 size-4 shrink-0 text-gold" />
           <span>
-            <span className="font-semibold">Today's focus:</span> {plan.focus}
+            <span className="font-semibold">Today’s focus:</span> {plan.focus}
           </span>
         </p>
       )}
@@ -76,7 +76,7 @@ export function MorningPlanCard({
 
       <div className="flex gap-2">
         <Button size="sm" className="flex-1" onClick={onDismiss}>
-          Let's go
+          Let’s go
         </Button>
         <Button size="sm" variant="ghost" onClick={onHardDay}>
           Hard day?

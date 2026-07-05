@@ -17,18 +17,17 @@ import {
 import { Select } from "@/components/ui/select";
 import { DEFAULT_DOMAINS, DEFAULT_MVD, DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
 import { notificationPermission } from "@/lib/push/client";
-import { flagEnabled as flagOn } from "@/lib/flags";
 import type {
   DomainToggles,
   ForgeScoreWeights,
   MvdDefinition,
-  NotificationPrefs,
   PainFlags,
   UserProfile,
 } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackupCard } from "@/components/settings/BackupCard";
+import { CloudAccountCard } from "@/components/settings/CloudAccountCard";
 import { PushCard } from "@/components/settings/PushCard";
 import { ProtocolsCard } from "@/components/settings/ProtocolsCard";
 import { SubscriptionCard } from "@/components/settings/SubscriptionCard";
@@ -582,6 +581,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <CloudAccountCard />
 
       <Card className="border-danger/30">
         <CardHeader>

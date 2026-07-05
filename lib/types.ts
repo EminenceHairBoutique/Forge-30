@@ -1114,5 +1114,8 @@ export interface WeeklySummary {
   avgStress: number;
   avgSleep: number;
   avgForgeScore: number;
-  mostMissedHabit: string;
+  /** Days this week with any logged activity (v3.3 §1.2 cold-start gate). */
+  activeDays: number;
+  /** Absent until ≥3 active days — no "most missed" verdict on day one. */
+  mostMissedHabit?: string;
 }

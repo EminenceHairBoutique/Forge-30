@@ -45,7 +45,7 @@ export function HardDaySheet({
             <p className="font-semibold text-ivory">The whole plan for today:</p>
             {mvd.met ? (
               <p className="mt-1 text-xs text-success">
-                Minimum Viable Day already met. You're done.
+                Minimum Viable Day already met. You’re done.
               </p>
             ) : (
               <ul className="mt-1 flex flex-col gap-0.5 text-muted">

@@ -135,7 +135,7 @@ export function VoiceNoteSheet({
         <div className="flex flex-col gap-4">
           {!recordingSupported() ? (
             <p className="text-sm text-muted">
-              Voice recording isn't available in this browser. The written journal is always
+              Voice recording isn’t available in this browser. The written journal is always
               here.
             </p>
           ) : (
@@ -157,7 +157,7 @@ export function VoiceNoteSheet({
                     <Square className="size-5 text-danger" /> Stop
                   </Button>
                 ) : dataUrl ? (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                   
                   <audio controls src={dataUrl} className="w-full" />
                 ) : (
                   <Button size="lg" onClick={start}>

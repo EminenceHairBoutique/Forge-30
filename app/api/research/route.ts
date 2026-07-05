@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { FLAGS } from "@/lib/flags";
+import { RESEARCH_DAILY_LIMIT } from "@/lib/engine/rateLimit";
+import { resolveEntitlement } from "@/lib/server/entitlements";
+import { callerId, consumeRateLimit } from "@/lib/server/rateLimit";
+import { crossOriginBlocked } from "@/lib/server/origin";
 
 /**
  * Research mode route (E15) — fail-closed by design.
@@ -16,7 +20,28 @@ import { FLAGS } from "@/lib/flags";
  * official medical organizations, peer-reviewed research, and clinical
  * guidelines, separating evidence from speculation.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  if (crossOriginBlocked(request)) {
+    return NextResponse.json({ error: "Cross-origin requests aren't accepted." }, { status: 403 });
+  }
+
+  // Research is an Elite feature with a 10/day window (§1.1) — wired now so
+  // flipping researchLive later changes nothing about access control.
+  const ent = await resolveEntitlement(request);
+  if (!ent.unmetered && ent.tier !== "elite") {
+    return NextResponse.json(
+      { error: "Research mode is part of Elite." },
+      { status: 402 }
+    );
+  }
+  const limit = await consumeRateLimit("research", callerId(request, ent.userId), RESEARCH_DAILY_LIMIT);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Daily research limit reached — the window resets tomorrow." },
+      { status: 429 }
+    );
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       {

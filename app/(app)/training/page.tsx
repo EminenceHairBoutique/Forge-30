@@ -403,7 +403,7 @@ export default function TrainingPage() {
       {plan.isRest && workout?.status === "rest" && (
         <Card className="flex items-center gap-3 border-success/30 bg-success/5 p-4">
           <CheckCircle2 className="size-6 text-success" />
-          <p className="text-sm text-ivory">Rest day complete. See you on Monday's push day.</p>
+          <p className="text-sm text-ivory">Rest day complete. See you on Monday’s push day.</p>
         </Card>
       )}
 

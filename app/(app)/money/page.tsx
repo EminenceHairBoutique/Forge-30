@@ -146,7 +146,7 @@ export default function MoneyPage() {
         {/* Today's entries */}
         <Card className="lg:self-start">
           <CardHeader>
-            <CardTitle>Today's entries</CardTitle>
+            <CardTitle>Today’s entries</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {todayEntries.length === 0 && (

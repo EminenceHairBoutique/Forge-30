@@ -41,11 +41,7 @@ export function LabsSection({
   const [entryOpen, setEntryOpen] = useState(false);
   const [trendMarker, setTrendMarker] = useState<string | null>(null);
 
-  // Latest panel first; marker list across all panels for the trend picker.
-  const markerNames = useMemo(
-    () => [...new Set(panels.flatMap((p) => p.markers.map((m) => m.name)))],
-    [panels]
-  );
+  // Latest panel first.
   const latest = panels[0] ?? null;
 
   const trendData = useMemo(() => {

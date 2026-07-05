@@ -43,6 +43,7 @@ describe("weeklyReviewMode", () => {
   const summary: WeeklySummary = {
     weekStart: "2026-06-29",
     weekEnd: "2026-07-05",
+    activeDays: 7,
     avgCalories: 2350,
     avgProtein: 138,
     weightTrendLb: 0.4,

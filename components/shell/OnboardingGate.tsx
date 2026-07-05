@@ -250,7 +250,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Anything else you're working on? (tap any)</Label>
+              <Label>Anything else you’re working on? (tap any)</Label>
               <div className="grid grid-cols-2 gap-1.5">
                 {GOAL_IDS.filter((g) => g !== draft.primaryGoal).map((g) => {
                   const on = (draft.secondaryGoals ?? []).includes(g);
@@ -440,7 +440,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
                   <option value="dating">Dating</option>
                   <option value="partnered">Partnered</option>
                   <option value="married">Married</option>
-                  <option value="complicated">It's complicated</option>
+                  <option value="complicated">It’s complicated</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">

@@ -8,11 +8,10 @@ import {
   CalendarDays,
   ShoppingCart,
   Camera,
-  TrendingUp,
 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { useDay } from "@/lib/hooks/useDay";
-import { toISODate, addDays, uid, cn } from "@/lib/utils";
+import { toISODate, addDays, uid } from "@/lib/utils";
 import { getMealPlanForDate, MEAL_PLAN, PREP_CHECKLIST, generateGroceryList } from "@/lib/data/mealPlan";
 import { QUICK_ADDS } from "@/lib/data/quickAdds";
 import { calculateMacroTotals, getNutritionRecommendation } from "@/lib/engine/nutritionRules";
@@ -33,7 +32,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CheckItem } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 
 const SLOT_LABEL: Record<MealSlot, string> = {
   meal1: "Meal 1",

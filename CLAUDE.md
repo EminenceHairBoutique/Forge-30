@@ -44,11 +44,12 @@ npm run build        # production build — must stay green
 npm start            # serve production build (service worker active)
 npm run typecheck    # tsc --noEmit — must stay clean
 npm test             # Vitest; count only ever grows (301 at v3 Phase 0 — DECISIONS.md §2)
-npm run lint
+npm run lint         # eslint . (flat config) — non-interactive, must stay clean
 npm run icons        # regenerate public/icons/ from scripts/generate-icons.mjs
 ```
 
-Every phase gates on: typecheck clean → tests pass → build passes, all three, every time.
+Every phase gates on: typecheck clean → lint clean → tests pass → build passes, every time.
+`.github/workflows/ci.yml` runs the same four on push/PR.
 
 ## Architecture rules (non-negotiable)
 
@@ -120,10 +121,13 @@ legends for ≥2 series). Respect focus-visible rings already styled in the prim
 
 ## PWA
 
-`public/manifest.json` + hand-rolled `public/sw.js`. **Adding a route requires updating the nav
-(`components/shell/BottomNav.tsx`) and `SHELL_ROUTES` in `public/sw.js` in the same commit**,
-and bumping the SW `VERSION` string when shell content changes — otherwise installed apps serve
-a stale shell.
+`public/manifest.json` + hand-rolled service worker. **`public/sw.template.js` is the SW
+source** — `public/sw.js` is generated from it by `scripts/generate-sw.mjs` (npm `prebuild`),
+which stamps `VERSION` with the git SHA + build time, so every deploy invalidates the shell
+cache automatically (no manual bumps). **Adding a route requires updating the nav
+(`components/shell/BottomNav.tsx`) and `SHELL_ROUTES` in `public/sw.template.js` in the same
+commit.** Updates are user-opt-in: the waiting worker activates only from the "New version
+ready" toast (`ServiceWorkerRegistrar`) — never auto-reload mid-session.
 
 ## Safety copy
 

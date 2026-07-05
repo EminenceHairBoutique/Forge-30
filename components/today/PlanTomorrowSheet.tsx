@@ -78,7 +78,7 @@ export function PlanTomorrowSheet({
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label>Tomorrow's training</Label>
+            <Label>Tomorrow’s training</Label>
             <p className="rounded-(--radius-control) bg-elevated px-3 py-2 text-sm text-ivory">
               {workoutForDate(customPlan, tomorrow).isRest
                 ? "Rest day — recovery is the plan."

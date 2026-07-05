@@ -54,7 +54,7 @@ export function DailyCheckSheet({
     return () => {
       cancelled = true;
     };
-  }, [open, log]);
+  }, [open, log, adapter]);
 
   const accept = (s: DetectedSuggestion) => {
     if (s.field === "sleepHours") setSleep(String(s.value));

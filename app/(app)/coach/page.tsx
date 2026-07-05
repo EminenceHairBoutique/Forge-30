@@ -284,7 +284,7 @@ export default function CoachPage() {
               </>
             ) : (
               <>
-                <Sparkles className="size-5" /> Get today's review
+                <Sparkles className="size-5" /> Get today’s review
               </>
             )}
           </Button>

@@ -77,7 +77,7 @@ export function weeklyReviewMode(
       },
     ];
   }
-  return [
+  const sections: ModeSection[] = [
     {
       label: "The week in one read",
       text: summarizeWeek(summary, profile),
@@ -86,11 +86,16 @@ export function weeklyReviewMode(
       label: "The numbers",
       text: `Average score ${summary.avgForgeScore}/100 · ${summary.avgCalories.toLocaleString()} kcal and ${summary.avgProtein}g protein a day · workouts ${summary.workoutCompletionPct}% · ${formatMoney(summary.spendingTotal)} spent this week.`,
     },
-    {
+  ];
+  // Cold start (§1.2): the most-missed read only exists once the week has
+  // enough active days to mean something.
+  if (summary.mostMissedHabit) {
+    sections.push({
       label: "Most-missed habit",
       text: `${summary.mostMissedHabit} — one habit, not a verdict. Pick the smallest version of it and run that this week.`,
-    },
-  ];
+    });
+  }
+  return sections;
 }
 
 /** Tomorrow Plan: tonight's two-minute intention, read back. */

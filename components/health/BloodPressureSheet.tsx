@@ -139,7 +139,7 @@ export function BloodPressureSheet({
                 onOpenChange(false);
               }}
             >
-              I've read this — close
+              I’ve read this — close
             </Button>
           </div>
         </SheetContent>
