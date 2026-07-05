@@ -5,7 +5,7 @@ import { Barcode, Camera, Search as SearchIcon, Trash2 } from "lucide-react";
 import { useStorage } from "@/lib/storage/provider";
 import { QUICK_ADDS } from "@/lib/data/quickAdds";
 import { toISODate, uid } from "@/lib/utils";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, authHeaders } from "@/lib/api";
 import type { CachedFood, MealSlot, SavedMeal } from "@/lib/types";
 import type { PhotoAnalysis } from "@/app/api/nutrition/photo/route";
 import type { FoodSearchResult } from "@/app/api/nutrition/search/route";
@@ -178,11 +178,11 @@ export function AddMealSheet({
       setThumb(thumbUrl);
       const res = await fetch(apiUrl("/api/nutrition/photo"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ image: full.split(",")[1], mediaType: "image/jpeg" }),
       });
-      const data = (await res.json()) as { analysis?: PhotoAnalysis; error?: string };
-      if (!res.ok || !data.analysis) throw new Error(data.error ?? "Analysis failed.");
+      const data = (await res.json()) as { analysis?: PhotoAnalysis; error?: string; message?: string };
+      if (!res.ok || !data.analysis) throw new Error(data.message ?? data.error ?? "Analysis failed.");
       setPhotoItems(
         data.analysis.items.map((i) => ({
           name: i.name,

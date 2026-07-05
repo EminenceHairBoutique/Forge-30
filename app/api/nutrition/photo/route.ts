@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { meterPhotoUse, resolveEntitlement } from "@/lib/server/entitlements";
 
 /**
  * Photo meal analysis (v3 Phase 4 — the flagship logging path). The client
@@ -68,6 +69,24 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
+  // Quota gate (Phase 7): Free 3/mo taste, Pro 150/mo fair use, Elite
+  // unlimited; unconfigured builds unmetered. Over-quota is a friendly
+  // 402 — search and manual logging stay free forever.
+  const ent = await resolveEntitlement(request);
+  const remaining = await meterPhotoUse(ent);
+  if (remaining === -1) {
+    return NextResponse.json(
+      {
+        error: "quota",
+        message:
+          ent.tier === "free"
+            ? "That's the 3 free photo analyses this month — Pro makes it 150. Search and manual logging stay free, always."
+            : "That's this month's fair-use limit. Search and manual logging keep working — the counter resets next month.",
+      },
+      { status: 402 }
+    );
+  }
+
   let body: { image?: string; mediaType?: string };
   try {
     body = await request.json();

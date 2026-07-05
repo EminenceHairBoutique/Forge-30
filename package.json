@@ -2,7 +2,7 @@
   "name": "forge30",
   "version": "1.0.0",
   "private": true,
-  "description": "Forge30 \u2014 a mobile-first, all-in-one 30-day lifestyle improvement PWA.",
+  "description": "Forge30 — a mobile-first, all-in-one 30-day lifestyle improvement PWA.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -30,6 +30,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.4",
+    "stripe": "^22.3.0",
     "tailwind-merge": "^3.0.1",
     "web-push": "^3.6.7"
   },

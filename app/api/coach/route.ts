@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import type { AdaptiveReview, CoachInput } from "@/lib/engine/mockCoach";
 import { ADAPTIVE_SECTION_KEYS } from "@/lib/engine/mockCoach";
 import { PROTOCOL_COACH_RAIL } from "@/lib/engine/coachGuardrails";
+import { canUseLiveCoach } from "@/lib/engine/subscription";
+import { resolveEntitlement } from "@/lib/server/entitlements";
 
 /**
  * Live AI Coach route. The client POSTs the day's structured summary (all
@@ -76,12 +78,26 @@ export async function POST(request: Request) {
     );
   }
 
+  // Entitlement gate (Phase 7): live coach is Pro+. Unconfigured builds are
+  // unmetered (the keyless/self-hosted experience never regresses); a 402
+  // sends the client to the mock engine + upgrade path, never a dead end.
+  const ent = await resolveEntitlement(request);
+  if (!ent.unmetered && !canUseLiveCoach(ent.tier)) {
+    return NextResponse.json(
+      { error: "Live coaching is part of Pro — the mock engine keeps working free, forever." },
+      { status: 402 }
+    );
+  }
+
   try {
     const input = (await request.json()) as CoachInput;
     const client = new Anthropic();
 
     const response = await client.messages.create({
-      model: process.env.COACH_MODEL ?? "claude-sonnet-5",
+      model:
+        ent.tier === "elite"
+          ? (process.env.COACH_MODEL_ELITE ?? "claude-opus-4-8")
+          : (process.env.COACH_MODEL ?? "claude-sonnet-5"),
       max_tokens: 2048,
       thinking: { type: "adaptive" },
       system: `${SYSTEM_PROMPT}\n\n${PROTOCOL_COACH_RAIL}`,

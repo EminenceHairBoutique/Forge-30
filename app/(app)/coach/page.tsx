@@ -32,7 +32,7 @@ import {
   type AdaptiveSectionKey,
 } from "@/lib/engine/mockCoach";
 import { COACH_MODES, type CoachModeId } from "@/lib/engine/coachModes";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, authHeaders } from "@/lib/api";
 import { loadPatterns } from "@/lib/hooks/usePatterns";
 
 const SECTIONS: { key: keyof CoachReview; label: string; icon: typeof Gauge }[] = [
@@ -119,7 +119,7 @@ export default function CoachPage() {
       try {
         const res = await fetch(apiUrl("/api/coach"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(await authHeaders()) },
           body: JSON.stringify(input),
         });
         if (res.ok) {
