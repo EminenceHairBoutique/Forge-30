@@ -20,7 +20,7 @@ export function TimelineRow({
       {/* Left rail + tick */}
       <span aria-hidden className="absolute top-0 bottom-0 left-1 w-px bg-(--stroke-hairline)" />
       <span aria-hidden className="absolute top-4 left-0 h-px w-2.5 bg-(--stroke-active)" />
-      <span className="microlabel w-12 shrink-0 pt-3.5 text-muted/80">{time}</span>
+      <span className="microlabel w-12 shrink-0 pt-3.5 text-muted">{time}</span>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

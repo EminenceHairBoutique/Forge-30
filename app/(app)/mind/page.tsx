@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ScaleSlider } from "@/components/ui/slider";
+import { ScaleSlider } from "@/components/ui/scale-slider";
 import { CheckItem } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

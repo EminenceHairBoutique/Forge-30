@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { crossOriginBlocked } from "@/lib/server/origin";
+import { MAX_JSON_BODY_BYTES, readJsonBody, validatePushSubscription } from "@/lib/server/validate";
 
 /**
  * Push subscription endpoint (v3 Phase 2).
@@ -37,6 +39,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (crossOriginBlocked(req)) {
+    return NextResponse.json({ error: "Cross-origin requests aren't accepted." }, { status: 403 });
+  }
   const supabase = serviceClient();
   if (!supabase || !process.env.VAPID_PUBLIC_KEY) {
     return NextResponse.json({ error: "Push is not configured." }, { status: 404 });
@@ -44,22 +49,18 @@ export async function POST(req: Request) {
   const userId = await userIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
-  let body: { endpoint?: string; keys?: { p256dh?: string; auth?: string }; tz?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Malformed subscription." }, { status: 400 });
-  }
-  if (!body.endpoint || !body.keys?.p256dh || !body.keys.auth) {
-    return NextResponse.json({ error: "Malformed subscription." }, { status: 400 });
-  }
+  const raw = await readJsonBody(req, MAX_JSON_BODY_BYTES);
+  if (!raw.ok) return NextResponse.json({ error: "Malformed subscription." }, { status: 400 });
+  const sub = validatePushSubscription(raw.value);
+  if (!sub.ok) return NextResponse.json({ error: sub.error }, { status: 400 });
+
   const { error } = await supabase.from("push_subscriptions").upsert(
     {
       user_id: userId,
-      endpoint: body.endpoint,
-      p256dh: body.keys.p256dh,
-      auth: body.keys.auth,
-      tz: typeof body.tz === "string" && body.tz.length <= 64 ? body.tz : "UTC",
+      endpoint: sub.value.endpoint,
+      p256dh: sub.value.keys.p256dh,
+      auth: sub.value.keys.auth,
+      tz: sub.value.tz,
     },
     { onConflict: "user_id,endpoint" }
   );

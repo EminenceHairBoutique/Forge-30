@@ -153,6 +153,11 @@ export class SyncedAdapter extends LocalStorageAdapter {
   }
 
   private async initialSync(): Promise<void> {
+    // §6.0.5 + §3.4: load ProtocolSettings and MediaPrefs (hydrating the
+    // sync-exclusion set) BEFORE anything can enqueue or pull — never
+    // depend on UI mount order.
+    await this.getProtocolSettings();
+    await this.getMediaPrefs();
     if (!this.meta.migratedAt) await this.migrateLocalToCloud();
     await this.pull();
     await this.flush();

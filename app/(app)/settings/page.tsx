@@ -7,6 +7,9 @@ import { useStorage } from "@/lib/storage/provider";
 import { toISODate } from "@/lib/utils";
 import { validateExport, type ExportFile } from "@/lib/storage/migrations";
 import { flagEnabled } from "@/lib/flags";
+import { logsCsv, mealsCsv, metricsCsv, spendingCsv, workoutsCsv } from "@/lib/engine/exportCsv";
+import { Switch } from "@/components/ui/switch";
+import { PROGRAMS } from "@/lib/data/programs";
 import { TIERS, isTier } from "@/lib/engine/entitlements";
 import { useTier } from "@/lib/hooks/useTier";
 import {
@@ -17,18 +20,19 @@ import {
 import { Select } from "@/components/ui/select";
 import { DEFAULT_DOMAINS, DEFAULT_MVD, DEFAULT_NOTIFICATIONS } from "@/lib/data/defaults";
 import { notificationPermission } from "@/lib/push/client";
-import { flagEnabled as flagOn } from "@/lib/flags";
 import type {
   DomainToggles,
   ForgeScoreWeights,
   MvdDefinition,
-  NotificationPrefs,
   PainFlags,
   UserProfile,
+  ProgramId,
 } from "@/lib/types";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { useTheme } from "@/lib/hooks/useTheme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackupCard } from "@/components/settings/BackupCard";
+import { CloudAccountCard } from "@/components/settings/CloudAccountCard";
 import { PushCard } from "@/components/settings/PushCard";
 import { ProtocolsCard } from "@/components/settings/ProtocolsCard";
 import { SubscriptionCard } from "@/components/settings/SubscriptionCard";
@@ -85,6 +89,7 @@ const WEIGHT_FIELDS: { key: ScoreComponentKey; label: string }[] = [
 
 export default function SettingsPage() {
   const { adapter, profile, saveProfile, touch } = useStorage();
+  const { theme, setTheme } = useTheme();
   const { tier } = useTier();
   const router = useRouter();
   const [draft, setDraft] = useState<UserProfile | null>(null);
@@ -93,6 +98,14 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<{ file: ExportFile; name: string } | null>(null);
   const [dataMessage, setDataMessage] = useState<string | null>(null);
+  const [includeMedia, setIncludeMedia] = useState(false);
+  const [mediaBytes, setMediaBytes] = useState<number | null>(null);
+  const [syncVoice, setSyncVoice] = useState(false);
+
+  useEffect(() => {
+    void adapter.mediaUsageBytes().then(setMediaBytes);
+    void adapter.getMediaPrefs().then((m) => setSyncVoice(m.syncVoice));
+  }, [adapter]);
   const [permission, setPermission] = useState<string>("default");
 
   useEffect(() => {
@@ -112,16 +125,47 @@ export default function SettingsPage() {
     setSavedAt(new Date().toLocaleTimeString());
   };
 
-  const exportData = async () => {
-    const file = await adapter.exportAll();
-    const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
+  const download = (content: string, name: string, type: string) => {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `forge30-export-${toISODate()}.json`;
+    a.download = name;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const MEDIA_COLLECTIONS = ["journalAudio", "mealPhotos", "bodyPhotos"];
+
+  const exportData = async () => {
+    const file = await adapter.exportAll();
+    // §3.4: media (voice audio, photos) joins the export only when asked —
+    // it dominates file size and re-imports fine without it.
+    if (!includeMedia && file.large) {
+      file.large = Object.fromEntries(
+        Object.entries(file.large).filter(([name]) => !MEDIA_COLLECTIONS.includes(name))
+      );
+    }
+    download(JSON.stringify(file, null, 2), `forge30-export-${toISODate()}.json`, "application/json");
     setDataMessage("Export downloaded. Keep it somewhere safe.");
+  };
+
+  const exportCsvs = async () => {
+    const today = toISODate();
+    const from = "2000-01-01";
+    const [logs, meals, workouts, spending, metrics] = await Promise.all([
+      adapter.listDailyLogs(from, today),
+      adapter.listMealsRange(from, today),
+      adapter.listWorkouts(from, today),
+      adapter.listSpendingRange(from, today),
+      adapter.listBodyMetrics(from, today),
+    ]);
+    download(logsCsv(logs), `forge30-days-${today}.csv`, "text/csv");
+    download(mealsCsv(meals), `forge30-meals-${today}.csv`, "text/csv");
+    download(workoutsCsv(workouts), `forge30-workouts-${today}.csv`, "text/csv");
+    download(spendingCsv(spending), `forge30-spending-${today}.csv`, "text/csv");
+    download(metricsCsv(metrics), `forge30-body-${today}.csv`, "text/csv");
+    setDataMessage("Five CSVs downloaded — days, meals, workouts, spending, body.");
   };
 
   const pickImportFile = async (picked: File | null) => {
@@ -162,6 +206,26 @@ export default function SettingsPage() {
       <BackupCard />
 
       <SubscriptionCard />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm text-muted">
+            Dark is the default — easier on the eyes for night logging. Light is the bright
+            Starship look.
+          </p>
+          <div className="flex items-center justify-between rounded-(--radius-control) border border-line bg-elevated px-3 py-2">
+            <span className="text-sm text-ivory">Light theme</span>
+            <Switch
+              checked={theme === "light"}
+              onCheckedChange={(v) => setTheme(v ? "light" : "dark")}
+              aria-label="Light theme"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -254,6 +318,30 @@ export default function SettingsPage() {
             Before that hour, Today shows your score as still building; after it, the day gets
             its review. Default 20 (8&nbsp;PM).
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>30-day program</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm text-muted">
+            Programs shape the workout builder’s defaults and how meal logging leads. Switching
+            affects future days only — nothing already planned or logged changes.
+          </p>
+          <Select
+            aria-label="30-day program"
+            value={draft.program ?? "custom"}
+            onChange={(e) => setDraft({ ...draft, program: e.target.value as ProgramId })}
+          >
+            {PROGRAMS.map((prog) => (
+              <option key={prog.id} value={prog.id}>
+                {prog.name} — {prog.tagline}
+              </option>
+            ))}
+            <option value="custom">Custom — build everything yourself</option>
+          </Select>
         </CardContent>
       </Card>
 
@@ -522,6 +610,39 @@ export default function SettingsPage() {
               <Upload className="size-4 text-gold" /> Import data
             </Button>
           </div>
+          <Button variant="secondary" onClick={() => void exportCsvs()}>
+            <Download className="size-4 text-gold" /> Export CSVs (days · meals · workouts · spending · body)
+          </Button>
+          <div className="flex items-center justify-between rounded-(--radius-control) border border-line bg-elevated px-3 py-2">
+            <span className="text-sm text-ivory">Include media in JSON export</span>
+            <Switch
+              checked={includeMedia}
+              onCheckedChange={setIncludeMedia}
+              aria-label="Include media in export"
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-(--radius-control) border border-line bg-elevated px-3 py-2">
+            <div className="min-w-0">
+              <span className="block text-sm text-ivory">Sync voice recordings</span>
+              <span className="block text-xs text-muted">
+                Off keeps audio on this device; entries still sync.
+              </span>
+            </div>
+            <Switch
+              checked={syncVoice}
+              onCheckedChange={(v) => {
+                setSyncVoice(v);
+                void adapter.saveMediaPrefs({ syncVoice: v });
+              }}
+              aria-label="Sync voice recordings"
+            />
+          </div>
+          {mediaBytes !== null && (
+            <p className="text-xs text-muted">
+              Journal media: {mediaBytes >= 1_048_576 ? `${(mediaBytes / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(mediaBytes / 1024))} KB`}{" "}
+              on this device.
+            </p>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -582,6 +703,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <CloudAccountCard />
 
       <Card className="border-danger/30">
         <CardHeader>

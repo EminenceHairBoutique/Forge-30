@@ -208,8 +208,32 @@ export interface UserProfile {
   /** Meal-plan template (v3 Phase 4 demotion): absent/"none" = no seeded
    *  plan; "forge30" re-enables the 7-day rotation + grocery list. */
   mealPlanTemplate?: "none" | "forge30";
+  // --- v3.3 §3.1 personalization inputs (all optional/additive; each one is
+  // consumed by the programs engine or the coach context — no dead fields).
+  /** Training days per week the user actually plans to show up for. */
+  trainingDaysPerWeek?: 2 | 3 | 4 | 5 | 6;
+  /** Minutes per session the schedule really allows. */
+  sessionMinutes?: 20 | 30 | 45 | 60 | 75 | 90;
+  /** Self-reported sleep quality — coach context, never a diagnosis. */
+  sleepQuality?: SleepQuality;
+  /** Selected 30-day program (v3.3 §3.2); absent/"custom" = current behavior. */
+  program?: ProgramId;
   onboardingComplete: boolean;
 }
+
+/** Media preferences (v3.3 §3.4) — on-device only, never synced. */
+export interface MediaPrefs {
+  /** Opt-in: voice-journal audio joins cloud sync (off by default). */
+  syncVoice: boolean;
+}
+
+/** UI theme (Starship S0) — dark default, device-only preference. */
+export type UiTheme = "dark" | "light";
+
+export type SleepQuality = "rough" | "ok" | "good";
+
+/** 30-day program identities (v3.3 §3.2). */
+export type ProgramId = "custom" | "first30" | "comeback30" | "busy30";
 
 // ---------------------------------------------------------------------------
 // Daily log — the single source of truth for "how did today go"
@@ -960,8 +984,14 @@ export interface BodyMetric {
   energy: number;
   /** 1–10 subjective soreness. */
   soreness: number;
-  /** Local object URL / data URL of progress photo (MVP only). */
-  photoUrl: string;
+  /**
+   * LEGACY (pre-v3.3 §3.4): embedded photo data URL. New photos live in the
+   * IndexedDB large store keyed by metric id (adapter.getBodyPhoto); the
+   * one-time relocation empties this field and sets hasPhoto.
+   */
+  photoUrl?: string;
+  /** A progress photo exists in the large store for this metric id. */
+  hasPhoto?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1114,5 +1144,8 @@ export interface WeeklySummary {
   avgStress: number;
   avgSleep: number;
   avgForgeScore: number;
-  mostMissedHabit: string;
+  /** Days this week with any logged activity (v3.3 §1.2 cold-start gate). */
+  activeDays: number;
+  /** Absent until ≥3 active days — no "most missed" verdict on day one. */
+  mostMissedHabit?: string;
 }

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { PHOTO_DAILY_BURST } from "@/lib/engine/rateLimit";
 import { meterPhotoUse, resolveEntitlement } from "@/lib/server/entitlements";
+import { callerId, consumeRateLimit } from "@/lib/server/rateLimit";
+import { crossOriginBlocked } from "@/lib/server/origin";
+import { readJsonBody, validateImagePayload } from "@/lib/server/validate";
 
 /**
  * Photo meal analysis (v3 Phase 4 — the flagship logging path). The client
@@ -63,6 +67,9 @@ Rules:
 - These are ESTIMATES for self-tracking, not medical or dietary advice. Never comment on the user's choices, body, or goals — numbers and assumptions only.`;
 
 export async function POST(request: Request) {
+  if (crossOriginBlocked(request)) {
+    return NextResponse.json({ error: "Cross-origin requests aren't accepted." }, { status: 403 });
+  }
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "Photo analysis isn't configured — search or manual entry works the same." },
@@ -70,9 +77,24 @@ export async function POST(request: Request) {
     );
   }
   // Quota gate (Phase 7): Free 3/mo taste, Pro 150/mo fair use, Elite
-  // unlimited; unconfigured builds unmetered. Over-quota is a friendly
-  // 402 — search and manual logging stay free forever.
+  // unlimited; opted-in self-hosted builds unmetered. Over-quota is a
+  // friendly 402 — search and manual logging stay free forever.
   const ent = await resolveEntitlement(request);
+
+  // Daily burst cap (§1.1) atop the monthly quota, checked BEFORE metering
+  // so a burst-refused call never burns monthly quota.
+  const burst = await consumeRateLimit("photo", callerId(request, ent.userId), PHOTO_DAILY_BURST);
+  if (!burst.allowed) {
+    return NextResponse.json(
+      {
+        error: "quota",
+        message:
+          "That's a lot of photos for one day — the counter resets tomorrow. Search and manual logging keep working right now.",
+      },
+      { status: 429 }
+    );
+  }
+
   const remaining = await meterPhotoUse(ent);
   if (remaining === -1) {
     return NextResponse.json(
@@ -87,17 +109,16 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { image?: string; mediaType?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+  const body = await readJsonBody(request, MAX_IMAGE_BYTES + 4096);
+  if (!body.ok) return NextResponse.json({ error: body.error }, { status: 400 });
+  const payload = validateImagePayload(body.value, MAX_IMAGE_BYTES);
+  if (!payload.ok) {
+    return NextResponse.json(
+      { error: "Send one downscaled image (≤1024px JPEG)." },
+      { status: 400 }
+    );
   }
-  const image = body.image ?? "";
-  const mediaType = body.mediaType === "image/png" ? "image/png" : "image/jpeg";
-  if (!image || image.length > MAX_IMAGE_BYTES) {
-    return NextResponse.json({ error: "Send one downscaled image (≤1024px JPEG)." }, { status: 400 });
-  }
+  const { image, mediaType } = payload.value;
 
   try {
     const client = new Anthropic();

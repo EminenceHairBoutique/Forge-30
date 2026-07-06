@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isProtocolAdviceAsk,
+  LIFEGRAPH_NARRATE_RAIL,
   PROTOCOL_COACH_RAIL,
   protocolDeflection,
 } from "./coachGuardrails";
@@ -67,5 +68,29 @@ describe("protocol red-team fixtures", () => {
     ]) {
       expect(PROTOCOL_COACH_RAIL.toLowerCase()).toContain(required.toLowerCase());
     }
+  });
+});
+
+
+describe("LifeGraph narration rail (v3.3 Phase 4)", () => {
+  it("pins the description-only, no-causation, no-advice contract", () => {
+    const rail = LIFEGRAPH_NARRATE_RAIL.toLowerCase();
+    for (const required of [
+      "describe only",
+      "never invent",
+      "co-occurrences, not causes",
+      "no advice",
+      "adherence-neutral",
+      "if the list is empty",
+    ]) {
+      expect(rail).toContain(required);
+    }
+  });
+
+  it("forbids the causal verbs the deterministic layer already avoids", () => {
+    // The rail names the banned words to steer the model; it must not itself
+    // read as an instruction TO use them (they appear only inside quotes).
+    expect(LIFEGRAPH_NARRATE_RAIL).toContain('"causes"');
+    expect(LIFEGRAPH_NARRATE_RAIL).toContain("Tends to show up alongside");
   });
 });

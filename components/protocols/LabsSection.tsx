@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { FlaskConical, Plus, Trash2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Camera, FlaskConical, Plus, Trash2 } from "lucide-react";
+import { apiUrl, authHeaders } from "@/lib/api";
+import { useTier } from "@/lib/hooks/useTier";
+import type { LabImportResult } from "@/app/api/protocols/labimport/route";
 import { useStorage } from "@/lib/storage/provider";
 import { LAB_MARKER_CATALOG, LAB_RANGE_DISCLAIMER } from "@/lib/data/protocolReference";
 import { labStatus } from "@/lib/engine/protocols";
@@ -38,11 +41,7 @@ export function LabsSection({
   const [entryOpen, setEntryOpen] = useState(false);
   const [trendMarker, setTrendMarker] = useState<string | null>(null);
 
-  // Latest panel first; marker list across all panels for the trend picker.
-  const markerNames = useMemo(
-    () => [...new Set(panels.flatMap((p) => p.markers.map((m) => m.name)))],
-    [panels]
-  );
+  // Latest panel first.
   const latest = panels[0] ?? null;
 
   const trendData = useMemo(() => {
@@ -135,10 +134,45 @@ function LabPanelSheet({
   onSaved: () => void;
   adapterSave: (p: LabPanel) => Promise<void>;
 }) {
+  const { can } = useTier();
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
   const [date, setDate] = useState(toISODate());
   const [source, setSource] = useState("");
   const [markers, setMarkers] = useState<LabMarkerValue[]>([]);
   const [pick, setPick] = useState("");
+
+  // AI lab import (Pro): transcription prefill only — every value stays
+  // editable here and nothing saves until the user says so.
+  const importFromPhoto = async (file: File) => {
+    setImporting(true);
+    setImportError(null);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      const res = await fetch(apiUrl("/api/protocols/labimport"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ image: dataUrl.split(",")[1], mediaType: "image/jpeg" }),
+      });
+      const data = (await res.json()) as { result?: LabImportResult; error?: string };
+      if (!res.ok || !data.result) throw new Error(data.error ?? "Import failed.");
+      setMarkers(data.result.markers);
+      if (data.result.drawDate) setDate(data.result.drawDate);
+      if (data.result.source) setSource(data.result.source);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import failed — manual entry works the same.");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const addMarker = (name: string) => {
     if (!name || markers.some((m) => m.name === name)) return;
@@ -179,6 +213,33 @@ function LabPanelSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent title="Add lab panel">
         <div className="flex flex-col gap-3">
+          {can("protocolLabImport") && (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void importFromPhoto(f);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                variant="secondary"
+                disabled={importing}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Camera className="size-4" />
+                {importing ? "Reading the report…" : "Import from a report photo"}
+              </Button>
+              <p className="text-xs text-muted">
+                Transcription only — review and edit every value below before saving.
+              </p>
+              {importError && <p className="text-sm text-muted">{importError}</p>}
+            </>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="lab-date">Draw date</Label>

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   LocalStorageAdapter,
+  resetSyncExclusionsForTests,
   setProtocolLocalOnly,
   setWriteObserver,
   isSyncExcluded,
@@ -56,12 +57,13 @@ describe("protocol local-only sync exclusion", () => {
   beforeEach(() => {
     (globalThis as { window?: unknown }).window = { localStorage: fakeLocalStorage() };
     observed = [];
+    resetSyncExclusionsForTests();
     setWriteObserver((collection) => observed.push(collection));
   });
 
   afterEach(() => {
     setWriteObserver(null);
-    setProtocolLocalOnly(false);
+    resetSyncExclusionsForTests();
     delete (globalThis as { window?: unknown }).window;
   });
 
@@ -117,5 +119,25 @@ describe("protocol local-only sync exclusion", () => {
     for (const c of PROTOCOL_COLLECTIONS) expect(isSyncExcluded(c)).toBe(true);
     setProtocolLocalOnly(false);
     for (const c of PROTOCOL_COLLECTIONS) expect(isSyncExcluded(c)).toBe(false);
+  });
+
+  it("COLD START: persisted local-only enforces itself with zero prior settings reads", async () => {
+    // Simulate a fresh session on a device where local-only was previously
+    // enabled: the setting sits in storage, nothing has called
+    // getProtocolSettings, and the sync observer attaches immediately.
+    (globalThis as { window?: { localStorage: unknown } }).window = {
+      localStorage: fakeLocalStorage(),
+    };
+    resetSyncExclusionsForTests();
+    (globalThis as unknown as { window: { localStorage: Storage } }).window.localStorage.setItem(
+      "forge30:protocolSettings",
+      JSON.stringify(settings(true))
+    );
+    const cold: string[] = [];
+    setWriteObserver((collection) => cold.push(collection));
+    const adapter = new LocalStorageAdapter();
+    await adapter.saveCompound(compound);
+    expect(cold).not.toContain("compounds");
+    expect(isSyncExcluded("compounds")).toBe(true);
   });
 });

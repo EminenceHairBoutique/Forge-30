@@ -37,3 +37,48 @@ flags. Deliberately thin at launch — it anchors Pro's price.
   generating new AI output. This is stated in the paywall copy because it's true.
 - Unconfigured builds (no Stripe/Supabase env): no purchase UI renders anywhere, and the
   keyless self-hosted experience behaves as unmetered Pro — it never regresses.
+
+## v3.3 Phase 5 — surface additions
+
+- **Paywall sheet** (`components/cards/PaywallSheet.tsx`): contextual only — opened from a
+  quota hit (AddMealSheet's over-quota 402/429) or a locked-feature tap (`PaywallCard`'s
+  "See plans"), never an interstitial. Full Free/Pro/Elite feature table from
+  `lib/data/pricing.ts` (safety + habit rows checked across all three tiers so the
+  free-forever promise is visible, not just claimed), monthly/annual toggle, verbatim trust
+  line. Buy buttons render only when `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is set AND the user
+  is signed in; otherwise it's an honest comparison with no dead CTA.
+- **Customer portal** (`app/api/stripe/portal/route.ts`): POST → hosted Stripe billing portal
+  for plan changes / cancel / card update; 404 unconfigured, 409 when the user has no Stripe
+  customer yet, never writes subscription state (the webhook stays sole writer).
+- **7-day trial**: granted server-side by `subscription_data.trial_period_days: 7` on the
+  Checkout session; `status: "trialing"` is in `ACTIVE_STATUSES`, so entitlements resolve to
+  the paid tier through the trial. One per customer (Stripe-enforced per customer id).
+- **Settings → Subscription**: paid users get "Manage billing" (portal) + "Refresh" (re-pulls
+  `/api/entitlements` and caches the tier locally after a checkout returns); free users get
+  "See plans". Trust line: "Downgrading never deletes your data — features stop generating,
+  nothing is lost."
+- Annual price envs added: `NEXT_PUBLIC_STRIPE_PRICE_{PRO,ELITE}_YEARLY`.
+
+**Never paywalled (asserted in `lib/data/pricing.test.ts`):** logging, streaks, sync, push,
+food search, mock coach, crisis/safety resources, doctor report, Hard Day flow, and
+export/delete-data controls — free on Free, Pro, and Elite alike.
+
+WAIT(operator): create the four Stripe prices + set the eight price envs; register the webhook
+endpoint + secret; test-mode round trip (checkout → webhook → tier flip → portal → cancel →
+non-destructive downgrade) with the Stripe CLI.
+
+## Webhook hardening (2026-07-06)
+
+The webhook now handles the full lifecycle: `checkout.session.completed`,
+`customer.subscription.created/updated/deleted`, `invoice.paid` (keeps `current_period_end`
+fresh on renewal), and `invoice.payment_failed` (→ `status = past_due`, tier retained until it
+recovers or the period + 24h grace lapses per `resolveTierFromRow`). Deliveries are idempotent
+via the `stripe_events` ledger (migration 0007): a duplicate event id short-circuits; a handler
+failure un-records the id so Stripe's retry reprocesses. The `subscriptions` row now carries
+`billing_interval`, `current_period_start`, `cancel_at_period_end`, and `created_at`
+(migration 0006, additive). The Stripe→row mapping is a pure, unit-tested function
+(`subscriptionPatch` / `subscriptionIdFromInvoice` in `lib/engine/subscription.ts`).
+
+**Register these 6 events on the webhook endpoint:** checkout.session.completed,
+customer.subscription.created, customer.subscription.updated, customer.subscription.deleted,
+invoice.paid, invoice.payment_failed.

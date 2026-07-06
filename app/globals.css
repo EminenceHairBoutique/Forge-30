@@ -1,49 +1,108 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Forge30 design tokens — "Solaris HUD": molten luxe base with instrument-
-   grade data details. Warm incandescent brand; precision telemetry where
-   numbers live. Dark mode only. One system, no fork.
+   Forge30 design tokens — "Starship OS": a personal operating system rendered
+   as spacecraft instrumentation. Violet/cyan HUD, angular hull-cut glass,
+   plasma gauge. Two themes via [data-theme]; DARK is the default (protects
+   heavy night-usage surfaces — Mind, Journal, in-bed dose logging). The
+   SEMANTIC token names (gold/ember/success/danger) are preserved so every
+   existing utility reskins through them — "gold" now means the violet
+   primary. One system; the palette is the only fork.
 --------------------------------------------------------------------------- */
 
-:root {
-  --bg-base: #0b0806;
-  /* Warm glass surfaces: translucent warm tints compositing over the base.
-     Solid equivalents (glass fallbacks, opaque contexts): #161210 / #1d1712. */
-  --bg-surface: rgba(255, 222, 180, 0.055);
-  --bg-elevated: rgba(255, 226, 190, 0.1);
-  --bg-surface-solid: #161210;
-  --bg-elevated-solid: #1d1712;
-  /* Safety components render on neutral cool-dark — a different instrument
-     mode. Never warm glass, never ember/gold inside a safety surface. */
-  --surface-safety: #16181a;
-  --text-primary: #fff4e4;
-  --text-secondary: #b3a18a;
-  --accent-gold: #ffb13d;
-  --accent-ember: #ff6a3d; /* gradient partner; hero/primary only */
-  --accent-gold-soft: #ffd98a; /* gradient top-stop, highlights */
-  --accent-success: #2de1c2; /* teal completion — reads against the warm field */
-  --accent-danger: #ff3b30; /* safety red; the ONLY safety color family (§2) */
-  /* Hairline strokes: cards carry 1px hairlines; active states swap to the
-     gold hairline instead of a fill change. */
-  --stroke-hairline: rgba(255, 214, 160, 0.15);
-  --stroke-active: rgba(255, 177, 61, 0.5);
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-base: #0a0818;
+  /* Violet-tinted glass over the hull. Solid equivalents (glass fallbacks,
+     opaque contexts): #141126 / #1a1730. */
+  --bg-surface: rgba(124, 92, 255, 0.055);
+  --bg-elevated: rgba(124, 92, 255, 0.1);
+  --bg-surface-solid: #141126;
+  --bg-elevated-solid: #1a1730;
+  /* Safety components render on a neutral cool-dark hull — a different
+     instrument mode. Never violet/cyan glow inside a safety surface. */
+  --surface-safety: #15161f;
+  --text-primary: #efecff;
+  --text-secondary: #9a94c4;
+  /* Primary brand = violet; "ember" is the deep-violet gradient partner;
+     "gold-soft" the light-violet top stop. Cyan is the telemetry accent. */
+  --accent-gold: #8a6dff;
+  --accent-ember: #4a2fd4;
+  --accent-gold-soft: #9b7bff;
+  --accent-cyan: #00d4ff;
+  --accent-success: #00d4a6; /* teal completion — distinct from cyan */
+  --accent-danger: #ff3b5c; /* safety red; the ONLY safety color family (§2) */
+  --stroke-hairline: rgba(124, 92, 255, 0.18);
+  --stroke-active: rgba(124, 92, 255, 0.6);
   --line: var(--stroke-hairline);
-  --ring-track: rgba(255, 214, 160, 0.09);
-  /* Glass surface (nav, sheets, sticky headers) — budget: ≤3 blurred layers
-     per screen; solid fallback where backdrop-filter is unsupported. */
-  --surface-glass: rgba(29, 23, 18, 0.72);
-  /* Glow is rationed: score ring, the one primary action, coach card;
-     teal only on completion/milestone moments. Nothing else. */
-  --glow-ember: 0 0 30px rgba(255, 138, 61, 0.3);
-  --glow-teal: 0 0 18px rgba(45, 225, 194, 0.35);
-  /* Gradients — defined once. Molten: hero numerals + gauge stroke (via SVG
-     stops); bar: progress fills; glass: pill buttons; glass-primary: the one
-     primary action per surface. */
-  --grad-molten: linear-gradient(180deg, #ffd98a, #ff6a3d);
-  --grad-bar: linear-gradient(90deg, #ffb13d, #ff6a3d);
-  --grad-glass: linear-gradient(135deg, rgba(255, 214, 160, 0.14), rgba(255, 150, 60, 0.04));
-  --grad-glass-primary: linear-gradient(135deg, rgba(255, 177, 61, 0.3), rgba(255, 106, 61, 0.1));
+  --ring-track: rgba(124, 92, 255, 0.12);
+  --surface-glass: rgba(20, 17, 38, 0.72);
+  /* Glow is rationed: gauge, the one primary action, coach card; cyan/teal
+     only on telemetry + completion moments. `--glow-ember` keeps its name
+     (violet value) so glow-budgeted components need no edit. */
+  --glow-ember: 0 0 30px rgba(124, 92, 255, 0.38);
+  --glow-teal: 0 0 18px rgba(0, 212, 255, 0.4);
+  /* Plasma gradients — defined once. "molten": hero numerals + gauge stops;
+     "bar": progress fills (violet→cyan); glass pills; primary action. */
+  --grad-molten: linear-gradient(160deg, #9b7bff, #7c5cff 55%, #4a2fd4);
+  --grad-bar: linear-gradient(90deg, #7c5cff, #00d4ff);
+  --grad-glass: linear-gradient(135deg, rgba(124, 92, 255, 0.14), rgba(0, 212, 255, 0.04));
+  --grad-glass-primary: linear-gradient(135deg, rgba(124, 92, 255, 0.32), rgba(74, 47, 212, 0.12));
+}
+
+/* Light Starship: violet ink on near-white glass (the mockups). Toggled from
+   Settings; dark stays the default so nothing regresses for night users. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-base: #dcddef;
+  --bg-surface: rgba(255, 255, 255, 0.55);
+  --bg-elevated: rgba(255, 255, 255, 0.74);
+  --bg-surface-solid: #f2f2fb;
+  --bg-elevated-solid: #ffffff;
+  --surface-safety: #eef0f6;
+  --text-primary: #191630;
+  --text-secondary: #5a5478;
+  --accent-gold: #5f3ae8;
+  --accent-ember: #4a2fd4;
+  --accent-gold-soft: #7c5cff;
+  --accent-cyan: #0089a8; /* darkened cyan for AA on white */
+  --accent-success: #0a7a68;
+  --accent-danger: #c1123c;
+  --stroke-hairline: rgba(29, 26, 51, 0.12);
+  --stroke-active: rgba(109, 74, 255, 0.55);
+  --line: var(--stroke-hairline);
+  --ring-track: rgba(109, 74, 255, 0.14);
+  --surface-glass: rgba(255, 255, 255, 0.76);
+  --glow-ember: 0 0 24px rgba(109, 74, 255, 0.28);
+  --glow-teal: 0 0 16px rgba(0, 159, 196, 0.32);
+  --grad-molten: linear-gradient(160deg, #9b7bff, #6d4aff 55%, #4a2fd4);
+  --grad-bar: linear-gradient(90deg, #6d4aff, #00b4d4);
+  --grad-glass: linear-gradient(135deg, rgba(124, 92, 255, 0.14), rgba(0, 212, 255, 0.04));
+  --grad-glass-primary: linear-gradient(135deg, rgba(138, 102, 255, 0.9), rgba(74, 47, 212, 0.8));
+}
+
+/* Signature angular hull-cut — one clip for panels, a tighter one for
+   controls. Defined once; applied via .hull-cut / .hull-cut-sm. */
+:root {
+  --hull-cut: 14px;
+  --hull-cut-sm: 10px;
+  --clip-panel: polygon(
+    var(--hull-cut) 0,
+    100% 0,
+    100% calc(100% - var(--hull-cut)),
+    calc(100% - var(--hull-cut)) 100%,
+    0 100%,
+    0 var(--hull-cut)
+  );
+  --clip-control: polygon(
+    var(--hull-cut-sm) 0,
+    100% 0,
+    100% calc(100% - var(--hull-cut-sm)),
+    calc(100% - var(--hull-cut-sm)) 100%,
+    0 100%,
+    0 var(--hull-cut-sm)
+  );
 }
 
 @theme inline {
@@ -58,10 +117,14 @@
   --color-gold-soft: var(--accent-gold-soft);
   --color-success: var(--accent-success);
   --color-danger: var(--accent-danger);
+  --color-cyan: var(--accent-cyan);
   --color-line: var(--line);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Starship type: Space Grotesk display (numerals/headings), JetBrains Mono
+     microlabels, Inter/Geist body. Variables come from next/font in layout. */
+  --font-sans: var(--font-body), var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-hud-mono), var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-hud-display), var(--font-body), ui-sans-serif, system-ui, sans-serif;
 
   /* Radius scale: 6 / 10 / 14, plus 18 for sheets and hero cards. Pills 100px. */
   --radius-lg: 18px;
@@ -71,7 +134,6 @@
 }
 
 html {
-  color-scheme: dark;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -85,10 +147,11 @@ body {
   min-height: 100dvh;
 }
 
-/* Large score / macro numerals: heavy weight, tabular figures. */
+/* Large score / macro numerals: Space Grotesk display, tabular figures. */
 .display-num {
+  font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -122,13 +185,12 @@ body {
   }
 }
 
-/* One radial solar wash on the app shell only — never inside cards. */
+/* Hull wash on the app shell only — twin nebula glows (violet + cyan),
+   never inside cards. Kept as `.solar-wash` so existing shells need no edit. */
 .solar-wash {
-  background-image: radial-gradient(
-    540px 400px at 50% 3%,
-    rgba(255, 140, 50, 0.18),
-    transparent 65%
-  );
+  background-image:
+    radial-gradient(560px 380px at 82% 2%, rgba(0, 212, 255, 0.1), transparent 60%),
+    radial-gradient(620px 460px at 12% 26%, rgba(124, 92, 255, 0.16), transparent 62%);
   background-repeat: no-repeat;
 }
 
@@ -164,25 +226,27 @@ body {
   transform: scale(0.96);
 }
 
-/* Ultra-subtle instrument grid on the app shell only — felt, not seen. */
+/* Ultra-subtle hull grid on the app shell only — felt, not seen. */
 .grid-texture {
   background-image:
-    linear-gradient(rgba(255, 244, 228, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 244, 228, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(124, 92, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 92, 255, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
 }
-/* Both on one element: layer the wash over the grid (background-image is a
-   single property — the combined rule keeps both). */
+/* Both on one element: layer the twin nebula wash over the hull grid
+   (background-image is a single property — the combined rule keeps both). */
 .solar-wash.grid-texture {
   background-image:
-    radial-gradient(540px 400px at 50% 3%, rgba(255, 140, 50, 0.18), transparent 65%),
-    linear-gradient(rgba(255, 244, 228, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 244, 228, 0.02) 1px, transparent 1px);
+    radial-gradient(560px 380px at 82% 2%, rgba(0, 212, 255, 0.1), transparent 60%),
+    radial-gradient(620px 460px at 12% 26%, rgba(124, 92, 255, 0.16), transparent 62%),
+    linear-gradient(rgba(124, 92, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 92, 255, 0.05) 1px, transparent 1px);
   background-size:
+    100% 100%,
     100% 100%,
     24px 24px,
     24px 24px;
-  background-repeat: no-repeat, repeat, repeat;
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
 }
 @media (prefers-reduced-transparency: reduce) {
   .solar-wash.grid-texture {
@@ -252,8 +316,8 @@ textarea {
   padding-right: env(safe-area-inset-right);
 }
 @utility pb-safe-nav {
-  /* bottom nav height + home-indicator inset */
-  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  /* floating dock (64px) + 14px gap + protruding core headroom + inset */
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
 }
 
 /* Hide scrollbars on horizontal snap rows without disabling scroll. */
@@ -332,4 +396,229 @@ textarea {
 }
 .animate-breathe {
   animation: breathe 8s ease-in-out infinite;
+}
+
+/* --- Scale slider (v3.3 C1): native range input, HUD-styled ------------- */
+.scale-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.scale-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-gold) 70%, transparent), var(--accent-gold))
+      0 / var(--fill, 0%) 100% no-repeat,
+    var(--bg-elevated-solid);
+  border: 1px solid var(--line);
+}
+.scale-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-elevated-solid);
+  border: 1px solid var(--line);
+}
+.scale-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent-gold);
+}
+.scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -12px;
+  border-radius: 999px;
+  background: var(--accent-gold);
+  border: 3px solid var(--bg-base);
+  box-shadow: 0 0 0 1px var(--accent-gold);
+}
+.scale-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--accent-gold);
+  border: 3px solid var(--bg-base);
+  box-shadow: 0 0 0 1px var(--accent-gold);
+}
+.scale-slider:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* --- Starship structural motifs (S0) ------------------------------------- */
+
+/* Angular hull-cut clip — the signature silhouette. Panels use the larger
+   cut; controls/pills the tighter one. */
+.hull-cut {
+  clip-path: var(--clip-panel);
+}
+.hull-cut-sm {
+  clip-path: var(--clip-control);
+}
+
+/* Corner tick: a single 6px bracket at a card's top-right — instrument
+   detailing that reads as "panel", not "card". */
+.corner-tick {
+  position: relative;
+}
+.corner-tick::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid var(--stroke-active);
+  border-right: 1.5px solid var(--stroke-active);
+  pointer-events: none;
+}
+
+/* Plasma progress bar fill (violet→cyan), reused by StatCard + meters. */
+.plasma-bar {
+  background: var(--grad-bar);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-gold) 60%, transparent);
+}
+
+/* Ambient telemetry scan line drifting down the hull (shell only). Cyan,
+   very low opacity; killed by reduced motion + reduced transparency. */
+.ambient-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 180px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(transparent, rgba(0, 212, 255, 0.06), transparent);
+  animation: ambient-scan 7s linear infinite;
+}
+@keyframes ambient-scan {
+  0% {
+    transform: translateY(-200px);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+/* Faint diagonal hull panel-lines on the shell — structural, barely there. */
+.hull-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    linear-gradient(
+      105deg,
+      transparent 70%,
+      rgba(124, 92, 255, 0.09) 70.2%,
+      rgba(124, 92, 255, 0.09) 72.6%,
+      transparent 72.8%
+    ),
+    linear-gradient(
+      255deg,
+      transparent 80%,
+      rgba(0, 212, 255, 0.08) 80.2%,
+      rgba(0, 212, 255, 0.08) 82%,
+      transparent 82.2%
+    );
+}
+
+/* Boot sequence: a one-time systems-online splash. Fades out to reveal the
+   dashboard; skipped entirely under reduced motion (handled in JS + CSS). */
+@keyframes boot-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes boot-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes boot-line-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes boot-load {
+  to {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-scan {
+    animation: none;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ambient-scan,
+  .hull-lines {
+    display: none;
+  }
+}
+
+/* Gauge targeting reticle — slow rotation, killed by reduced motion. */
+.starship-reticle {
+  transform-origin: center;
+  animation: reticle-spin 16s linear infinite;
+}
+@keyframes reticle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .starship-reticle {
+    animation: none;
+  }
+}
+
+/* Coach diamond core — the protruding action node in the HUD dock (S2). */
+.starship-core {
+  background: var(--grad-glass-primary);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: 0 8px 24px rgba(74, 47, 212, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.starship-core::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid var(--stroke-active);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  animation: core-pulse 2.4s ease-in-out infinite;
+}
+@keyframes core-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.08);
+  }
+}
+.starship-core:active {
+  transform: translateX(-50%) scale(0.92);
+}
+@media (prefers-reduced-motion: reduce) {
+  .starship-core::after {
+    animation: none;
+  }
 }

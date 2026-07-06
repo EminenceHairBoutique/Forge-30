@@ -43,24 +43,47 @@ export function ScoreRing({
             majorEvery={3}
             glow={!building && score > 0}
             pulse={building && score > 0}
-            gradient={["#ffd98a", "#ffb13d", "#ff6a3d"]}
+            gradient={["#00d4ff", "#9b7bff", "#4a2fd4"]}
             sweep={!building}
             label={`Forge Score ${score}/100`}
           >
-            {/* Molten core: soft inner radiance behind the numeral. */}
+            {/* Targeting reticle + corner brackets: the Starship gauge tell.
+                Cyan rotating reticle, four L-brackets. Decorative only. */}
+            <svg
+              aria-hidden
+              viewBox="0 0 176 176"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+            >
+              <circle
+                cx="88"
+                cy="88"
+                r="66"
+                fill="none"
+                stroke="var(--accent-cyan)"
+                strokeWidth="1"
+                strokeDasharray="4 10"
+                opacity="0.5"
+                className="starship-reticle"
+              />
+              <path d="M16 34 L16 18 L32 18" fill="none" stroke="var(--stroke-active)" strokeWidth="2" opacity="0.6" />
+              <path d="M160 34 L160 18 L144 18" fill="none" stroke="var(--stroke-active)" strokeWidth="2" opacity="0.6" />
+              <path d="M16 142 L16 158 L32 158" fill="none" stroke="var(--stroke-active)" strokeWidth="2" opacity="0.6" />
+              <path d="M160 142 L160 158 L144 158" fill="none" stroke="var(--stroke-active)" strokeWidth="2" opacity="0.6" />
+            </svg>
+            {/* Plasma core: soft inner violet/cyan radiance behind the numeral. */}
             <span
               aria-hidden
               className="pointer-events-none absolute inset-3 rounded-full"
               style={{
                 background:
-                  "radial-gradient(circle at 50% 64%, rgba(255,120,50,0.22), transparent 62%)",
+                  "radial-gradient(circle at 50% 64%, rgba(124,92,255,0.22), transparent 62%)",
               }}
             />
             <span className="display-num text-molten text-6xl leading-none">{shown}</span>
             <span className="microlabel mt-1 text-muted">
               {building ? "Score building" : "Forge Score"}
             </span>
-            {building && <span className="microlabel mt-0.5 text-[9px] text-muted/70">Day in progress</span>}
+            {building && <span className="microlabel mt-0.5 text-[9px] text-muted">Day in progress</span>}
           </Ring>
           <span className="text-xs text-muted">
             {building ? "day in progress · tap for breakdown" : "tap for breakdown"}

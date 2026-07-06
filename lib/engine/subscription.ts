@@ -58,11 +58,84 @@ export function canUseLiveCoach(tier: SubscriptionTier): boolean {
 }
 
 /** Stripe price id → tier, from env (documented in docs/MONETIZATION.md). */
-export function tierForPrice(
-  priceId: string,
-  env: { proMonthly?: string; proYearly?: string; eliteMonthly?: string; eliteYearly?: string }
-): SubscriptionTier | null {
+export type PriceEnv = {
+  proMonthly?: string;
+  proYearly?: string;
+  eliteMonthly?: string;
+  eliteYearly?: string;
+};
+
+export function tierForPrice(priceId: string, env: PriceEnv): SubscriptionTier | null {
   if (priceId === env.proMonthly || priceId === env.proYearly) return "pro";
   if (priceId === env.eliteMonthly || priceId === env.eliteYearly) return "elite";
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Stripe webhook mapping (pure). Structural shapes — no SDK import — so the
+// webhook route stays thin I/O and this mapping is unit-tested. Stripe's own
+// Subscription/Invoice objects are structurally assignable to these.
+// ---------------------------------------------------------------------------
+
+export interface StripeSubShape {
+  id: string;
+  status: string;
+  cancel_at_period_end?: boolean | null;
+  items: {
+    data: Array<{
+      price: { id: string; recurring?: { interval?: string | null } | null };
+      current_period_start?: number | null;
+      current_period_end?: number | null;
+    }>;
+  };
+}
+
+export interface SubscriptionPatch {
+  tier: SubscriptionTier;
+  status: string;
+  stripe_subscription_id: string;
+  current_period_end: string | null;
+  current_period_start: string | null;
+  cancel_at_period_end: boolean;
+  billing_interval: string | null;
+}
+
+const isoFromUnix = (s: number | null | undefined): string | null =>
+  typeof s === "number" ? new Date(s * 1000).toISOString() : null;
+
+/**
+ * Build the subscriptions-row patch from a Stripe subscription. `tierOverride`
+ * forces the tier (e.g. "free" on delete); `statusOverride` forces status
+ * (e.g. "past_due" on invoice.payment_failed).
+ */
+export function subscriptionPatch(
+  sub: StripeSubShape,
+  env: PriceEnv,
+  overrides?: { tier?: SubscriptionTier; status?: string }
+): SubscriptionPatch {
+  const item = sub.items.data[0];
+  const priceId = item?.price.id ?? "";
+  return {
+    tier: overrides?.tier ?? tierForPrice(priceId, env) ?? "pro",
+    status: overrides?.status ?? sub.status,
+    stripe_subscription_id: sub.id,
+    current_period_end: isoFromUnix(item?.current_period_end),
+    current_period_start: isoFromUnix(item?.current_period_start),
+    cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    billing_interval: item?.price.recurring?.interval ?? null,
+  };
+}
+
+export interface StripeInvoiceShape {
+  subscription?: string | { id: string } | null;
+  lines?: { data?: Array<{ subscription?: string | { id: string } | null }> };
+}
+
+/** Extract the subscription id from an invoice across Stripe API versions. */
+export function subscriptionIdFromInvoice(invoice: StripeInvoiceShape): string | null {
+  const read = (v: unknown): string | null =>
+    typeof v === "string" ? v : v && typeof v === "object" && "id" in v ? String((v as { id: string }).id) : null;
+  const direct = read(invoice.subscription);
+  if (direct) return direct;
+  return read(invoice.lines?.data?.[0]?.subscription);
 }

@@ -10,9 +10,13 @@ import {
  * Server-side entitlements (v3 Phase 7) — the authoritative check on every
  * AI route; client-side tier state is UX only.
  *
- * Fallback rules (graceful degradation, A2.5):
- * - Supabase not configured (self-hosted / personal / dev builds): behave as
- *   Pro with no quotas — the pre-Phase-7 keyless experience never regresses.
+ * Fallback rules (graceful degradation, A2.5 + v3.3 §1.1 hard guard):
+ * - Supabase not configured AND ALLOW_UNMETERED="true" (self-hosted /
+ *   personal / dev builds, opted in explicitly): behave as Pro with no
+ *   quotas — the pre-Phase-7 keyless experience never regresses.
+ * - Supabase not configured WITHOUT that opt-in: free tier, IP-keyed rate
+ *   limits — an API key on a backend-less deployment must never hand
+ *   unlimited AI calls to anonymous traffic.
  * - Configured but the request carries no valid user: free tier.
  */
 
@@ -35,7 +39,14 @@ export interface Entitlement {
 
 export async function resolveEntitlement(req: Request): Promise<Entitlement> {
   const supabase = serviceClient();
-  if (!supabase) return { tier: "pro", userId: null, unmetered: true };
+  if (!supabase) {
+    // Unmetered hard guard (§1.1): backend-less builds get the quota-free
+    // Pro experience only when the operator explicitly opted in.
+    if (process.env.ALLOW_UNMETERED === "true") {
+      return { tier: "pro", userId: null, unmetered: true };
+    }
+    return { tier: "free", userId: null, unmetered: false };
+  }
 
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return { tier: "free", userId: null, unmetered: false };

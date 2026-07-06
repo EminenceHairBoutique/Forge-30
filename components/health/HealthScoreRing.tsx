@@ -11,7 +11,6 @@ import type { HealthScoreResult } from "@/lib/engine/healthRules";
  */
 export function HealthScoreRing({ result }: { result: HealthScoreResult }) {
   const { score, components } = result;
-  const tracked = components.filter((c) => c.tracked);
 
   return (
     <Sheet>
@@ -32,7 +31,7 @@ export function HealthScoreRing({ result }: { result: HealthScoreResult }) {
             stroke={10}
             ticks={30}
             majorEvery={3}
-            gradient={["#ffd98a", "#ffb13d", "#ff6a3d"]}
+            gradient={["#00d4ff", "#9b7bff", "#4a2fd4"]}
             label={score === null ? "Health Score not started" : `Health Score ${score}/100`}
           >
             <span
@@ -56,7 +55,7 @@ export function HealthScoreRing({ result }: { result: HealthScoreResult }) {
       <SheetContent title="Health Score breakdown">
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted">
-            An educational composite of what you actually track — inputs you don't track are
+            An educational composite of what you actually track — inputs you don’t track are
             left out and the rest re-balance, so missing gear never lowers the score. It
             describes habits and readings, never a medical status.
           </p>

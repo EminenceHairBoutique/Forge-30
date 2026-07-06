@@ -222,7 +222,7 @@ export function JournalSection() {
                   <p className="mt-1 text-xs text-muted">{n.tags.map((t) => `#${t}`).join(" ")}</p>
                 )}
                 {playing?.id === n.id && (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                   
                   <audio controls autoPlay src={playing.src} className="mt-2 w-full" />
                 )}
               </div>

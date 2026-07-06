@@ -173,6 +173,7 @@ describe("protocol LifeGraph signals (behavioral, prescriber-framed)", () => {
       dailySpendingLimit: 50,
       calorieTarget: 2400,
       doseDates,
+      protocolsEnabled: true,
     });
     const patterns = detectPatterns(days, "2026-06-24");
     const doseSleep = patterns.find((p) => p.id === "dose-sleep");
@@ -181,8 +182,11 @@ describe("protocol LifeGraph signals (behavioral, prescriber-framed)", () => {
     expect(doseSleep?.line.toLowerCase()).not.toMatch(/caus|because of|due to/);
   });
 
-  it("without dose dates (tab disabled) no protocol flags exist at all", () => {
-    const logs = [log("2026-06-01", {}), log("2026-06-02", {})];
+  it("disabled tab hides protocol flags even when historical symptom data exists", () => {
+    const logs = [
+      log("2026-06-01", { protocolSymptoms: [{ tag: "acne", severity: 4 }] }),
+      log("2026-06-02", { protocolSymptoms: [{ tag: "gi", severity: 5 }] }),
+    ];
     const days = buildDays({
       logs,
       spending: [],

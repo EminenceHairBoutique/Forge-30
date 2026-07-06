@@ -40,6 +40,8 @@ import type {
   TomorrowPlan,
   UserProfile,
   WorkoutEntry,
+  MediaPrefs,
+  UiTheme,
 } from "@/lib/types";
 import type { ExportFile } from "./migrations";
 import type { Tier } from "@/lib/engine/entitlements";
@@ -211,6 +213,17 @@ export interface StorageAdapter {
   saveFoodCacheItem(item: CachedFood): Promise<void>;
   saveMealPhoto(mealId: string, dataUrl: string): Promise<void>;
   getMealPhoto(mealId: string): Promise<string | null>;
+
+  // -- Media discipline (v3.3 §3.4) -------------------------------------------
+  /** Progress photos live in the large store, keyed by metric id. */
+  saveBodyPhoto(metricId: string, dataUrl: string): Promise<void>;
+  getBodyPhoto(metricId: string): Promise<string | null>;
+  getTheme(): Promise<UiTheme>;
+  saveTheme(theme: UiTheme): Promise<void>;
+  getMediaPrefs(): Promise<MediaPrefs>;
+  saveMediaPrefs(prefs: MediaPrefs): Promise<void>;
+  /** Approximate bytes of media (voice audio + photos) on this device. */
+  mediaUsageBytes(): Promise<number>;
 
   // Assessments (E10 — large store; results and in-flight progress)
   listAssessmentResults(): Promise<AssessmentResult[]>;

@@ -2,7 +2,8 @@ import type { AssessmentDef } from "./defs";
 
 /**
  * Wave 2 question banks (Phase NEXT, workstream B): Emotional Intelligence
- * Profile and Trauma-Response & Coping Profile. Same architecture and
+ * Profile and Stress Response Patterns (formerly Trauma-Response & Coping
+ * Profile — v3.3 C7 display rename). Same architecture and
  * register as wave 1 — educational self-report, mirrored pairs for the
  * validity system, attention checks that say what they are, every band a
  * legitimate place to be. The trauma profile never claims PTSD/CPTSD and
@@ -101,8 +102,11 @@ export const EMOTIONAL_INTELLIGENCE: AssessmentDef = {
 };
 
 export const TRAUMA_COPING: AssessmentDef = {
+  // Display name only (v3.3 C7): the stored id stays "traumaCoping", so
+  // previously saved results render under the new name automatically.
+  // Rationale in DECISIONS.md §12 — content and safety framing unchanged.
   id: "traumaCoping",
-  name: "Trauma-Response & Coping Profile",
+  name: "Stress Response Patterns",
   tagline: "The protective patterns your system learned — named without judgment.",
   minutes: 6,
   kind: "likert",

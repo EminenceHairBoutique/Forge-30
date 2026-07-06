@@ -79,7 +79,10 @@ export default function ProgressPage() {
   const [spending, setSpending] = useState<SpendingEntry[]>([]);
   const [metrics, setMetrics] = useState<BodyMetric[]>([]);
   const [metric, setMetric] = useState<Metric>("forge");
+  const [bodyPhotos, setBodyPhotos] = useState<{ id: string; date: string; src: string }[]>([]);
   const [dayDetail, setDayDetail] = useState<string | null>(null);
+  // Calendar starts as a heat-strip (v3.3 C5); tap expands the full grid.
+  const [calExpanded, setCalExpanded] = useState(false);
   const [bodyOpen, setBodyOpen] = useState(false);
 
   const start = profile?.startDate ?? today;
@@ -203,6 +206,26 @@ export default function ProgressPage() {
     return points;
   }, [profile, metric, spending, metrics, logs, logByDate, start, today]);
 
+  // §3.4: photos live in the large store keyed by metric id (legacy records
+  // may still carry an embedded photoUrl until the one-time relocation runs).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const withPhoto = metrics.filter((m) => m.hasPhoto || m.photoUrl).slice(-8);
+      const loaded = await Promise.all(
+        withPhoto.map(async (m) => ({
+          id: m.id,
+          date: m.date,
+          src: (await adapter.getBodyPhoto(m.id)) ?? m.photoUrl ?? "",
+        }))
+      );
+      if (!cancelled) setBodyPhotos(loaded.filter((p) => p.src));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [metrics, adapter]);
+
   if (!profile) return null;
 
   const chartPointCount = chartData.filter((p) => p.a !== null || (p.b ?? null) !== null).length;
@@ -245,53 +268,6 @@ export default function ProgressPage() {
           </ul>
         </Card>
       )}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* 30-day calendar */}
-        <Card>
-          <CardHeader>
-            <CardTitle>30-day calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-6 gap-1.5">
-              {Array.from({ length: PROGRAM_LENGTH_DAYS }, (_, i) => {
-                const date = addDays(start, i);
-                const log = logByDate.get(date);
-                const isFuture = date > today;
-                const isToday = date === today;
-                const style = log ? STATE_STYLE[log.calendarState] : null;
-                return (
-                  <button
-                    key={date}
-                    type="button"
-                    disabled={isFuture}
-                    onClick={() => setDayDetail(date)}
-                    aria-label={`Day ${i + 1}, ${log ? STATE_STYLE[log.calendarState].label : isFuture ? "upcoming" : "no data"}`}
-                    className={cn(
-                      "flex aspect-square min-h-11 flex-col items-center justify-center rounded-lg border text-center transition-colors",
-                      style?.className ?? "border-line bg-elevated text-muted",
-                      isFuture && "opacity-35",
-                      isToday && "ring-2 ring-gold/70"
-                    )}
-                  >
-                    <span className="display-num text-sm leading-none">{i + 1}</span>
-                    {log && <span className="mt-0.5 text-[9px] leading-none">{log.forgeScore}</span>}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {Object.entries(STATE_STYLE).map(([key, s]) => (
-                <span
-                  key={key}
-                  className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold", s.className)}
-                >
-                  {s.label}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Weekly report card */}
         {weekSummary && (
@@ -350,19 +326,20 @@ export default function ProgressPage() {
                   <p className="text-xs text-muted">avg sleep</p>
                 </div>
               </div>
-              <div className="rounded-(--radius-control) bg-elevated px-3 py-2">
-                <p className="text-xs text-muted">
-                  Most-missed habit:{" "}
-                  <span className="font-semibold text-ivory">{weekSummary.mostMissedHabit}</span>
-                </p>
-              </div>
+              {weekSummary.mostMissedHabit && (
+                <div className="rounded-(--radius-control) bg-elevated px-3 py-2">
+                  <p className="text-xs text-muted">
+                    Most-missed habit:{" "}
+                    <span className="font-semibold text-ivory">{weekSummary.mostMissedHabit}</span>
+                  </p>
+                </div>
+              )}
               <p className="text-sm leading-relaxed text-ivory">
                 {summarizeWeek(weekSummary, profile)}
               </p>
             </CardContent>
           </Card>
         )}
-      </div>
 
       {/* LifeGraph patterns in the weekly report (E14) */}
       <PatternsCard title="Patterns in your data" limit={3} />
@@ -416,6 +393,97 @@ export default function ProgressPage() {
         </CardContent>
       </Card>
 
+      {/* 30-day calendar (v3.3 C5): a collapsed heat-strip by default —
+          day-state color only, today ringed — expanding to the full grid +
+          legend with tap-a-day. */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle>30-day calendar</CardTitle>
+          <button
+            type="button"
+            aria-expanded={calExpanded}
+            onClick={() => setCalExpanded((v) => !v)}
+            className="min-h-11 px-2 microlabel text-muted"
+          >
+            {calExpanded ? "Collapse" : "Expand"}
+          </button>
+        </CardHeader>
+        <CardContent>
+          {calExpanded ? (
+            <>
+              <div className="grid grid-cols-6 gap-1.5">
+                {Array.from({ length: PROGRAM_LENGTH_DAYS }, (_, i) => {
+                  const date = addDays(start, i);
+                  const log = logByDate.get(date);
+                  const isFuture = date > today;
+                  const isToday = date === today;
+                  const style = log ? STATE_STYLE[log.calendarState] : null;
+                  return (
+                    <button
+                      key={date}
+                      type="button"
+                      disabled={isFuture}
+                      onClick={() => setDayDetail(date)}
+                      aria-label={`Day ${i + 1}, ${log ? STATE_STYLE[log.calendarState].label : isFuture ? "upcoming" : "no data"}`}
+                      className={cn(
+                        "flex aspect-square min-h-11 flex-col items-center justify-center rounded-lg border text-center transition-colors",
+                        style?.className ?? "border-line bg-elevated text-muted",
+                        isFuture && "opacity-35",
+                        isToday && "ring-2 ring-gold/70"
+                      )}
+                    >
+                      <span className="display-num text-sm leading-none">{i + 1}</span>
+                      {log && <span className="mt-0.5 text-[9px] leading-none">{log.forgeScore}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {Object.entries(STATE_STYLE).map(([key, s]) => (
+                  <span
+                    key={key}
+                    className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold", s.className)}
+                  >
+                    {s.label}
+                  </span>
+                ))}
+              </div>
+  
+            </>
+          ) : (
+            <button
+              type="button"
+              aria-label="Expand the 30-day calendar"
+              onClick={() => setCalExpanded(true)}
+              className="block w-full"
+            >
+              <div className="grid grid-cols-15 gap-1">
+                {Array.from({ length: PROGRAM_LENGTH_DAYS }, (_, i) => {
+                  const date = addDays(start, i);
+                  const log = logByDate.get(date);
+                  const isFuture = date > today;
+                  const isToday = date === today;
+                  const style = log ? STATE_STYLE[log.calendarState] : null;
+                  return (
+                    <span
+                      key={date}
+                      title={`Day ${i + 1}`}
+                      className={cn(
+                        "h-4 rounded-[4px] border",
+                        style?.className ?? "border-line bg-elevated",
+                        isFuture && "opacity-35",
+                        isToday && "ring-2 ring-gold/70"
+                      )}
+                    />
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-left text-xs text-muted">Tap for the day-by-day grid.</p>
+            </button>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Recent body metrics + photos */}
       {metrics.length > 0 && (
         <Card>
@@ -423,20 +491,17 @@ export default function ProgressPage() {
             <CardTitle>Body log</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {metrics.some((m) => m.photoUrl) && (
+            {bodyPhotos.length > 0 && (
               <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                {metrics
-                  .filter((m) => m.photoUrl)
-                  .slice(-8)
-                  .map((m) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={m.id}
-                      src={m.photoUrl}
-                      alt={`Progress photo ${m.date}`}
-                      className="h-28 w-20 shrink-0 rounded-(--radius-control) border border-line object-cover"
-                    />
-                  ))}
+                {bodyPhotos.map((p) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={p.id}
+                    src={p.src}
+                    alt={`Progress photo ${p.date}`}
+                    className="h-28 w-20 shrink-0 rounded-(--radius-control) border border-line object-cover"
+                  />
+                ))}
               </div>
             )}
             {metrics

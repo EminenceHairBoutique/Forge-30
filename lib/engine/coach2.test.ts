@@ -99,6 +99,20 @@ describe("adaptiveFromLegacy (v3 Phase 5)", () => {
   });
 });
 
+describe("mock coach protocol context (behavioral only)", () => {
+  it("states the protocol record plainly and never advises", () => {
+    const input = baseInput({ protocolAdherence7d: 92, protocolMissedCount7d: 2 });
+    const adaptive = adaptiveFromLegacy(generateMockAIFeedback(input), input);
+    const score = adaptive.sections.find((s) => s.key === "scoreExplanation");
+    expect(score?.text).toContain("Protocol record this week: 92%");
+    expect(score?.text).toContain("doctor report");
+    expect(score?.text.toLowerCase()).not.toMatch(/raise|increase|adjust|titrate|dose to/);
+    // Absent context → no protocol sentence at all.
+    const plain = adaptiveFromLegacy(generateMockAIFeedback(baseInput({})), baseInput({}));
+    expect(plain.sections[0]?.text).not.toContain("Protocol record");
+  });
+});
+
 describe("coach memory builders", () => {
   const log = (date: string, over: Partial<DailyLog>): DailyLog => ({
     date,

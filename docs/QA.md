@@ -81,3 +81,131 @@ strength of this file alone.
       shows the upgrade path; search/manual keep working.
 - [ ] Elite account: coach responses come from the opus model (check response metadata).
 - [ ] Unconfigured build: zero purchase UI anywhere (regression-checked in CI Playwright).
+
+## v3.3 Phase 1 — rate limiting, validation, hygiene (2026-07-05)
+
+Shipped and covered by tests: fixed-window daily limits on /api/coach (10 free / 40 pro /
+80 elite), /api/nutrition/photo (+20/day burst atop the monthly quota), /api/protocols/labimport
+(20/day) and /api/research (Elite, 10/day); the ALLOW_UNMETERED hard guard (a Supabase-less
+deployment with an API key resolves anonymous callers to FREE tier unless the operator opts
+in); request validation on coach/photo/labimport/push bodies (64 KB JSON cap, image caps,
+unknown-key rejection); cross-origin pin on API routes (native shell origins allow-listed);
+security headers + CSP; SW version stamped per build with the opt-in update toast; account
+deletion endpoint; error boundaries; ESLint flat config + CI.
+
+WAIT(operator):
+- Create the `rate_limits` table (supabase/migrations/0005_rate_limits.sql).
+- Decide ALLOW_UNMETERED for any personal deployment (docs in .env.example).
+- After first deploy: confirm CSP report console is quiet on iOS Safari + Chrome, then keep
+  the enforced policy (documented in next.config.ts).
+- Verify the update toast on an installed PWA across one deploy.
+- Account deletion end-to-end against a real Supabase project (needs auth.admin).
+
+## v3.3 Phase 2 — UX polish (2026-07-05)
+
+Shipped: full-width drag ScaleSlider (native range input, big readout, 1/5/10 ticks,
+aria-valuetext, "not set" state) replacing tap-number rows on Mind, Relationships, Social,
+BodyMetric, and the injury intake pain scale; Money empty state one-liner (philosophy is
+footer-only); coach mode tabs gained a right-edge fade + active-tab scrollIntoView; Progress
+reordered report → patterns → trends → calendar, with the calendar collapsed to a ≤96px
+heat-strip (expands to the tappable grid + legend); "Trauma-Response & Coping Profile"
+renamed "Stress Response Patterns" (display-only; DECISIONS §12); dimmed text lifted to
+≥4.5:1 (placeholders, timeline stamps, ring sublabel); recharts now loads behind a lazy
+client import with dimension-matched skeletons (/progress first-load 325 kB → 216 kB);
+Day-1 "0 isn't a grade" line on onboarding's last step + under the gauge until the first
+logged item; §2.9 flag rule documented in lib/flags.ts (flag-off = hidden; the Health
+bloodwork/wearables "soon" chips are the one sanctioned marketing treatment) and
+photoMeal now truthfully `true` with the AddMeal photo tab gated on it.
+
+iPhone-width screenshots (Mind, Money, Today, Progress) captured in session scratchpad
+during the Playwright pass; regenerate any time with verify-v33-phase2.mjs.
+
+WAIT(device) — VoiceOver spot-check list:
+- ScaleSlider: swipe up/down adjusts value; "Not set" then "N of 10" announced.
+- ScoreRing: role=img label announces score + "tap for breakdown".
+- Progress heat-strip: "Expand the 30-day calendar" then per-day labels in the grid.
+- Coach tabs: selected state announced; horizontal scroll reachable.
+
+## v3.3 Phase 3 — personalization, programs, export, media (2026-07-05)
+
+Shipped: §3.1 onboarding gains schedule (days/week, minutes/session), sleep quality, and a
+program picker suggested from the answers (every field consumed: schedule + program →
+builder defaults; sleep quality → coach context + mock framing; diet/equipment/experience
+were already consumed by the builder and targets). §3.2 programs — First 30 / Comeback 30 /
+Busy 30 over pure engines (suggestProgram, programBuilderDefaults, quickAddFirst), Settings
+switch affects future days only (non-destructive by test). §3.3 CSV export (days, meals,
+workouts-per-set, spending, body) + include-media toggle on the JSON export; all free
+(DECISIONS §13). §3.4 progress photos relocated to IndexedDB (one-time idempotent migration,
+never synced), voice notes prefer opus @96kbps with a 30-second-left countdown, voice sync
+is opt-in ("Sync voice recordings"), media usage surfaced in Settings.
+
+WAIT(device): record a full 3:00 note on iOS Safari and confirm ≲3 MB on disk (the
+mediaUsage line in Settings shows it) and playback works; verify photo relocation on a
+device carrying pre-v3.3 embedded photos.
+
+## v3.3 Phase 4 — AI flag flips (2026-07-05)
+
+Flags are now env-derived (NEXT_PUBLIC_FLAG_*, current values as defaults, fail-closed) so
+flips are ops. Flags off → zero UI change from Phase 3 (verified: photoMeal default-true is
+the only visible surface; every other route degrades to its non-AI path). Each AI write path
+has a human review step:
+- photoMeal (already shipped): editable line items, low-confidence deflection to search.
+- transcription (dark): /api/journal/transcribe ships the full pipeline but returns 501 until
+  an STT provider is wired (DECISIONS §14); the review textarea + "Use as caption" flow is in
+  VoiceNoteSheet behind the flag; the note always saves/plays without it.
+- bloodworkUpload (dark, Pro): /api/health/labs transcribes a report photo into the
+  BloodworkSheet review list; every value is editable inline before saving; paste + manual
+  stay free.
+- lifeGraphAI (dark, Pro): /api/lifegraph/narrate (haiku micro-copy) narrates the
+  deterministic pattern lines only, under LIFEGRAPH_NARRATE_RAIL (no new patterns, no
+  causation); deterministic patterns stay free-visible; any failure is silent.
+- researchLive / research route: now Elite + rate-limited even while flagged off.
+
+Guardrail suite green: PROTOCOL_COACH_RAIL + LIFEGRAPH_NARRATE_RAIL pinned; flags env test
+covers true/1/other + default-on-turned-off.
+
+WAIT(operator): provision an STT provider to flip transcription; live-key runs of
+/api/health/labs and /api/lifegraph/narrate; decide which flags go on per environment.
+
+## v3.3 Phase 5 — monetization surface (2026-07-05)
+
+Shipped: PaywallSheet (contextual, feature table, monthly/annual toggle, verbatim trust
+line), Stripe customer-portal route, Settings "Manage billing" + "Refresh" for paid users
+and "See plans" for free, quota-hit "See plans" CTA in AddMealSheet, 7-day trial via
+Checkout trial_period_days, annual price envs. Purchase UI stays fully absent on unconfigured
+builds. Pricing invariants (safety/habit rows free at every tier; prices mirror TIER_PRICING;
+verbatim trust line) pinned by lib/data/pricing.test.ts.
+
+WAIT(operator): Stripe test-mode checkout → webhook → tier flip round trip; trial grants once;
+portal opens for a subscribed user; downgrade leaves all data readable; paywall renders for
+all three tiers via the dev tier switcher.
+
+## Starship OS visual overhaul (S0–S3, 2026-07-05)
+
+Reskin only — engine logic and all copy unchanged; 438 tests stayed green throughout.
+Shipped: [data-theme] dark-default + light themes (token repoint of Solaris→violet/cyan
+keeping semantic names), Space Grotesk/JetBrains Mono/Inter via next/font, theme toggle +
+no-FOUC script; plasma gauge (violet→cyan) with cyan reticle + corner brackets; angular
+hull-cut stat tiles; violet/cyan charts; hexagonal floating HUD dock with the protruding
+diamond Coach core; one-time BootSequence; §2 safety sweep (red-family on cool-dark, crisis
+copy byte-identical, DECISIONS §16); AA contrast tuning both themes (DECISIONS §17); complete
+reduced-motion path (boot skipped, all six infinite animations guarded).
+
+WAIT(device): physical iPhone pass — read one screenshot as "operating system" first; verify
+the boot splash on cold launch and its reduced-motion skip; check the floating dock clears the
+home indicator and the quick-deploy chips; confirm AA on OLED for muted text over the brightest
+light wash; confirm the theme toggle survives an installed-PWA relaunch (no FOUC).
+
+## Stripe hardening (2026-07-06)
+
+Shipped: webhook events completed (checkout.session.completed, customer.subscription.
+created/updated/deleted, invoice.paid, invoice.payment_failed) + idempotency ledger
+(stripe_events, 0007); subscriptions extended with billing_interval / current_period_start /
+cancel_at_period_end / created_at (0006, additive); pure unit-tested Stripe→row mapping.
+Tiers stay Free/Pro/Elite; table stays API-mediated (DECISIONS §18). Full audit in docs/AUDIT.md.
+
+WAIT(operator): create Pro+Elite products + 4 prices → 8 envs; register the webhook for the
+6 events + copy the signing secret; run migrations 0001–0007; `stripe listen --forward-to
+<origin>/api/stripe/webhook`; test-mode round trip (checkout → tier flips → invoice.paid keeps
+period fresh → Portal cancel → cancel_at_period_end true → period end → free; a failed renewal
+flips status past_due then recovers on invoice.paid). Never live mode until test-mode passes.

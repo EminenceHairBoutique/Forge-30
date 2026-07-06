@@ -15,7 +15,11 @@ import type {
   Sex,
   TrainingExperience,
   UserProfile,
+  ProgramId,
+  SleepQuality,
 } from "@/lib/types";
+import { PROGRAMS, programById } from "@/lib/data/programs";
+import { suggestProgram } from "@/lib/engine/programs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,6 +80,12 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   const [draft, setDraft] = useState(defaultProfile);
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const suggestedProgram = suggestProgram({
+    trainingExperience: draft.trainingExperience,
+    trainingDaysPerWeek: draft.trainingDaysPerWeek,
+    sessionMinutes: draft.sessionMinutes,
+    painFlags: draft.painFlags,
+  });
 
   if (!profileLoaded) {
     return (
@@ -104,7 +114,12 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
           : base.primaryGoal === "recomposition"
             ? "Recomposition"
             : base.weightGoal;
-    await saveProfile({ ...base, weightGoal, onboardingComplete: true });
+    await saveProfile({
+      ...base,
+      weightGoal,
+      program: base.program ?? suggestedProgram,
+      onboardingComplete: true,
+    });
     setSaving(false);
   };
 
@@ -250,7 +265,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Anything else you're working on? (tap any)</Label>
+              <Label>Anything else you’re working on? (tap any)</Label>
               <div className="grid grid-cols-2 gap-1.5">
                 {GOAL_IDS.filter((g) => g !== draft.primaryGoal).map((g) => {
                   const on = (draft.secondaryGoals ?? []).includes(g);
@@ -338,6 +353,63 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
                 onChange={(e) => set({ dietaryRestrictions: e.target.value })}
               />
             </div>
+            {/* §3.1 schedule — feeds the workout builder + program suggestion. */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="ob-days">Training days / week</Label>
+                <Select
+                  id="ob-days"
+                  value={String(draft.trainingDaysPerWeek ?? 4)}
+                  onChange={(e) =>
+                    set({ trainingDaysPerWeek: Number(e.target.value) as UserProfile["trainingDaysPerWeek"] })
+                  }
+                >
+                  {[2, 3, 4, 5, 6].map((n) => (
+                    <option key={n} value={n}>
+                      {n} days
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="ob-mins">Minutes / session</Label>
+                <Select
+                  id="ob-mins"
+                  value={String(draft.sessionMinutes ?? 60)}
+                  onChange={(e) =>
+                    set({ sessionMinutes: Number(e.target.value) as UserProfile["sessionMinutes"] })
+                  }
+                >
+                  {[20, 30, 45, 60, 75, 90].map((n) => (
+                    <option key={n} value={n}>
+                      {n} min
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+            {/* §3.2 program picker — suggested from the answers above, always
+                overridable; Custom = exactly the pre-program behavior. */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ob-program">
+                30-day program{" "}
+                <span className="font-normal text-muted">
+                  (suggested: {programById(suggestedProgram)?.name ?? "Custom"})
+                </span>
+              </Label>
+              <Select
+                id="ob-program"
+                value={draft.program ?? suggestedProgram}
+                onChange={(e) => set({ program: e.target.value as ProgramId })}
+              >
+                {PROGRAMS.map((prog) => (
+                  <option key={prog.id} value={prog.id}>
+                    {prog.name} — {prog.tagline}
+                  </option>
+                ))}
+                <option value="custom">Custom — build everything yourself</option>
+              </Select>
+            </div>
           </div>
         )}
 
@@ -403,6 +475,18 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
+                <Label htmlFor="ob-sleepq">Sleep lately</Label>
+                <Select
+                  id="ob-sleepq"
+                  value={draft.sleepQuality ?? "ok"}
+                  onChange={(e) => set({ sleepQuality: e.target.value as SleepQuality })}
+                >
+                  <option value="rough">Rough</option>
+                  <option value="ok">Okay</option>
+                  <option value="good">Good</option>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor="ob-limit">Daily spend limit ($)</Label>
                 <Input
                   id="ob-limit"
@@ -440,7 +524,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
                   <option value="dating">Dating</option>
                   <option value="partnered">Partnered</option>
                   <option value="married">Married</option>
-                  <option value="complicated">It's complicated</option>
+                  <option value="complicated">It’s complicated</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
@@ -636,6 +720,11 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
               {last ? "Start Day 1" : "Next"}
             </Button>
           </div>
+          {last && (
+            <p className="text-center text-xs text-muted">
+              Your score builds as you log — 0 isn’t a grade.
+            </p>
+          )}
           {!last && (
             <Button variant="ghost" disabled={saving} onClick={() => setStep(step + 1)}>
               Skip this step

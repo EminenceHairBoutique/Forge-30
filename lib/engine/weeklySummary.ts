@@ -27,6 +27,25 @@ const HABIT_LABELS: [string, (log: DailyLog, p: UserProfile) => boolean][] = [
   ["skill practice", (l) => l.skillMinutes < 10],
 ];
 
+/** A day counts as active when anything at all was logged on it. */
+export function hasActivity(log: DailyLog): boolean {
+  return (
+    log.calories > 0 ||
+    log.waterMl > 0 ||
+    (log.workoutStatus !== "notStarted" && log.workoutStatus !== "skipped") ||
+    log.sleepHours > 0 ||
+    log.mood > 0 ||
+    log.stress > 0 ||
+    log.skillMinutes > 0 ||
+    log.mobilityDone ||
+    log.journalDone ||
+    log.spendingChecked
+  );
+}
+
+/** Below this many active days the report states it's still building (§1.2). */
+export const WEEKLY_VERDICT_MIN_ACTIVE_DAYS = 3;
+
 export function calculateWeeklySummary(args: {
   weekStart: string;
   weekEnd: string;
@@ -43,8 +62,11 @@ export function calculateWeeklySummary(args: {
 
   const withFood = logs.filter((l) => l.calories > 0);
   const doneWorkouts = workouts.filter((w) => w.status === "complete" || w.status === "rest").length;
+  const activeDays = logs.filter(hasActivity).length;
 
-  // Most-missed habit across days that have any activity logged.
+  // Most-missed habit across days that have any activity logged. Cold start
+  // (§1.2): with fewer than 3 active days there is no meaningful "most
+  // missed" — the field stays undefined and the card doesn't render it.
   let mostMissedHabit = "—";
   let worst = 0;
   for (const [label, missed] of HABIT_LABELS) {
@@ -56,6 +78,9 @@ export function calculateWeeklySummary(args: {
   }
 
   return {
+    activeDays,
+    mostMissedHabit:
+      activeDays >= WEEKLY_VERDICT_MIN_ACTIVE_DAYS && worst > 0 ? mostMissedHabit : undefined,
     weekStart,
     weekEnd,
     avgCalories: Math.round(avg(withFood.map((l) => l.calories))),
@@ -70,12 +95,15 @@ export function calculateWeeklySummary(args: {
     avgStress: round1(avg(logs.filter((l) => l.stress > 0).map((l) => l.stress))),
     avgSleep: round1(avg(logs.filter((l) => l.sleepHours > 0).map((l) => l.sleepHours))),
     avgForgeScore: Math.round(avg(logs.map((l) => l.forgeScore))),
-    mostMissedHabit: worst > 0 ? mostMissedHabit : "—",
   };
 }
 
 /** One honest sentence summarizing the week for the report card. */
 export function summarizeWeek(s: WeeklySummary, profile: UserProfile): string {
+  // Cold start (§1.2): no verdict on a week that has barely begun.
+  if (s.activeDays < WEEKLY_VERDICT_MIN_ACTIVE_DAYS) {
+    return `Report builds as the week does — ${s.activeDays} day${s.activeDays === 1 ? "" : "s"} in.`;
+  }
   const parts: string[] = [];
   if (s.avgForgeScore >= 80) parts.push(`Strong week — ${s.avgForgeScore} average score.`);
   else if (s.avgForgeScore >= 60) parts.push(`Solid week at ${s.avgForgeScore} average, with room to tighten up.`);

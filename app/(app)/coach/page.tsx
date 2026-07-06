@@ -177,11 +177,17 @@ export default function CoachPage() {
         }
       />
 
-      {/* Mode picker (E15) — every mode works deterministically, zero key. */}
+      {/* Mode picker (E15) — every mode works deterministically, zero key.
+          Overflow affordance (v3.3 C4): a right-edge fade signals more tabs;
+          the active tab scrolls itself into view on select and on mount. */}
       <div
         role="tablist"
         aria-label="Coach mode"
         className="flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]"
+        style={{
+          WebkitMaskImage: "linear-gradient(to right, black calc(100% - 32px), transparent)",
+          maskImage: "linear-gradient(to right, black calc(100% - 32px), transparent)",
+        }}
       >
         {COACH_MODES.map((m) => (
           <button
@@ -190,6 +196,11 @@ export default function CoachPage() {
             role="tab"
             aria-selected={mode === m.id}
             title={m.description}
+            ref={(el) => {
+              if (el && mode === m.id) {
+                el.scrollIntoView({ block: "nearest", inline: "nearest" });
+              }
+            }}
             onClick={() => setMode(m.id)}
             className={`min-h-11 shrink-0 rounded-full border px-3.5 text-sm font-semibold transition-colors ${
               mode === m.id
@@ -284,7 +295,7 @@ export default function CoachPage() {
               </>
             ) : (
               <>
-                <Sparkles className="size-5" /> Get today's review
+                <Sparkles className="size-5" /> Get today’s review
               </>
             )}
           </Button>

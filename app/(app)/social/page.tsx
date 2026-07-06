@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ScaleSlider } from "@/components/ui/slider";
+import { ScaleSlider } from "@/components/ui/scale-slider";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export default function SocialPage() {

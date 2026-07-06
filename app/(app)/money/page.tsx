@@ -146,18 +146,13 @@ export default function MoneyPage() {
         {/* Today's entries */}
         <Card className="lg:self-start">
           <CardHeader>
-            <CardTitle>Today's entries</CardTitle>
+            <CardTitle>Today’s entries</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {todayEntries.length === 0 && (
-              <div className="flex flex-col gap-2 py-4 text-center">
-                <p className="text-sm text-muted">Nothing logged yet.</p>
-                <p className="text-xs leading-relaxed text-muted">
-                  The philosophy: business and personal stay separated. Stress purchases get
-                  named. No &ldquo;I&apos;ll make it back later&rdquo; thinking. Make spending
-                  visible before it becomes damage.
-                </p>
-              </div>
+              <p className="py-4 text-center text-sm text-muted">
+                Nothing logged yet — first entry takes 10 seconds.
+              </p>
             )}
             {todayEntries.map((e) => (
               <TimelineRow key={e.id} time={e.loggedAt.slice(11, 16)}>
@@ -199,6 +194,10 @@ export default function MoneyPage() {
           savings, caps, 24-hour pause, export. */}
       <MoneyPlanningSection />
 
+      <p className="px-2 text-center text-xs leading-relaxed text-muted">
+        Business and personal stay separated. Stress purchases get named. Spending stays visible
+        before it becomes damage.
+      </p>
       <p className="px-2 pb-2 text-center text-xs leading-relaxed text-muted">{DISCLAIMERS.finance}</p>
 
       <SpendLogSheet open={logOpen} onOpenChange={setLogOpen} />

@@ -201,6 +201,7 @@ export async function buildCoachInput(
     streakFreezes: dailyStreak?.freezes ?? 0,
     coachStyle: coachStyleFromResults(assessmentResults),
     isSunday: new Date(`${date}T12:00:00`).getDay() === 0,
+    ...(profile.sleepQuality ? { sleepQuality: profile.sleepQuality } : {}),
     ...(await protocolContext(adapter, date)),
   };
 }

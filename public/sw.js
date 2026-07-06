@@ -1,5 +1,9 @@
+/* GENERATED from public/sw.template.js by scripts/generate-sw.mjs — do not edit. */
 /*
- * Forge30 service worker (hand-rolled).
+ * Forge30 service worker (hand-rolled). THIS FILE IS THE SOURCE —
+ * public/sw.js is generated from it by scripts/generate-sw.mjs (runs as
+ * npm prebuild), which stamps VERSION with the git SHA + build time.
+ * Edit here, never sw.js directly.
  *
  * Strategy:
  *  - Precache the app shell routes + offline fallback on install.
@@ -10,7 +14,7 @@
  *    content-hashed and immutable.
  */
 
-const VERSION = "forge30-v21";
+const VERSION = "forge30-ac4a954-202607061950";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
@@ -34,12 +38,14 @@ const SHELL_ROUTES = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_ROUTES))
-      .then(() => self.skipWaiting())
-  );
+  // No skipWaiting here (v3.3 §1.4): the new worker waits until the client
+  // shows its "New version ready" toast and the user opts in — an installed
+  // session is never reloaded out from under the user.
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_ROUTES)));
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {

@@ -148,7 +148,7 @@ export function NoteComposerSheet({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="tr-against">Evidence it isn't the whole story</Label>
+                <Label htmlFor="tr-against">Evidence it isn’t the whole story</Label>
                 <Input
                   id="tr-against"
                   placeholder="What the thought leaves out"

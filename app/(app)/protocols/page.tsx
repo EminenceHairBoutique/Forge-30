@@ -114,13 +114,18 @@ export default function ProtocolsPage() {
     }
   };
 
-  const openReport = () => {
+  const openReport = async () => {
+    // Symptom summary comes from the daily check-in tags over the window.
+    const windowLogs = await adapter.listDailyLogs(addDays(today, -90), today);
+    const symptoms = windowLogs.flatMap((l) =>
+      (l.protocolSymptoms ?? []).map((x) => ({ date: l.date, tag: x.tag, severity: x.severity }))
+    );
     const report = buildDoctorReport({
       compounds,
       schedules,
       doses,
       labs,
-      symptoms: [],
+      symptoms,
       from: addDays(today, -90),
       to: today,
       generatedAt: new Date().toISOString(),
@@ -151,6 +156,9 @@ export default function ProtocolsPage() {
       ${p.markers.map((m) => `<tr><td>${esc(m.name)}</td><td>${m.value}</td><td>${m.range}</td><td>${m.status}</td></tr>`).join("")}</table>`
         )
         .join("")}
+      <h2>Symptom notes</h2>
+      ${report.symptoms.length === 0 ? '<p class="muted">None recorded in this window.</p>' : `<table><tr><th>Symptom</th><th>Days noted</th><th>Avg severity (1–5)</th></tr>
+      ${report.symptoms.map((sy) => `<tr><td>${esc(sy.tag)}</td><td>${sy.days}</td><td>${sy.avgSeverity}</td></tr>`).join("")}</table>`}
       <h2>Dose log</h2>
       <table><tr><th>Date</th><th>Compound</th><th>Dose</th><th>Site</th></tr>
       ${report.doses.slice(0, 60).map((d) => `<tr><td>${d.date}</td><td>${esc(d.compound)}</td><td>${d.dose}</td><td>${d.site}</td></tr>`).join("")}</table>
@@ -362,7 +370,7 @@ export default function ProtocolsPage() {
       <LabsSection panels={labs} onChanged={() => touch()} />
 
       {/* Doctor report — free at every tier, the safety story in one file. */}
-      <Button variant="secondary" className="w-full" onClick={openReport} disabled={compounds.length === 0}>
+      <Button variant="secondary" className="w-full" onClick={() => void openReport()} disabled={compounds.length === 0}>
         <FileText className="size-4 text-gold" /> Doctor report (print / PDF)
       </Button>
 

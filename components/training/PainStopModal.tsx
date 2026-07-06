@@ -40,14 +40,14 @@ export function PainStopModal({
               sharp thoracic, rib, or scapular pain.
             </li>
             <li>
-              <strong className="text-gold">2. Log the pain.</strong> Done — it&apos;s on the set.
+              <strong>2. Log the pain.</strong> Done — it&apos;s on the set.
             </li>
             <li>
-              <strong className="text-gold">3. Swap the exercise</strong> for a supported,
+              <strong>3. Swap the exercise</strong> for a supported,
               pain-free variation.
             </li>
             <li>
-              <strong className="text-gold">4. Reduce intensity for the day.</strong> Drop loads
+              <strong>4. Reduce intensity for the day.</strong> Drop loads
               15–25% on everything that remains.
             </li>
           </ol>

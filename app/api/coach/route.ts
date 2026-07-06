@@ -4,7 +4,11 @@ import type { AdaptiveReview, CoachInput } from "@/lib/engine/mockCoach";
 import { ADAPTIVE_SECTION_KEYS } from "@/lib/engine/mockCoach";
 import { PROTOCOL_COACH_RAIL } from "@/lib/engine/coachGuardrails";
 import { canUseLiveCoach } from "@/lib/engine/subscription";
+import { COACH_DAILY_LIMIT } from "@/lib/engine/rateLimit";
 import { resolveEntitlement } from "@/lib/server/entitlements";
+import { callerId, consumeRateLimit } from "@/lib/server/rateLimit";
+import { crossOriginBlocked } from "@/lib/server/origin";
+import { MAX_JSON_BODY_BYTES, readJsonBody, validateCoachInput } from "@/lib/server/validate";
 
 /**
  * Live AI Coach route. The client POSTs the day's structured summary (all
@@ -71,6 +75,9 @@ const REVIEW_SCHEMA = {
 };
 
 export async function POST(request: Request) {
+  if (crossOriginBlocked(request)) {
+    return NextResponse.json({ error: "Cross-origin requests aren't accepted." }, { status: 403 });
+  }
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured — use the mock engine." },
@@ -78,8 +85,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Entitlement gate (Phase 7): live coach is Pro+. Unconfigured builds are
-  // unmetered (the keyless/self-hosted experience never regresses); a 402
+  // Entitlement gate (Phase 7): live coach is Pro+. Opted-in self-hosted
+  // builds are unmetered (the keyless experience never regresses); a 402
   // sends the client to the mock engine + upgrade path, never a dead end.
   const ent = await resolveEntitlement(request);
   if (!ent.unmetered && !canUseLiveCoach(ent.tier)) {
@@ -89,8 +96,25 @@ export async function POST(request: Request) {
     );
   }
 
+  // Daily window (§1.1): 10 free / 40 pro / 80 elite, keyed by user or
+  // hashed IP. The client treats any non-200 as mock-fallback, so a 429 is
+  // never a dead end.
+  const limit = await consumeRateLimit("coach", callerId(request, ent.userId), COACH_DAILY_LIMIT[ent.tier]);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Daily coach limit reached — the mock engine has you covered until tomorrow." },
+      { status: 429 }
+    );
+  }
+
+  // Shape validation (§1.9): a malformed POST never reaches Anthropic.
+  const body = await readJsonBody(request, MAX_JSON_BODY_BYTES);
+  if (!body.ok) return NextResponse.json({ error: body.error }, { status: 400 });
+  const validated = validateCoachInput(body.value);
+  if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: 400 });
+
   try {
-    const input = (await request.json()) as CoachInput;
+    const input: CoachInput = validated.value;
     const client = new Anthropic();
 
     const response = await client.messages.create({
