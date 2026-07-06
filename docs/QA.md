@@ -195,3 +195,17 @@ WAIT(device): physical iPhone pass — read one screenshot as "operating system"
 the boot splash on cold launch and its reduced-motion skip; check the floating dock clears the
 home indicator and the quick-deploy chips; confirm AA on OLED for muted text over the brightest
 light wash; confirm the theme toggle survives an installed-PWA relaunch (no FOUC).
+
+## Stripe hardening (2026-07-06)
+
+Shipped: webhook events completed (checkout.session.completed, customer.subscription.
+created/updated/deleted, invoice.paid, invoice.payment_failed) + idempotency ledger
+(stripe_events, 0007); subscriptions extended with billing_interval / current_period_start /
+cancel_at_period_end / created_at (0006, additive); pure unit-tested Stripe→row mapping.
+Tiers stay Free/Pro/Elite; table stays API-mediated (DECISIONS §18). Full audit in docs/AUDIT.md.
+
+WAIT(operator): create Pro+Elite products + 4 prices → 8 envs; register the webhook for the
+6 events + copy the signing secret; run migrations 0001–0007; `stripe listen --forward-to
+<origin>/api/stripe/webhook`; test-mode round trip (checkout → tier flips → invoice.paid keeps
+period fresh → Portal cancel → cancel_at_period_end true → period end → free; a failed renewal
+flips status past_due then recovers on invoice.paid). Never live mode until test-mode passes.

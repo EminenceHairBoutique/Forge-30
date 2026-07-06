@@ -205,3 +205,24 @@ all text pairs clear 4.5:1 (graphics 3:1):
   `#0a7a68` (5.25 on white); light cyan `#009fc4` → `#0089a8`.
 Dark body text (primary 17:1, secondary 6–7:1) and all completion/telemetry accents already
 passed.
+
+## 18. Stripe hardening — keep Free/Pro/Elite + API-mediated reads (operator, 2026-07-06)
+
+A "add Stripe from scratch (Free/Plus/Pro)" request arrived against a branch where Stripe was
+already ~85% shipped. Operator decisions:
+- **Keep tiers Free / Pro / Elite** — no rename. Renaming to Free/Plus/Pro would churn
+  `subscription.ts`, `entitlements.ts`, `pricing.ts`, `PaywallSheet`, env names, and 7+ tests
+  for cosmetic naming with a data migration. `.env.example` carries a name-map comment so the
+  earlier spec's `STRIPE_PLUS_*` / `NEXT_PUBLIC_APP_URL` names are unambiguous.
+- **Keep the subscription table API-mediated** — RLS stays enabled with NO user policies
+  (service-role/webhook is the sole writer; clients read tier via `GET /api/entitlements`).
+  No self-read SELECT policy added; the client never trusts a client-side flag.
+
+**Hardening shipped:** webhook now also handles `customer.subscription.created`,
+`invoice.paid`, and `invoice.payment_failed` (→ `past_due`), with an idempotency ledger
+(`stripe_events`, migration 0007) that short-circuits Stripe's duplicate deliveries and
+un-records on handler failure so retries reprocess. Migration 0006 adds
+`billing_interval` / `current_period_start` / `cancel_at_period_end` / `created_at`
+(additive; `tier` column unchanged). The Stripe→row mapping is a pure, unit-tested engine
+function (`subscriptionPatch`, `subscriptionIdFromInvoice` in `lib/engine/subscription.ts`);
+the route stays thin I/O. Full A–J product audit committed as `docs/AUDIT.md`.

@@ -66,3 +66,19 @@ export/delete-data controls — free on Free, Pro, and Elite alike.
 WAIT(operator): create the four Stripe prices + set the eight price envs; register the webhook
 endpoint + secret; test-mode round trip (checkout → webhook → tier flip → portal → cancel →
 non-destructive downgrade) with the Stripe CLI.
+
+## Webhook hardening (2026-07-06)
+
+The webhook now handles the full lifecycle: `checkout.session.completed`,
+`customer.subscription.created/updated/deleted`, `invoice.paid` (keeps `current_period_end`
+fresh on renewal), and `invoice.payment_failed` (→ `status = past_due`, tier retained until it
+recovers or the period + 24h grace lapses per `resolveTierFromRow`). Deliveries are idempotent
+via the `stripe_events` ledger (migration 0007): a duplicate event id short-circuits; a handler
+failure un-records the id so Stripe's retry reprocesses. The `subscriptions` row now carries
+`billing_interval`, `current_period_start`, `cancel_at_period_end`, and `created_at`
+(migration 0006, additive). The Stripe→row mapping is a pure, unit-tested function
+(`subscriptionPatch` / `subscriptionIdFromInvoice` in `lib/engine/subscription.ts`).
+
+**Register these 6 events on the webhook endpoint:** checkout.session.completed,
+customer.subscription.created, customer.subscription.updated, customer.subscription.deleted,
+invoice.paid, invoice.payment_failed.

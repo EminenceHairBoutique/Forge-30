@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
-import { tierForPrice } from "@/lib/engine/subscription";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { subscriptionIdFromInvoice, subscriptionPatch } from "@/lib/engine/subscription";
 
 /**
- * Stripe webhook (v3 Phase 7): signature-verified events → subscriptions
- * rows. The webhook is the ONLY writer of subscription state; entitlement
- * checks read it server-side on every AI route. Downgrade/cancel is
- * non-destructive by construction — this route only ever updates a tier
+ * Stripe webhook (v3 Phase 7 + hardening): signature-verified events →
+ * subscriptions rows. The webhook is the ONLY writer of subscription state;
+ * entitlement checks read it server-side on every AI route. Downgrade/cancel
+ * is non-destructive by construction — this route only ever updates a tier
  * row, never touches user data.
+ *
+ * Idempotent: each event id is recorded in stripe_events before processing
+ * (Stripe retries deliveries). A confirmed duplicate short-circuits; a
+ * handler failure removes the ledger row so Stripe's retry reprocesses.
+ * The state handlers are absolute-state upserts, so reprocessing is safe.
  */
 
 export const dynamic = "force-dynamic";
@@ -27,6 +32,15 @@ function configured() {
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+}
+
+async function userIdForSubscription(supabase: SupabaseClient, subscriptionId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("user_id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  return (data?.user_id as string | undefined) ?? null;
 }
 
 export async function POST(req: Request) {
@@ -51,64 +65,89 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
 
-  const upsert = async (
-    userId: string,
-    patch: {
-      tier: string;
-      status: string;
-      stripe_customer_id?: string | null;
-      stripe_subscription_id?: string | null;
-      current_period_end?: string | null;
+  // Idempotency: record the event id first. A unique-violation (23505) means
+  // we've already processed this delivery → acknowledge and skip.
+  const { error: ledgerError } = await supabase
+    .from("stripe_events")
+    .insert({ id: event.id, type: event.type });
+  if (ledgerError) {
+    if (ledgerError.code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true });
     }
-  ) => {
-    await supabase
+    // A ledger write failure shouldn't block a legitimate event; fall through.
+  }
+
+  const upsert = (userId: string, patch: object) =>
+    supabase
       .from("subscriptions")
       .upsert({ user_id: userId, ...patch, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-  };
 
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      const userId = session.client_reference_id;
-      if (userId && session.subscription) {
-        const sub = await stripe.subscriptions.retrieve(String(session.subscription));
-        const priceId = sub.items.data[0]?.price.id ?? "";
-        const tier = tierForPrice(priceId, PRICE_ENV) ?? "pro";
-        const periodEnd = sub.items.data[0]?.current_period_end;
-        await upsert(userId, {
-          tier,
-          status: sub.status,
-          stripe_customer_id: String(session.customer ?? ""),
-          stripe_subscription_id: sub.id,
-          current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-        });
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const userId = session.client_reference_id;
+        if (userId && session.subscription) {
+          const sub = await stripe.subscriptions.retrieve(String(session.subscription));
+          await upsert(userId, {
+            ...subscriptionPatch(sub, PRICE_ENV),
+            stripe_customer_id: String(session.customer ?? ""),
+          });
+        }
+        break;
       }
-      break;
-    }
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted": {
-      const sub = event.data.object;
-      // Find the user by stored subscription id (client_reference_id only
-      // exists on checkout events).
-      const { data: row } = await supabase
-        .from("subscriptions")
-        .select("user_id")
-        .eq("stripe_subscription_id", sub.id)
-        .maybeSingle();
-      if (row?.user_id) {
-        const priceId = sub.items.data[0]?.price.id ?? "";
-        const tier = tierForPrice(priceId, PRICE_ENV) ?? "pro";
-        const periodEnd = sub.items.data[0]?.current_period_end;
-        await upsert(row.user_id as string, {
-          tier: event.type === "customer.subscription.deleted" ? "free" : tier,
-          status: sub.status,
-          current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-        });
+
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = event.data.object;
+        const userId = await userIdForSubscription(supabase, sub.id);
+        // No row yet (created may precede checkout.session.completed) → the
+        // checkout event, which carries client_reference_id, creates it.
+        if (userId) {
+          const deleted = event.type === "customer.subscription.deleted";
+          await upsert(
+            userId,
+            subscriptionPatch(sub, PRICE_ENV, deleted ? { tier: "free", status: "canceled" } : undefined)
+          );
+        }
+        break;
       }
-      break;
+
+      case "invoice.paid": {
+        const subId = subscriptionIdFromInvoice(event.data.object);
+        if (subId) {
+          const userId = await userIdForSubscription(supabase, subId);
+          if (userId) {
+            const sub = await stripe.subscriptions.retrieve(subId);
+            await upsert(userId, subscriptionPatch(sub, PRICE_ENV));
+          }
+        }
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const subId = subscriptionIdFromInvoice(event.data.object);
+        if (subId) {
+          const userId = await userIdForSubscription(supabase, subId);
+          if (userId) {
+            const sub = await stripe.subscriptions.retrieve(subId);
+            // Keep the tier; flag the account as past_due until it recovers.
+            await upsert(userId, subscriptionPatch(sub, PRICE_ENV, { status: "past_due" }));
+          }
+        }
+        break;
+      }
+
+      default:
+        break; // Unhandled events acknowledge cleanly.
     }
-    default:
-      break; // Unhandled events acknowledge cleanly.
+  } catch (err) {
+    // Un-record so Stripe's retry reprocesses this event.
+    await supabase.from("stripe_events").delete().eq("id", event.id);
+    const message = err instanceof Error ? err.message : "Webhook processing failed.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
+
   return NextResponse.json({ received: true });
 }
