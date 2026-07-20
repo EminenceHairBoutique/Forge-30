@@ -812,6 +812,231 @@ export interface CustomWorkoutPlan {
 }
 
 // ---------------------------------------------------------------------------
+// Hybrid Athletic Bodybuilding (HT) — see HYBRID_TRAINING_IMPLEMENTATION.md
+// ---------------------------------------------------------------------------
+
+export type TrainingQuality =
+  | "strength"
+  | "hypertrophy"
+  | "power"
+  | "mobility"
+  | "stability"
+  | "conditioning";
+
+export type HybridDayKind = "strength" | "athletic" | "recovery";
+
+/** Regression widens access, lateral preserves the goal 1:1, progression advances it. */
+export type SubstitutionKind = "regression" | "lateral" | "progression";
+
+export interface HybridSubstitution {
+  id: string;
+  name: string;
+  whySafer: string;
+  preservesGoal: string;
+  equipment: EquipmentAccess;
+  difficulty: 1 | 2 | 3;
+  injuryNotes: string;
+  kind: SubstitutionKind;
+}
+
+/**
+ * A fully-specified hybrid-program movement. Strength slots carry sets/reps/
+ * rest; timed activities (carries, rounds, cardio) express the dose in `reps`
+ * ("30–40 m", "4–6 rounds", "20–40 min") with sets = rounds where sensible.
+ */
+export interface HybridExercise {
+  id: string;
+  name: string;
+  primaryMuscles: MuscleGroup[];
+  secondaryMuscles: string[];
+  pattern: MovementPattern;
+  qualities: TrainingQuality[];
+  equipment: EquipmentAccess;
+  difficulty: 1 | 2 | 3;
+  sets: number;
+  reps: string;
+  /** [min, max] seconds between sets; null for continuous/recovery work. */
+  restSeconds: [number, number] | null;
+  tempo?: string;
+  rpe?: string;
+  holdSeconds?: number;
+  perSide?: boolean;
+  /** Power work — quality-first progression; never taken to fatigue. */
+  explosive?: boolean;
+  explanation: string;
+  setup?: string;
+  steps: string[];
+  breathing?: string;
+  cues: string[];
+  mistakes: string[];
+  cautions: CautionTag[];
+  regression?: string;
+  progression?: string;
+  substitutions: HybridSubstitution[];
+  /** Optional demonstration media (none bundled; schema field only). */
+  mediaUrl?: string;
+}
+
+export interface HybridDay {
+  /** 0 = Monday … 6 = Sunday (default 6-day placement). */
+  weekday: number;
+  id: string;
+  label: string;
+  kind: HybridDayKind;
+  focus: string[];
+  /** Ordered slots referencing HYBRID_EXERCISES ids. */
+  exerciseIds: string[];
+}
+
+export interface MobilityDrill {
+  id: string;
+  name: string;
+  category: "thoracic" | "scapular" | "rotatorCuff" | "core";
+  region: string;
+  purpose: string;
+  explanation: string;
+  steps: string[];
+  sets: string;
+  reps: string;
+  holdSeconds?: number;
+  tempo?: string;
+  restSeconds: number;
+  frequency: string;
+  mistakes: string[];
+  regression: string;
+  progression: string;
+  equipment: string;
+  cautions: string[];
+  placement: Array<"daily" | "preWorkout" | "postWorkout" | "recoveryDay">;
+}
+
+export type HybridReadinessBand = "green" | "yellow" | "orange" | "red";
+
+/** Pain scores at which each band begins (inclusive). Configurable per user. */
+export interface HybridReadinessThresholds {
+  yellowPain: number;
+  orangePain: number;
+  redPain: number;
+}
+
+export type WarmupResponse = "better" | "same" | "worse" | "notTried";
+
+export interface HybridReadinessCheckin {
+  id: string;
+  date: ISODate;
+  painScore: number;
+  painLocations: string[];
+  sleepHours: number;
+  /** 1–5 self-ratings. */
+  sleepQuality: number;
+  energy: number;
+  soreness: number;
+  stress: number;
+  motivation: number;
+  /** Any entry here forces the red band (neurological red flags). */
+  neuroSymptoms: string[];
+  warmupResponse: WarmupResponse;
+  band: HybridReadinessBand;
+  loggedAt: ISODateTime;
+}
+
+export type AestheticPriority =
+  | "upperChest"
+  | "lats"
+  | "sideDelts"
+  | "rearDelts"
+  | "arms"
+  | "glutes"
+  | "hamstrings"
+  | "quads"
+  | "calves"
+  | "abs"
+  | "neckTraps";
+
+export interface HybridSettings {
+  enabled: boolean;
+  daysPerWeek: 3 | 4 | 5 | 6;
+  boxingDaysPerWeek: number;
+  sessionMinutes: number;
+  equipment: EquipmentAccess;
+  experience: TrainingExperience;
+  boxingExperience: "none" | "some" | "experienced";
+  aestheticPriorities: AestheticPriority[];
+  /** Trap-dominance guard: never emphasize upper traps when set. */
+  avoidTrapEmphasis: boolean;
+  thresholds: HybridReadinessThresholds;
+  mesoStartDate: ISODate | null;
+  mesoWeeks: 4 | 5 | 6 | 8;
+  /** 1-based mesocycle week to run twice (poor readiness/adherence); null = none. */
+  repeatWeek: number | null;
+  /** Remembered substitutions: program slot id → substitution id. */
+  preferredSubs: Record<string, string>;
+}
+
+export type BoxingSessionType = "technical" | "speed" | "power" | "conditioning";
+
+export interface BoxingSessionEntry {
+  id: string;
+  date: ISODate;
+  type: BoxingSessionType;
+  roundsPlanned: number;
+  roundsCompleted: number;
+  workSeconds: number;
+  restSeconds: number;
+  note: string;
+  completedAt: ISODateTime | null;
+}
+
+export interface MobilitySessionEntry {
+  id: string;
+  date: ISODate;
+  drillIds: string[];
+  minutes: number;
+  completedAt: ISODateTime;
+}
+
+export interface HybridSetLog {
+  setNumber: number;
+  reps: number;
+  weight: number;
+  /** Unilateral loads recorded separately when set. */
+  leftWeight?: number;
+  rightWeight?: number;
+  rpe: number;
+  rir?: number;
+  painBefore: number;
+  painAfter: number;
+  isWarmup: boolean;
+  failed: boolean;
+  note: string;
+}
+
+/**
+ * In-flight execution state for the active hybrid session — persisted on every
+ * mutation so closing or refreshing the app resumes exactly where it stopped.
+ */
+export interface HybridSessionState {
+  date: ISODate;
+  dayId: string;
+  startedAt: ISODateTime;
+  readinessBand: HybridReadinessBand;
+  currentIndex: number;
+  /** Slot id → substituted exercise id (this session). */
+  substitutions: Record<string, string>;
+  /** Slot id → logged sets. */
+  setLogs: Record<string, HybridSetLog[]>;
+  /** Slot id → extra sets added (negative = removed). */
+  setAdjustments: Record<string, number>;
+  skipped: string[];
+  /** Slots the user marked pain-provoking. */
+  painFlagged: string[];
+  /** Slot id → why the movement was stopped. */
+  stopReasons: Record<string, string>;
+  /** Audit trail of accepted AI-generated modifications. */
+  aiModifications: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Mind / journal
 // ---------------------------------------------------------------------------
 
