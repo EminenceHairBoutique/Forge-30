@@ -134,3 +134,130 @@ describe("LocalStorageAdapter export → import through storage", () => {
     expect(JSON.stringify(storage._dump())).toBe(before);
   });
 });
+
+describe("hybrid training persistence (HT-2)", () => {
+  it("settings default sensibly and merge stored partials over defaults", async () => {
+    const fresh = await adapter.getHybridSettings();
+    expect(fresh.enabled).toBe(false);
+    expect(fresh.thresholds).toEqual({ yellowPain: 3, orangePain: 5, redPain: 7 });
+    await adapter.saveHybridSettings({ ...fresh, enabled: true, daysPerWeek: 4 });
+    const saved = await adapter.getHybridSettings();
+    expect(saved.enabled).toBe(true);
+    expect(saved.daysPerWeek).toBe(4);
+    expect(saved.mesoWeeks).toBe(4); // untouched default survives
+  });
+
+  it("readiness check-ins persist per date and list by range", async () => {
+    await adapter.saveHybridReadiness({
+      id: "r1",
+      date: "2026-07-20",
+      painScore: 3,
+      painLocations: ["Shoulder"],
+      sleepHours: 7,
+      sleepQuality: 3,
+      energy: 3,
+      soreness: 2,
+      stress: 2,
+      motivation: 4,
+      neuroSymptoms: [],
+      warmupResponse: "better",
+      band: "yellow",
+      loggedAt: "2026-07-20T08:00:00.000Z",
+    });
+    expect((await adapter.getHybridReadiness("2026-07-20"))?.band).toBe("yellow");
+    expect(await adapter.getHybridReadiness("2026-07-21")).toBeNull();
+    expect(await adapter.listHybridReadiness("2026-07-14", "2026-07-20")).toHaveLength(1);
+  });
+
+  it("boxing + mobility sessions upsert, list, and delete", async () => {
+    const boxing = {
+      id: "b1",
+      date: "2026-07-18",
+      type: "technical" as const,
+      roundsPlanned: 5,
+      roundsCompleted: 4,
+      workSeconds: 180,
+      restSeconds: 60,
+      note: "",
+      completedAt: "2026-07-18T18:30:00.000Z",
+    };
+    await adapter.saveBoxingSession(boxing);
+    await adapter.saveBoxingSession({ ...boxing, roundsCompleted: 5 }); // upsert
+    const sessions = await adapter.listBoxingSessions("2026-07-14", "2026-07-20");
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]!.roundsCompleted).toBe(5);
+    await adapter.deleteBoxingSession("b1");
+    expect(await adapter.listBoxingSessions("2026-07-14", "2026-07-20")).toHaveLength(0);
+
+    await adapter.saveMobilitySession({
+      id: "m1",
+      date: "2026-07-19",
+      drillIds: ["dead-bug", "open-book"],
+      minutes: 12,
+      completedAt: "2026-07-19T09:00:00.000Z",
+    });
+    expect(await adapter.listMobilitySessions("2026-07-19", "2026-07-19")).toHaveLength(1);
+  });
+
+  it("in-flight session state survives an adapter re-instantiation (refresh) and clears", async () => {
+    const state = {
+      date: "2026-07-20",
+      dayId: "upper-a",
+      startedAt: "2026-07-20T10:00:00.000Z",
+      readinessBand: "green" as const,
+      currentIndex: 2,
+      substitutions: { "bb-bench-press": "floor-press" },
+      setLogs: {
+        "bb-bench-press": [
+          {
+            setNumber: 1,
+            reps: 6,
+            weight: 80,
+            rpe: 8,
+            painBefore: 0,
+            painAfter: 1,
+            isWarmup: false,
+            failed: false,
+            note: "",
+          },
+        ],
+      },
+      setAdjustments: {},
+      skipped: [],
+      painFlagged: [],
+      stopReasons: {},
+      aiModifications: [],
+    };
+    await adapter.saveHybridSessionState(state);
+
+    const reloaded = new LocalStorageAdapter(); // same storage → same data
+    const resumed = await reloaded.getHybridSessionState();
+    expect(resumed?.currentIndex).toBe(2);
+    expect(resumed?.setLogs["bb-bench-press"]).toHaveLength(1);
+
+    await adapter.saveHybridSessionState(null);
+    expect(await adapter.getHybridSessionState()).toBeNull();
+  });
+
+  it("hybrid collections ride exportAll/importAll", async () => {
+    const settings = await adapter.getHybridSettings();
+    await adapter.saveHybridSettings({ ...settings, enabled: true });
+    await adapter.saveBoxingSession({
+      id: "b2",
+      date: "2026-07-18",
+      type: "power",
+      roundsPlanned: 4,
+      roundsCompleted: 4,
+      workSeconds: 120,
+      restSeconds: 90,
+      note: "",
+      completedAt: null,
+    });
+    const file = await adapter.exportAll();
+    await adapter.resetAll();
+    expect((await adapter.getHybridSettings()).enabled).toBe(false);
+    await adapter.importAll(file);
+    expect((await adapter.getHybridSettings()).enabled).toBe(true);
+    expect(await adapter.listBoxingSessions("2026-07-18", "2026-07-18")).toHaveLength(1);
+  });
+});

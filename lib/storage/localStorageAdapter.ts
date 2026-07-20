@@ -42,8 +42,14 @@ import type {
   WorkoutEntry,
   MediaPrefs,
   UiTheme,
+  BoxingSessionEntry,
+  HybridReadinessCheckin,
+  HybridSessionState,
+  HybridSettings,
+  MobilitySessionEntry,
 } from "@/lib/types";
 import type { StorageAdapter } from "./adapter";
+import { DEFAULT_HYBRID_SETTINGS } from "@/lib/engine/hybridTraining";
 import { DEFAULT_TIER, isTier, type Tier } from "@/lib/engine/entitlements";
 import { createLargeStore } from "./largeStore";
 import {
@@ -98,6 +104,11 @@ const KEYS = {
   protocolSettings: `${PREFIX}:protocolSettings`,
   compounds: `${PREFIX}:compounds`,
   protocolSchedules: `${PREFIX}:protocolSchedules`,
+  hybridSettings: `${PREFIX}:hybridSettings`,
+  hybridReadiness: `${PREFIX}:hybridReadiness`,
+  boxingSessions: `${PREFIX}:boxingSessions`,
+  mobilitySessions: `${PREFIX}:mobilitySessions`,
+  hybridSessionState: `${PREFIX}:hybridSessionState`,
 } as const;
 
 function canUseStorage(): boolean {
@@ -556,6 +567,78 @@ export class LocalStorageAdapter implements StorageAdapter {
       return;
     }
     write(KEYS.customWorkoutPlan, plan);
+  }
+
+  // -- Hybrid Athletic Bodybuilding (HT) -------------------------------------------
+  async getHybridSettings(): Promise<HybridSettings> {
+    return { ...DEFAULT_HYBRID_SETTINGS, ...read<Partial<HybridSettings>>(KEYS.hybridSettings, {}) };
+  }
+
+  async saveHybridSettings(s: HybridSettings): Promise<void> {
+    write(KEYS.hybridSettings, s);
+  }
+
+  async getHybridReadiness(date: ISODate): Promise<HybridReadinessCheckin | null> {
+    return read<Record<ISODate, HybridReadinessCheckin>>(KEYS.hybridReadiness, {})[date] ?? null;
+  }
+
+  async saveHybridReadiness(c: HybridReadinessCheckin): Promise<void> {
+    const all = read<Record<ISODate, HybridReadinessCheckin>>(KEYS.hybridReadiness, {});
+    all[c.date] = c;
+    write(KEYS.hybridReadiness, all);
+  }
+
+  async listHybridReadiness(from: ISODate, to: ISODate): Promise<HybridReadinessCheckin[]> {
+    return Object.values(read<Record<ISODate, HybridReadinessCheckin>>(KEYS.hybridReadiness, {}))
+      .filter((c) => inRange(c.date, from, to))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async listBoxingSessions(from: ISODate, to: ISODate): Promise<BoxingSessionEntry[]> {
+    return read<BoxingSessionEntry[]>(KEYS.boxingSessions, [])
+      .filter((b) => inRange(b.date, from, to))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async saveBoxingSession(b: BoxingSessionEntry): Promise<void> {
+    const all = read<BoxingSessionEntry[]>(KEYS.boxingSessions, []);
+    const i = all.findIndex((s) => s.id === b.id);
+    if (i >= 0) all[i] = b;
+    else all.push(b);
+    write(KEYS.boxingSessions, all);
+  }
+
+  async deleteBoxingSession(id: string): Promise<void> {
+    write(
+      KEYS.boxingSessions,
+      read<BoxingSessionEntry[]>(KEYS.boxingSessions, []).filter((s) => s.id !== id)
+    );
+  }
+
+  async listMobilitySessions(from: ISODate, to: ISODate): Promise<MobilitySessionEntry[]> {
+    return read<MobilitySessionEntry[]>(KEYS.mobilitySessions, [])
+      .filter((m) => inRange(m.date, from, to))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async saveMobilitySession(m: MobilitySessionEntry): Promise<void> {
+    const all = read<MobilitySessionEntry[]>(KEYS.mobilitySessions, []);
+    const i = all.findIndex((s) => s.id === m.id);
+    if (i >= 0) all[i] = m;
+    else all.push(m);
+    write(KEYS.mobilitySessions, all);
+  }
+
+  async getHybridSessionState(): Promise<HybridSessionState | null> {
+    return read<HybridSessionState | null>(KEYS.hybridSessionState, null);
+  }
+
+  async saveHybridSessionState(s: HybridSessionState | null): Promise<void> {
+    if (s === null) {
+      if (canUseStorage()) window.localStorage.removeItem(KEYS.hybridSessionState);
+      return;
+    }
+    write(KEYS.hybridSessionState, s);
   }
 
   // -- Journal ---------------------------------------------------------------------

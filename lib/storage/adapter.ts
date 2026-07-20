@@ -42,6 +42,11 @@ import type {
   WorkoutEntry,
   MediaPrefs,
   UiTheme,
+  BoxingSessionEntry,
+  HybridReadinessCheckin,
+  HybridSessionState,
+  HybridSettings,
+  MobilitySessionEntry,
 } from "@/lib/types";
 import type { ExportFile } from "./migrations";
 import type { Tier } from "@/lib/engine/entitlements";
@@ -102,6 +107,21 @@ export interface StorageAdapter {
   saveWorkout(w: WorkoutEntry): Promise<void>;
   listWorkouts(from: ISODate, to: ISODate): Promise<WorkoutEntry[]>;
   listAllWorkouts(): Promise<WorkoutEntry[]>;
+
+  // Hybrid Athletic Bodybuilding (HT) — settings, readiness, sessions
+  getHybridSettings(): Promise<HybridSettings>;
+  saveHybridSettings(s: HybridSettings): Promise<void>;
+  getHybridReadiness(date: ISODate): Promise<HybridReadinessCheckin | null>;
+  saveHybridReadiness(c: HybridReadinessCheckin): Promise<void>;
+  listHybridReadiness(from: ISODate, to: ISODate): Promise<HybridReadinessCheckin[]>;
+  listBoxingSessions(from: ISODate, to: ISODate): Promise<BoxingSessionEntry[]>;
+  saveBoxingSession(b: BoxingSessionEntry): Promise<void>;
+  deleteBoxingSession(id: string): Promise<void>;
+  listMobilitySessions(from: ISODate, to: ISODate): Promise<MobilitySessionEntry[]>;
+  saveMobilitySession(m: MobilitySessionEntry): Promise<void>;
+  /** In-flight hybrid session; null clears it (survives refresh/close). */
+  getHybridSessionState(): Promise<HybridSessionState | null>;
+  saveHybridSessionState(s: HybridSessionState | null): Promise<void>;
 
   // Journal (daily check-in)
   getJournal(date: ISODate): Promise<JournalEntry | null>;
