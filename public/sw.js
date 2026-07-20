@@ -14,7 +14,7 @@
  *    content-hashed and immutable.
  */
 
-const VERSION = "forge30-aebffe7-202607200345";
+const VERSION = "forge30-61d0dbb-202607200357";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
@@ -23,6 +23,7 @@ const SHELL_ROUTES = [
   "/today",
   "/nutrition",
   "/training",
+  "/hybrid",
   "/mind",
   "/money",
   "/progress",

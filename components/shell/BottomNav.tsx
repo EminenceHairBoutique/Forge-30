@@ -20,6 +20,7 @@ import {
   Users,
   ClipboardList,
   Pill,
+  Swords,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -40,6 +41,7 @@ import { cn } from "@/lib/utils";
 const LOG_DESTINATIONS: { href: string; label: string; icon: LucideIcon; soon?: boolean }[] = [
   { href: "/nutrition", label: "Food", icon: UtensilsCrossed },
   { href: "/training", label: "Train", icon: Dumbbell },
+  { href: "/hybrid", label: "Hybrid", icon: Swords },
   { href: "/mind", label: "Mind", icon: Brain },
   { href: "/money", label: "Money", icon: Wallet },
   { href: "/skills", label: "Skills", icon: GraduationCap },

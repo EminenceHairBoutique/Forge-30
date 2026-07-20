@@ -22,6 +22,7 @@ const SHELL_ROUTES = [
   "/today",
   "/nutrition",
   "/training",
+  "/hybrid",
   "/mind",
   "/money",
   "/progress",
