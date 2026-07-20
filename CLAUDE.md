@@ -6,7 +6,11 @@ system connecting nutrition, training, mind, money, skills, health, and relation
 daily loop. **`V3_SPEC.md` is the active spec** — it supersedes `v2_spec.md` where they
 conflict; where v3 is silent, v2 still applies. `AUDIT_V3.md` reconciles the spec against this
 branch; `DECISIONS.md` records binding scope decisions (do not re-litigate them);
-`V3_PLAN.md` maps Phases 1–5 file by file.
+`V3_PLAN.md` maps Phases 1–5 file by file. The Hybrid Athletic Bodybuilding system
+(`/hybrid`) is mapped in `HYBRID_TRAINING_IMPLEMENTATION.md` (+ `_SCHEMA.md`, `_TESTING.md`;
+DECISIONS §19): adapter collections only, completed sessions freeze into `WorkoutEntry`, and
+its green/yellow/orange/red readiness classifier stays separate from the Training tab's
+0–100 score.
 
 ## v3 rules (V3_SPEC Part A)
 

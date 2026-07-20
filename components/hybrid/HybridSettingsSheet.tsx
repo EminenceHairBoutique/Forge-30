@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useStorage } from "@/lib/storage/provider";
 import { toISODate, cn } from "@/lib/utils";
 import { DEFAULT_HYBRID_THRESHOLDS, MESO_TEMPLATES } from "@/lib/engine/hybridTraining";
+import { programCsv, programJson } from "@/lib/engine/hybridExport";
 import type { AestheticPriority, EquipmentAccess, HybridSettings, TrainingExperience } from "@/lib/types";
 
 /**
@@ -52,6 +53,16 @@ export function HybridSettingsSheet({
 
   const set = <K extends keyof HybridSettings>(key: K, value: HybridSettings[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
+
+  const download = (content: string, name: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const setThreshold = (key: "yellowPain" | "orangePain" | "redPain", raw: string) => {
     const v = Math.min(10, Math.max(0, Number(raw) || 0));
@@ -260,6 +271,27 @@ export function HybridSettingsSheet({
               </Button>
             </div>
           )}
+
+          {/* Program export (never paywalled — DECISIONS §13) */}
+          <div>
+            <p className="microlabel mb-2 text-muted">Program export</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" size="sm" onClick={() => download(programCsv(), "forge30-hybrid-program.csv", "text/csv")}>
+                CSV
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => download(programJson(), "forge30-hybrid-program.json", "application/json")}
+              >
+                JSON
+              </Button>
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              Full program + mobility library with instructions, cues, and cautions. Logged
+              workouts export from Settings → Data.
+            </p>
+          </div>
 
           <Button className="w-full" onClick={save}>
             Save settings

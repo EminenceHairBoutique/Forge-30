@@ -226,3 +226,26 @@ un-records on handler failure so retries reprocess. Migration 0006 adds
 (additive; `tier` column unchanged). The Stripe→row mapping is a pure, unit-tested engine
 function (`subscriptionPatch`, `subscriptionIdFromInvoice` in `lib/engine/subscription.ts`);
 the route stays thin I/O. Full A–J product audit committed as `docs/AUDIT.md`.
+
+## 19. Hybrid Training — adapter collections, WorkoutEntry bridge, deferred admin RBAC (2026-07-20)
+
+The 21-phase "Hybrid Athletic Bodybuilding" prompt reconciled against this architecture
+(full map: `HYBRID_TRAINING_IMPLEMENTATION.md`):
+
+- **No bespoke SQL (§9 applied).** The five hybrid collections (`hybridSettings`,
+  `hybridReadiness`, `boxingSessions`, `mobilitySessions`, `hybridSessionState`) ride the
+  adapter `KEYS` map → SyncedAdapter blobs → existing per-user RLS. The prompt's Phase 13
+  "database design" is documented in `HYBRID_TRAINING_SCHEMA.md`, not new migrations.
+- **Completed hybrid sessions freeze into `WorkoutEntry`** (`hybrid-<date>-<dayId>`), so
+  PRs, volume, deload detection, heat map, CSV export, and the coach context all work with
+  zero new plumbing — and the coach guardrails (no diagnosis, red flags never overridden)
+  automatically govern hybrid data. Accepted AI modifications audit into the entry note.
+- **Readiness is a second, separate classifier.** The hybrid green/yellow/orange/red model
+  (pain-primary, neuro symptoms force red, thresholds user-configurable) lives in
+  `hybridTraining.ts`; the existing 0–100 `calculateReadinessScore` stays untouched for the
+  classic Training tab. They are different instruments and never conflate.
+- **Admin editor + RBAC deferred, not faked.** No roles system exists; hiding buttons is
+  not access control. The program is administered through the repo; the validated CSV
+  import parser ships (tested) without a privileged UI. See `HYBRID_TRAINING_SCHEMA.md`.
+- Trap-dominance guard: `neckTraps` aesthetic emphasis is suppressed (with an explanation)
+  when the user reports trap dominance or neck/scapular/thoracic symptoms.

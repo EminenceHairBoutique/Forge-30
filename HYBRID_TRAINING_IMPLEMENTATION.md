@@ -54,26 +54,26 @@ Update this file as phases land; it is the source of truth for what shipped vs. 
 | # | Prompt phase | Status | Where |
 |---|---|---|---|
 | 1 | Repository audit | ✅ | This file |
-| 2 | Weekly program structure (Mon Upper A ×10 … Sun recovery, exact prescriptions) | ⬜ HT-1 | `lib/data/hybridProgram.ts` |
-| 3 | Mobility/prehab library (19 drills, full field spec) | ⬜ HT-1 | `lib/data/mobilityLibrary.ts` |
-| 4 | Injury-aware onboarding (16 regions, 12 symptoms, red-flag advisory) | ⬜ HT-3 | Hybrid setup sheet; reuses `InjuryProfile` + `InjuryIntakeSheet` patterns |
-| 5 | Pain-aware readiness (green/yellow/orange/red, configurable) | ⬜ HT-1 engine, HT-3 UI | `classifyHybridReadiness` + check-in sheet |
-| 6 | Substitution engine (structured subs w/ why-safer/goal/equipment/difficulty/type) | ⬜ HT-1 | `HybridSubstitution` on every slot + remembered prefs |
-| 7 | Exercise-detail experience | ⬜ HT-3 | Exercise detail sheet (cues, mistakes, breathing, regress/progress, history) |
-| 8 | Execution mode with persistence | ⬜ HT-3 | `/hybrid` session runner + `hybridSessionState` (survives refresh) |
-| 9 | Progression logic (double / strength e1RM / explosive quality-first) | ⬜ HT-1 | `suggestProgression` in engine + tests |
-| 10 | Periodization (4-wk mesocycle, extend 5/6/8, repeat week, wk4 deload −40–50% vol / −10–20% int) | ⬜ HT-1 | `mesocycleWeek`, `applyWeekToPrescription` |
-| 11 | Customization (day count, boxing/conditioning frequency, aesthetic priorities, trap-dominance guard) | ⬜ HT-1 engine + HT-3 settings | `HybridSettings` |
-| 12 | Boxing module (technical/speed/power/conditioning + presets 2:1, 3:1, 30:30, custom) | ⬜ HT-1 data + HT-3 timers | `BOXING_SESSIONS` + round timer |
-| 13 | Database design | ♻️ resolved | Adapter collections (resolution #1); schema doc in HT-4 |
-| 14 | CSV/JSON export + validated CSV import | ⬜ HT-4 | `lib/engine/hybridExport.ts` on `exportCsv.ts` primitives |
-| 15 | Admin editor + RBAC | ⏸ deferred | Resolution #5 |
-| 16 | Premium mobile-first UI (320/375/390/430) | ⬜ HT-3/HT-4 | Starship tokens; Playwright width pass |
-| 17 | Hybrid dashboard | ⬜ HT-3 | `/hybrid` landing: today, readiness, week/meso, volume, boxing count, PRs, resume |
-| 18 | AI coaching layer with medical guardrails | ⬜ HT-3 | Coach context + accepted-modification record; guardrails reused |
-| 19 | Comprehensive tests | ⬜ HT-1/HT-4 | Colocated Vitest (count only grows from 444) + Playwright |
-| 20 | Security/quality | ⬜ all | Strict TS, adapter-only persistence, no secrets client-side, no fake success states |
-| 21 | Documentation ×3 | 🔨 this file; ⬜ HT-4 | + `HYBRID_TRAINING_SCHEMA.md`, `HYBRID_TRAINING_TESTING.md` |
+| 2 | Weekly program structure (Mon Upper A ×10 … Sun recovery, exact prescriptions) | ✅ HT-1 | `lib/data/hybridProgram.ts` |
+| 3 | Mobility/prehab library (19 drills, full field spec) | ✅ HT-1 | `lib/data/mobilityLibrary.ts` |
+| 4 | Injury-aware onboarding (16 regions, 12 symptoms, red-flag advisory) | ✅ HT-3 | Readiness check-in (regions/symptoms/neuro flags) + settings (equipment, experience, boxing, priorities); persistent injury profiles reuse the existing Training `InjuryIntakeSheet` |
+| 5 | Pain-aware readiness (green/yellow/orange/red, configurable) | ✅ HT-1+3 | `classifyHybridReadiness` + `ReadinessSheet`; thresholds editable in settings |
+| 6 | Substitution engine (structured subs w/ why-safer/goal/equipment/difficulty/type) | ✅ HT-1+3 | `HybridSubstitution` on every slot; `SubSheet` filtered by equipment; remembered on finish |
+| 7 | Exercise-detail experience | ✅ HT-3 | `ExerciseDetailSheet` (cues, mistakes, breathing, regress/progress, subs, history, progression hint) |
+| 8 | Execution mode with persistence | ✅ HT-3 | `SessionRunner` + `hybridSessionState` (verified refresh-proof) |
+| 9 | Progression logic (double / strength e1RM / explosive quality-first) | ✅ HT-1 | `suggestProgression` + tests; surfaced in exercise detail |
+| 10 | Periodization (4-wk mesocycle, extend 5/6/8, repeat week, wk4 deload −40–50% vol / −10–20% int) | ✅ HT-1 | `mesocycleWeek` + `mesoAdjustedSets`; deload 0.55 vol / 0.85 int |
+| 11 | Customization (day count, boxing frequency, aesthetic priorities, trap-dominance guard) | ✅ HT-1+3 | `HybridSettings` + `HybridSettingsSheet` + `weeklySchedule(3/4/5/6)` |
+| 12 | Boxing module (technical/speed/power/conditioning + presets 2:1, 3:1, 30:30, custom) | ✅ HT-1+3 | `lib/data/boxing.ts` + `BoxingTab` round timer (audio + guarded vibration) |
+| 13 | Database design | ✅ resolved | Adapter collections (resolution #1); `HYBRID_TRAINING_SCHEMA.md` |
+| 14 | CSV/JSON export + validated CSV import | ✅ HT-4 | `lib/engine/hybridExport.ts` (+ export buttons in settings); import parser tested, UI deferred with RBAC |
+| 15 | Admin editor + RBAC | ⏸ deferred | Resolution #5; `HYBRID_TRAINING_SCHEMA.md` §Deferred |
+| 16 | Premium mobile-first UI (320/375/390/430) | ✅ HT-3 | Starship tokens; Playwright width pass 27/27 |
+| 17 | Hybrid dashboard | ✅ HT-3 | `/hybrid` Today tab: readiness, adjusted session, meso week, volume, PRs, pain trend, labeled suggestion surfaces |
+| 18 | AI coaching layer with medical guardrails | ✅ via bridge | Hybrid sessions are WorkoutEntry rows → existing coach context + guardrails apply; accepted AI modifications audit into the entry note |
+| 19 | Comprehensive tests | ✅ HT-1..4 | 44 new Vitest tests (444 → 488) + 27-check Playwright run (`HYBRID_TRAINING_TESTING.md`) |
+| 20 | Security/quality | ✅ | Strict TS, adapter-only persistence, validated import, no secrets client-side, no fake success states |
+| 21 | Documentation ×3 | ✅ HT-4 | This file + `HYBRID_TRAINING_SCHEMA.md` + `HYBRID_TRAINING_TESTING.md` |
 
 ## Commit plan
 
